@@ -1,0 +1,23 @@
+[0] Config.pm:307> INFO - This is Biber 2.19
+[0] Config.pm:310> INFO - Logfile is 'main-thesis.blg'
+[59] biber-darwin:340> INFO - === Sun Mar 16, 2025, 15:45:26
+[72] Biber.pm:419> INFO - Reading 'main-thesis.bcf'
+[143] Biber.pm:979> INFO - Found 21 citekeys in bib section 0
+[155] Biber.pm:4419> INFO - Processing section 0
+[164] Biber.pm:4610> INFO - Looking for bibtex file '0b_ai_referenzen.bib' for section 0
+[166] bibtex.pm:1713> INFO - LaTeX decoding ...
+[178] bibtex.pm:1519> INFO - Found BibTeX data source '0b_ai_referenzen.bib'
+[251] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[251] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[251] Biber.pm:4239> INFO - Sorting list 'none/global//global/global' of type 'entry' with template 'none' and locale 'de-DE'
+[251] Biber.pm:4245> INFO - No sort tailoring available for locale 'de-DE'
+[261] bbl.pm:660> INFO - Writing 'main-thesis.bbl' with encoding 'UTF-8'
+[267] bbl.pm:763> INFO - Output to main-thesis.bbl
+[267] Biber.pm:131> WARN - I didn't find a database entry for 'Markowitz1952' (section 0)
+[268] Biber.pm:131> WARN - I didn't find a database entry for 'Williams1992' (section 0)
+[268] Biber.pm:131> WARN - I didn't find a database entry for 'Sutton2000' (section 0)
+[268] Biber.pm:131> WARN - I didn't find a database entry for 'Dixon2020' (section 0)
+[268] Biber.pm:131> WARN - I didn't find a database entry for 'Lillicrap2016' (section 0)
+[268] Biber.pm:131> WARN - I didn't find a database entry for 'Fischer2018' (section 0)
+[268] Biber.pm:131> WARN - I didn't find a database entry for 'Alderman2021' (section 0)
+[268] Biber.pm:133> INFO - WARNINGS: 7

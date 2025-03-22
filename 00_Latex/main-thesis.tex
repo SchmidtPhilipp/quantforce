@@ -1,0 +1,427 @@
+% !TeX document-id = {0be46d8b-ac41-4314-8d67-ca30c471ba2b}
+% !TeX TXS-program:bibliography = biber
+% !TeX TXS-program:glossary = makeglossaries
+% !TeX TXS-program = pdflatex
+% !TeX TXS-program = biber
+% !TeX TXS-program = pdflatex
+% !TeX TXS-program = pdflatex
+% !TeX TXS-program = makeglossaries
+% !TeX TXS-program = pdflatex
+% !TeX TXS-program = pdflatex
+
+% !TeX encoding = UTF-8
+% !TeX spellcheck = de_DE
+% !BIB program = biber
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Document class: KOMA-Script book (scrbook)
+%%
+\documentclass[a4paper,
+fleqn,            % Linksbündige Gleichungen
+12pt,             % Standard-Schriftgröße
+ngerman,          % Deutsche Sprache
+oneside,          % Doppelseitiges Layout
+chapterentrydots=true,  % Punkte in Inhaltsverzeichnis für Kapitel
+parskip=half      % Halber Zeilenabstand zwischen Absätzen
+]{scrbook}
+
+\counterwithout{section}{chapter}
+\counterwithout{figure}{chapter}
+
+% Listet verwendete Pakete und Versionen nach Kompilierung
+\listfiles
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Zeichencodierung & Schriftart
+%% 
+\usepackage{lmodern}  % Sichere Latin Modern Schriftart laden (Fix für T1/lmr/m/up Fehler)
+\usepackage[utf8]{inputenc} % UTF-8 Unterstützung für pdflatex
+\usepackage[T1]{fontenc} % Bessere Trennung von Wörtern mit Umlauten
+\usepackage[ngerman]{babel} % Mehrsprachige Unterstützung, letzte Sprache als Standardsprache
+\usepackage{csquotes} % Notwendig für babel/polyglossia (Fix für fehlende csquotes)
+\usepackage[onehalfspacing]{setspace}  % Für Zeilenabstände
+\onehalfspacing         % 1,5-facher Zeilenabstand (oder \doublespacing für doppelten Abstand)
+
+\usepackage{helvet} % use helvet for text
+\usepackage{mathpazo} % use Pazo font for math
+
+\usepackage{tikz}
+\usepackage{lastpage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Typografie
+%% 
+%\KOMAoptions{parskip=half} % Nutzt KOMA-Script-Methode für Absatzformatierung
+\setlength{\headheight}{15pt} % Mindesthöhe für Kopfzeilen, um scrlayer-scrpage-Warnung zu vermeiden
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% JKU LaTeX-Template
+%% seminarreport
+\usepackage[seminarreport,nocompactverb,nofancyfonts, equalmargins]{jkureport}
+%mathesis
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Hyperref und Verlinkungen
+%% 
+%\usepackage[hidelinks]{hyperref} % Links ohne sichtbare Markierung
+%\usepackage{bookmark} % Verbessertes Handling von PDF-Bookmarks
+\usepackage{url}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Mathematikpakete
+%% 
+\usepackage{amssymb} % Zusätzliche mathematische Symbole
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Tabellen und Layout-Optimierungen
+%% 
+\usepackage{array}   % Verbesserte Tabellenformatierung
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\newcolumntype{N}{@{}m{0pt}@{}} % Unsichtbare Spalte für bessere Formatierung
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Abbildungen
+%% 
+\usepackage{graphicx}  % Unterstützung für Grafiken
+\usepackage{import} % Ermöglicht das Importieren von externen Dateien
+\usepackage[]{caption} % Optimierung von Bildunterschriften
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Literaturverwaltung mit BibLaTeX & Biber
+%% 
+
+
+\usepackage[%
+backend=biber,
+style=ieee, %IEEEtran, %numeric-comp, % authoryear
+bibstyle=numeric, %numeric, % authoryear
+citestyle=numeric, %numeric, % authoryear
+maxnames=3,
+sorting=none, %nty
+backref=true, % Define if there should be an reference to the citetion in the text
+backrefstyle=three
+]{biblatex}
+
+
+
+
+% Lade zuerst die Konfigurationsdatei (für Rechtliche Arbeite) Dazu muss der Stil auch auf verbose gesetzt werden!!!
+%\InputIfFileExists{biblatex.cfg}{}{}
+%https://github.com/PhilippTh/austrian-legal-citation-style/blob/master/biblatex/biblatex.cfg
+
+% Verbesserte URL-Formatierung in Bibliographie
+%\setcounter{biburlnumpenalty}{100} 
+%\setcounter{biburllcpenalty}{100}
+%\setcounter{biburlucpenalty}{100}
+
+%\BiblatexSplitbibDefernumbersWarningOff
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%%% Biber modifications
+
+%\DeclareNameAlias{default}{family-given}
+\renewbibmacro{in:}{}															%% remove the in: before the journal
+
+%% Article Formatting
+\DeclareFieldFormat[article]{title}{\\ \textit{#1}} 	%% remove the qoutes from title and add italic instead
+\DeclareFieldFormat[article]{journaltitle}{\\{#1}}    	%% remove the italic from journaltitle in articles
+\DeclareFieldFormat[article]{pages}{Pages: #1} 			%% Add Pages: in front of pages
+%\DeclareFieldFormat[article]{year}{Issue date: #1} 		%% Add Issue date in front of date
+\DeclareFieldFormat[article]{volume}{Volume: #1} 		%% Add text Volume in front of number
+
+\DeclareFieldFormat{doi}{%
+	\\ \color{gray}\small%
+	{DOI}\addcolon\space
+	\ifhyperref
+	{\href{https://doi.org/#1}{\nolinkurl{#1}}}
+	{\nolinkurl{#1}}}
+
+\DeclareFieldFormat{url}{%
+	\\ \color{gray}\small%
+	{URL}\addcolon\space
+	\ifhyperref
+	{\href{#1}{\nolinkurl{#1}}}
+	{\nolinkurl{#1}}}
+
+%% Book Formatting
+\DeclareFieldFormat[book]{title}{\\ \textit{#1}} 	%% remove the qoutes from title and add italic instead
+\DeclareFieldFormat[book]{publisher}{\\ {#1}} 		%% move the publisher to the next line
+\DeclareFieldFormat[book]{volumes}{}				%% remove the number of volumes
+%\DeclareFieldFormat[book]{date}{Issue date: #1}
+\DeclareFieldFormat[book]{maintitle}{}
+\DeclareFieldFormat[book]{volume}{}
+\DeclareFieldFormat[book]{series}{}
+\DeclareFieldFormat[book]{isbn}{}
+
+
+%% Patent Formatting
+\DeclareFieldFormat[patent]{title}{\\ \textit{#1}} 		%% remove the qoutes from title and add italic instead
+\DeclareFieldFormat[patent]{number}{Patent Nr.: #1} 	%% Add pagent number in front of patent
+%\DeclareFieldFormat[patent]{date}{Issue date: #1} 		%% remove the qoutes from title and add italic instead
+
+%% Unpublished Formatting      
+\DeclareFieldFormat[unpublished]{title}{\\ \textit{#1}} %% remove the qoutes from title and add italic instead
+
+%% Master Thesis Formatting
+\DeclareFieldFormat[thesis]{title}{\\ \textit{#1}} %% remove the qoutes from title and add italic instead
+%\DeclareFieldFormat[thesis]{type}{} %% remove the MA thesis
+%\DeclareFieldFormat[thesis]{date}{Issue date: #1}
+
+%% Manual Formatting
+\DeclareFieldFormat[manual]{title}{\\ \textit{#1}} %% remove the qoutes from title and add italic instead
+
+
+\addbibresource{0b_ai_referenzen.bib}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Glossar und Abkürzungen
+%% 
+\usepackage[acronym, nopostdot, toc, style=index]{glossaries}
+
+% Glossardefinitionen zuerst importieren
+\input{99_myglossaries.tex}
+
+% Abkürzungen importieren
+\input{99_acronyms.tex}
+
+% Erst danach Glossar initialisieren (Korrektur)
+\makeglossaries
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% PDF-Warnung unterdrücken
+%% 
+\pdfsuppresswarningpagegroup=1 % Behebt "multiple pdfs with page group" Fehler
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+%\pagenumbering{arabic}
+	
+%% Begin with the frontmatter (among other things, this switches to roman page numbers)
+\frontmatter
+\pagenumbering{Roman}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Thesis information and title page
+%% 
+
+%% Command \title{title}: sets the title of your thesis
+\title{Überblick und Anwendung von Maschinellem Lernen im Kontext von Quantitativer Finanz}
+
+%% Command \titleshort{short title}: sets an abbreviated version of the thesis title for page heads
+%\titleshort{Optional space for your abbreviated title}
+
+%% Command \subtitle{subtitle}: sets the subtitle for seminar/technical reports (not used for theses)
+%\subtitle{Rechtliche Herausforderungen und Chancen bei der Wiederverwendung und dem Recycling von Elektronikprodukten unter Berücksichtigung europäischer Richtlinien}
+
+%% Command \author{name}: sets the author's name; use \prefix{} and \suffix{} to add academic titles and suffixes, use \matno{} to add the immatriculation number
+\author{\prefix{Dipl.-Ing.}Philipp Schmidt\suffix{BSc}}
+
+%% Command \supervisor[number,gender]{name}: sets the name of the supervisor (where number optionally
+%%   defines the rank of the supervisor (1-3) and gender specifies if the supervisor is male or female
+%%   to adapt gener-specific terms in German)
+\supervisor{\prefix{Prof. Dr.}}
+
+
+% Command \assistantsupervisor{name}: sets the name of the assistant supervisor(s)
+
+% Command \degree{degree}{degree program}: sets the degree and degree program name
+\degree{Master of Legal and business aspects in technics}{Recht und Wirtschaft für TechnikerInnen}
+%\degree{Master of Science}{Artificial Intelligence}
+
+% Command \submissiondepartment{institute or department}: set the department that the thesis is submitted at
+\submissiondepartment{Institut}
+
+% Command \submissionplace{place}: set the place of submission (typically `Linz', which is also the default)
+\submissionplace{Linz}
+
+% Command \date{YYYY-MM-DD}: set the day of submission (defaults to today)
+%\date{2020-04-09}
+
+% Command \keywords{text}: set the document keywords
+%\keywords{Space for your comma-separated keywords}
+
+
+%% Finally, print the title page using the above information:
+\maketitle
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Include satuatory declaration into the frontmatter
+%% 
+%\import{./}{satuatory}
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Include your abstract into the frontmatter
+%% 
+%\import{./}{00-abstract}
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Include your acknowledgements into the frontmatter (optional and typically only
+%% used to acknowledge external funding, discuss with your supvervisor if unsure)
+%% 
+%\import{./}{acknowledgements}
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Add a table of contents (and optionally various other lists)
+%% 
+
+%% Make sure to start the table of contents on a new odd page (odd is only relevant in de layout)
+\cleardoubleoddpage
+%% Print the table of contents
+%\includeChapterImage
+\renewcommand{\contentsname}{Inhaltsverzeichnis}
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Abkürzungsverzeichnis
+
+%\cleardoubleoddpage
+%\includeChapterImage
+\printglossary[type=\acronymtype, style=superglossarystyle, title={Abkürzungsverzeichnis}]
+
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Begin with the mainmatter (among other things, this switches to arabic page numbers)
+\mainmatter
+
+\pagestyle{normal}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Include your chapters
+%% 
+\import{./}{01-introduction}
+\import{./}{02}
+\import{./}{03}
+%\import{./}{04}
+%\import{./}{05}
+%\import{./}{06}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Print the bibliography
+%% 
+
+%\includeChapterImage
+%\printbibliography[type=book,title={Books}]
+%
+%\cleardoubleoddpage
+%\includeChapterImage
+%\printbibliography[type=article,title={Articles}]
+%
+%\cleardoubleoddpage
+%\includeChapterImage
+%\printbibliography[nottype=book,nottype=article,title={Miscellaneous}]
+%% 
+
+
+%% Law stuff:
+\renewcommand{\chapterpagestyle}{normal} % Kurektur des seitenstils
+% Literaturverzeichnis
+\cleardoubleoddpage%  Make sure to start bibliography on a new odd page
+
+
+
+%\includeChapterImage
+\printbibliography[type=book,title={Books}]
+%
+\cleardoubleoddpage
+%\includeChapterImage
+\printbibliography[type=article,title={Articles}]
+%
+\cleardoubleoddpage
+%\includeChapterImage
+\printbibliography[nottype=book,nottype=article,title={Miscellaneous}]
+%% 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Begin with the appendix part (all further chapters will be appendices)
+\appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Include your appendix chapters
+%% 
+%\import{./}{91-appendix}
+% ...
+
+%% 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Tables, Figures, Acronyms
+
+%% Make sure to start the list of tables on a new odd page (odd is only relevant in twoside layout)
+%\cleardoubleoddpage
+%% Print the list of tables (optional and often not necessary)
+%\includeChapterImage
+%\listoftables
+
+%% Make sure to start the list of figures on a new odd page (odd is only relevant in twoside layout)
+%\cleardoubleoddpage
+%% Print the list of figures (optional and often not necessary)
+%\includeChapterImage
+%\listoffigures
+
+%% Make sure to start the list of acronyms on a new odd page (odd is only relevant in twoside layout)
+%\cleardoubleoddpage
+%% Include list of acronyms (optional and often not necessary)
+%\import{./}{acronyms}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
+%% Print Glossary
+
+%\cleardoubleoddpage
+%\includeChapterImage
+%\printglossary[style=superglossarystyle,type=main,nonumberlist]
+%
+
+% Math symbol glossary
+%\cleardoubleoddpage
+%\includeChapterImage
+%\printglossary[style=long,type=symbols]
+
+% Math operators 
+%\printglossary[style=super,type=math]
+%
+%\printglossary[type=main]
+%
+%
+%\cleardoubleoddpage
+%
+\end{document}
+\endinput

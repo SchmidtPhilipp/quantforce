@@ -1,0 +1,78 @@
+
+\newglossary[slg]{symbols}{sym}{sbl}{Mathematical Symbols} % define a list of symbols
+\newglossary[mth]{math}{mat}{mtt}{Special Mathematical Operations} % define a list of symbols
+
+%\newglossary[gls]{glossar}{glo}{gls}{Glossar} % define a list of abbreviations
+
+% prevent hyphenating abbreviations
+\renewcommand\newacronym[3]{\hyphenation{#2}\oldnewacronym{#1}{#2}{#3}}
+
+% the default width of the description column looks odd when using KOMA
+% http://www.mrunix.de/forums/showthread.php?65790-Eine-Frage-guten-Stils-Glossaries-KOMA-(scrbook)-und-style-list
+\setlength{\glsdescwidth}{0.7\textwidth}
+
+% define a glossarystyle with linebrakes
+% http://tex.stackexchange.com/questions/203718/manual-line-break-in-glossaries-name
+\newlength\glsnamewidth
+\setlength{\glsnamewidth}{0.2\textwidth}
+\newglossarystyle{superglossarystyle}
+{%
+	\setglossarystyle{super}%
+	\renewenvironment{theglossary}%
+	{%
+		\tablehead{}%
+		\tabletail{}%
+		%\begin{supertabular}{p{\glsnamewidth}p{\glsdescwidth}}%
+		\begin{longtable}{p{\glsnamewidth}p{\glsdescwidth}}%
+			
+			%\begin{supertabular}{p{\glsnamewidth}p{\textwidth-2\tabcolsep-\glsnamewidth}}%
+		}%
+		{%
+			%\end{supertabular}%
+		\end{longtable}%
+	}%
+	\renewcommand{\glossentry}[2]{%
+		\raggedleft
+		\glsentryitem{##1}\glstarget{##1}{\glossentryname{##1}} &
+		\glossentrydesc{##1}\glspostdescription\space ##2\tabularnewline
+	}%
+}
+\setglossarystyle{superglossarystyle}
+%\makeglossaries % produces the *.ist file for makeindex.exe or makeglossaries
+
+
+% Fachbegriffe
+
+\newglossaryentry{reinforcement_learning}{
+	name={Reinforcement Learning},
+	description={Ein Bereich des maschinellen Lernens, in dem ein Agent durch Interaktion mit einer Umgebung eine optimale Strategie erlernt, um eine langfristige Belohnung zu maximieren}
+}
+
+\newglossaryentry{multi_agent_reinforcement_learning}{
+	name={Multi-Agent Reinforcement Learning},
+	description={Eine Erweiterung des Reinforcement Learning, bei der mehrere Agenten simultan in einer Umgebung agieren und interagieren}
+}
+
+\newglossaryentry{black_scholes_modell}{
+	name={Black-Scholes-Modell},
+	description={Ein Modell zur Bewertung von Derivaten, das auf der Annahme einer geometrischen Brown’schen Bewegung basiert}
+}
+
+\newglossaryentry{markov_decision_process}{
+	name={Markov-Entscheidungsprozess},
+	description={Mathematische Modellierung eines Entscheidungsproblems mit Zuständen, Aktionen, Belohnungen und Übergangswahrscheinlichkeiten}
+}
+
+\newglossaryentry{policy}{
+	name={Policy},
+	description={Strategie eines RL-Agenten, die beschreibt, welche Aktion in einem bestimmten Zustand ausgeführt wird}
+}
+
+\newglossaryentry{ml}{
+	name={Machine Learning},
+	description={Ein Teilgebiet der künstlichen Intelligenz, das sich mit der Entwicklung von Algorithmen und Modellen befasst, die es Computern ermöglichen, aus Daten zu lernen}
+}
+
+
+
+

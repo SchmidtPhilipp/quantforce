@@ -1,0 +1,32 @@
+{
+  "agent": "DQNAgent",
+  "tickers": [
+    "MSFT",
+    "AAPL",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA",
+    "NVDA",
+    "INTC",
+    "AMD",
+    "NFLX",
+    "ADBE",
+    "PYPL",
+    "CSCO",
+    "CMCSA",
+    "PEP",
+    "AVGO",
+    "TMUS",
+    "COST",
+    "QCOM",
+    "AMGN"
+  ],
+  "train_start": "2000-01-01",
+  "train_end": "2021-01-01",
+  "eval_start": "2021-01-01",
+  "eval_end": "2022-01-01",
+  "episodes": 100,
+  "lr": 0.001,
+  "gamma": 0.99
+}
