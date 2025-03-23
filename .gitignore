@@ -6,3 +6,5 @@ rl_portfolio_framework/temp/
 
 # Python-Cache-Ordner überall im Projekt ignorieren
 **/__pycache__/
+
+.DS_Store

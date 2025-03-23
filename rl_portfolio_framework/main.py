@@ -5,7 +5,8 @@ import os
 from agents.dqn_agent import DQNAgent
 from agents.random_agent import RandomAgent
 from envs.portfolio_env import PortfolioEnv
-from data.data_loader import download_data
+from data.downloader import download_data
+from data.preprocessor import add_technical_indicators
 from train import train_agent
 from evaluate import evaluate_agent
 from utils.start_tensorboard import start_tensorboard
@@ -21,9 +22,16 @@ def load_config(path):
 def main():
     # CLI arg: --config configs/dqn_msft.json
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True, help="Path to config file")
+    parser.add_argument("--config", type=str, help="Path to config file")
     args = parser.parse_args()
-    config = load_config(args.config)
+
+    if args.config:
+        config_path = args.config
+    else:
+        config_path = "configs/dqn_msft.json"
+        print(f"Keine Konfigurationsdatei angegeben. Verwende Standardkonfiguration: {config_path}")
+
+    config = load_config(config_path)
 
     tickers = config["tickers"]
     run_name = f"{config['agent']}_{'-'.join(tickers)}_{config['episodes']}ep"
@@ -33,6 +41,8 @@ def main():
     ##################################
     # Training setup
     train_data = download_data(tickers, config["train_start"], config["train_end"])
+    train_data = add_technical_indicators(train_data)  
+
     train_env = PortfolioEnv(train_data)
 
     train_agent_instance = DQNAgent(
@@ -48,10 +58,11 @@ def main():
     )
     ##################################
 
-
     ##################################
     # Evaluation setup
     eval_data = download_data(tickers, config["eval_start"], config["eval_end"])
+    eval_data = add_technical_indicators(eval_data)  # ✅ preprocess
+
     eval_env = PortfolioEnv(eval_data)
 
     eval_agent_instance = DQNAgent(
@@ -60,14 +71,37 @@ def main():
     )
     eval_agent_instance.load(load_path)
 
+    eval_agent_instance = RandomAgent(
+        act_dim=eval_env.action_space.shape[0]
+    )
+
     evaluate_agent(env=eval_env, agent=eval_agent_instance, config=config, run_name=run_name)
     ##################################
 
-
-    ##################################
     # END
     focus_tensorboard_tab()
 
 
 if __name__ == "__main__":
     main()
+
+
+
+# TODOS: 
+# finish the Data feting and preprocessing and testing functions
+# finsish the visualization functions
+
+# Agent classes:
+# renew the Agent classes such that the observalbes can have any number of features
+# but the actions are limited to the number of assets + 1 (cash)
+
+# Implement Multi-Agent training and evaluation
+# Implement the PortfolioEnv such that it can handle multiple agents at the same time
+# Implement the evaluation such that it can handle multiple agents at the same time
+
+# Implement the MADDPG algorithm
+# Implement the MADDPG agent with CPPI and TIPP and compare the results
+
+# Implement the MADDPG agent with other risk management strategies and compare the results
+
+# Implement classical agents 

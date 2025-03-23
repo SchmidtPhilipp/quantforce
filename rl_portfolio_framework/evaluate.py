@@ -52,8 +52,7 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
         log_weights(logger, tickers, weights_over_time[-1])
 
         logger.next_step()
-        logger.next_step()
-
+    
         # Compute metrics
         returns = calculate_returns(balances)
         drawdown = max_drawdown(balances)
@@ -72,11 +71,15 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     mean_balances = np.mean(balances_array, axis=0)
     std_balances = np.std(balances_array, axis=0)
 
+    logger.step = 0
+
     for t in range(len(mean_balances)):
         logger.log_scalar("02_eval/portfolio_value_mean", mean_balances[t])
         logger.log_scalar("02_eval/portfolio_value_std", std_balances[t])
         logger.next_step()
 
+    logger.step = 0
+    
     # Log metrics as scalars + emulated histograms
     logger.log_metrics(metrics)
     for name, values in metrics.items():

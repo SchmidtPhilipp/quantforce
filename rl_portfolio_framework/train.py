@@ -15,6 +15,10 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
 
+            # Überprüfen Sie die Form der Zustände
+            if state.shape != next_state.shape:
+                raise ValueError(f"Inconsistent state shapes: {state.shape} vs {next_state.shape}")
+
             agent.store((state, action, reward, next_state))
             agent.train()
 
@@ -36,7 +40,6 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
     # ✅ Save model into run folder
     if save_path is None:
         save_path = os.path.join(logger.run_path, "agent.pt")
-
 
     logger.close()
     agent.save(save_path)
