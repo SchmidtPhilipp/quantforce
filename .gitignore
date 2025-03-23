@@ -1,0 +1,8 @@
+# Projektordner ausschließen
+rl_portfolio_framework/checkpoints/
+rl_portfolio_framework/configs/
+rl_portfolio_framework/runs/
+rl_portfolio_framework/temp/
+
+# Python-Cache-Ordner überall im Projekt ignorieren
+**/__pycache__/
