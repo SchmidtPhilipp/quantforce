@@ -4,6 +4,7 @@ import os
 
 from agents.dqn_agent import DQNAgent
 from agents.random_agent import RandomAgent
+from agents.maddpg_agent import MADDPGAgent
 from envs.portfolio_env import PortfolioEnv
 from data.downloader import download_data
 from data.preprocessor import add_technical_indicators
@@ -50,6 +51,12 @@ def main():
         act_dim=train_env.action_space.shape[0]
     )
 
+    train_agent_instance = MADDPGAgent(
+        obs_dim=train_env.observation_space.shape[0],
+        act_dim=train_env.action_space.shape[0],
+        n_agents=2
+    )
+
     load_path = train_agent(
         env=train_env,
         agent=train_agent_instance,
@@ -61,7 +68,7 @@ def main():
     ##################################
     # Evaluation setup
     eval_data = download_data(tickers, config["eval_start"], config["eval_end"])
-    eval_data = add_technical_indicators(eval_data)  # ✅ preprocess
+    eval_data = add_technical_indicators(eval_data)  
 
     eval_env = PortfolioEnv(eval_data)
 
@@ -70,10 +77,6 @@ def main():
         act_dim=eval_env.action_space.shape[0]
     )
     eval_agent_instance.load(load_path)
-
-    eval_agent_instance = RandomAgent(
-        act_dim=eval_env.action_space.shape[0]
-    )
 
     evaluate_agent(env=eval_env, agent=eval_agent_instance, config=config, run_name=run_name)
     ##################################
@@ -88,20 +91,26 @@ if __name__ == "__main__":
 
 
 # TODOS: 
-# finish the Data feting and preprocessing and testing functions
-# finsish the visualization functions
+# TODO: I THINK there is something wrong with the interaciton between the Portfolio env and the MADDPG agent
+# TODO: It seems like the states are not given in the right manner to the agent the agent expects a three dimensional state (batch_size, n_agents, obs_dim) but we do not get the n_agents dimension
+# TODO: I think the problem is in the PortfolioEnv class where we do not have the n_agents dimension in the state maybe we should extend the environment to handle multiple agents and single agents at the same time
+# TODO: The actions seem also to be a bit strange because the MADDPG agent generates a list of actions for each agent but the PortfolioEnv expects a single action for all agents
+# TODO: The MADDPG agent gives a state vector for each agent but the PortfolioEnv expects a single state vector for all agents. 
+
+
+
+# TODO: In the end i would like to use a nested dict in the config file to specify the architecture of the angent (Net architecture, etc.)
+# and the hyperparameters of the training (learning rate, gamma, etc.)
+
 
 # Agent classes:
-# renew the Agent classes such that the observalbes can have any number of features
-# but the actions are limited to the number of assets + 1 (cash)
+# TODO Implement Multi-Agent training and evaluation
+# TODO Implement the PortfolioEnv such that it can handle multiple agents at the same time
+# TODO Implement the evaluation such that it can handle multiple agents at the same time
 
-# Implement Multi-Agent training and evaluation
-# Implement the PortfolioEnv such that it can handle multiple agents at the same time
-# Implement the evaluation such that it can handle multiple agents at the same time
+# TODO Implement the MADDPG algorithm
+# TODO Implement the MADDPG agent with CPPI and TIPP and compare the results
 
-# Implement the MADDPG algorithm
-# Implement the MADDPG agent with CPPI and TIPP and compare the results
+# TODO Implement the MADDPG agent with other risk management strategies and compare the results
 
-# Implement the MADDPG agent with other risk management strategies and compare the results
-
-# Implement classical agents 
+# TODO Implement classical agents 
