@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import warnings
 
-def download_data(tickers, start, end, interval="1d", progress=False, cache_dir="data_cache"):
+def download_data(tickers, start, end, interval="1d", progress=False, cache_dir="data_cache", verbosity=0):
     """
     Downloads historical financial data using yfinance and performs forward/backward filling.
 
@@ -28,7 +28,8 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
 
     # Check if cached data exists
     if os.path.exists(cache_file):
-        print(f"Loading data from cache: {cache_file}")
+        if verbosity > 0:
+            print(f"Loading data from cache: {cache_file}")
         data = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
     else:
         # Download data with separate groups per ticker (multi-indexed columns)
@@ -40,6 +41,8 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
 
         # Save data to cache
         data.to_csv(cache_file)
-        print(f"Data cached to: {cache_file}")
+        if verbosity > 0:
+            print(f"Data cached to: {cache_file}")
+
 
     return data

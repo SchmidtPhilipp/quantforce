@@ -59,7 +59,7 @@ class MADDPGAgent:
         critic_optimizers (list): List of optimizers for critic networks.
         memory (list): Replay memory for storing transitions.
     """
-    def __init__(self, obs_dim, act_dim, n_agents, lr=1e-3, gamma=0.99, tau=0.01, verbosity=1):
+    def __init__(self, obs_dim, act_dim, n_agents, lr=1e-3, gamma=0.99, tau=0.01, verbosity=0):
         """
         Initialize the MADDPG agent.
 
