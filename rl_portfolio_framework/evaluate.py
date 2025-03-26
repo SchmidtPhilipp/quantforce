@@ -92,7 +92,14 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     # Print summary
     print(f"\n📊 Evaluation Summary ({n_runs} runs):")
     for name, values in metrics.items():
-        print(f"{name.capitalize():20s}: {np.mean(values):.4f} ± {np.std(values):.4f}")
+        if name in ["sharpe", "sortino", "calmar"]:  # Ratios
+            print(f"{name.capitalize():<20s}: {np.mean(values):.4f} ± {np.std(values):.4f}")
+        elif name in ["drawdown", "cumulative", "annualized"]:  # Percentages
+            print(f"{name.capitalize():<20s}: {np.mean(values) * 100:.2f}% ± {np.std(values) * 100:.2f}%")
+        elif name == "volatility":  # Volatility as percentage
+            print(f"{name.capitalize():<20s}: {np.mean(values) * 100:.2f}% ± {np.std(values) * 100:.2f}%")
+        else:
+            print(f"{name.capitalize():<20s}: {np.mean(values):.4f} ± {np.std(values):.4f}")
 
     print("✅ Evaluation completed, logged, and saved.")
     return metrics
