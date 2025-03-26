@@ -37,7 +37,7 @@ def main():
     tickers = config["tickers"]
     run_name = f"{config['agent']}_{'-'.join(tickers)}_{config['episodes']}ep"
 
-    start_tensorboard(mode="safari")
+    start_tensorboard(mode="safari", port=6005)
 
     ##################################
     # Training setup

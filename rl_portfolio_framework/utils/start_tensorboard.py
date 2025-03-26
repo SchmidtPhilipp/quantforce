@@ -20,7 +20,6 @@ def is_vscode_extension_installed(extension_id):
     except Exception:
         return False
 
-
 def start_tensorboard(logdir="runs", port=6006, mode="safari"):
     tb_url = f"http://localhost:{port}"
 
@@ -38,7 +37,12 @@ def start_tensorboard(logdir="runs", port=6006, mode="safari"):
     if mode == "safari":
         print("🌐 Bringing TensorBoard tab to front (Safari)...")
         bring_safari_tab_to_front(title_match="TensorBoard", url_match=tb_url)
-
+    elif mode == "chrome":
+        print("🌐 Opening TensorBoard in Google Chrome...")
+        webbrowser.get("chrome").open(tb_url)
+    elif mode == "firefox":
+        print("🌐 Opening TensorBoard in Firefox...")
+        webbrowser.get("firefox").open(tb_url)
     elif mode == "vscode":
         if shutil.which("code") is None:
             print("❌ VS Code CLI not found. Install it via 'Shell Command: Install code in PATH'.")
@@ -52,6 +56,5 @@ def start_tensorboard(logdir="runs", port=6006, mode="safari"):
 
         subprocess.run(["code", logdir])
         print(f"🧠 Open TensorBoard tab inside VS Code manually if needed ({logdir})")
-
     else:
-        print(f"❌ Unknown mode: {mode} — use 'safari' or 'vscode'")
+        print(f"❌ Unknown mode: {mode} — use 'safari', 'chrome', 'firefox', or 'vscode'")
