@@ -20,6 +20,9 @@ def load_config(path):
         return json.load(f)
 
 
+# Start with:  python main.py --config configs/dqn_msft.json
+# Test with: python -m unittest discover -s tests -p "test_*.py"
+
 def main():
     # CLI arg: --config configs/dqn_msft.json
     parser = argparse.ArgumentParser()
