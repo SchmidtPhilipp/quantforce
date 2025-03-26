@@ -23,7 +23,8 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             agent.train()
 
             # Log per-step metrics
-            logger.log_scalar("01_train/step_reward", reward)
+            for agent_idx, agent_reward in enumerate(reward):
+                logger.log_scalar(f"01_train/agent_{agent_idx}_reward", agent_reward)
             logger.log_scalar("01_train/portfolio_value", env.balance)
             logger.next_step()
 
@@ -32,11 +33,15 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             steps += 1
 
         # Log episode summary
-        logger.log_scalar("01_train/total_reward_of_episode", total_reward)
+        for agent_idx, agent_reward in enumerate(total_reward):
+            logger.log_scalar(f"01_train/agent_{agent_idx}_total_reward_of_episode", agent_reward)
+
         logger.next_step()
 
-        print(f"[Train] Episode {ep+1:>3} | Total Reward: {total_reward:.4f} | Steps: {steps}")
-
+        # Print episode summary for multiple agents
+        agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
+        print(f"[Train] Episode {ep+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
+        
     # ✅ Save model into run folder
     if save_path is None:
         save_path = os.path.join(logger.run_path, "agent.pt")

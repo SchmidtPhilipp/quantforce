@@ -195,3 +195,52 @@ class MADDPGAgent:
 
             if self.verbosity > 0:
                 print(f"Agent {i} target networks updated.")
+
+    def save(self, save_path):
+        """
+        Save the MADDPG agent's actor and critic networks to the specified path.
+
+        Parameters:
+            save_path (str): Path to save the model files.
+        """
+        save_data = {
+            "actors": [actor.state_dict() for actor in self.actors],
+            "critics": [critic.state_dict() for critic in self.critics],
+            "target_actors": [target_actor.state_dict() for target_actor in self.target_actors],
+            "target_critics": [target_critic.state_dict() for target_critic in self.target_critics],
+            "actor_optimizers": [optimizer.state_dict() for optimizer in self.actor_optimizers],
+            "critic_optimizers": [optimizer.state_dict() for optimizer in self.critic_optimizers],
+        }
+        torch.save(save_data, save_path)
+        if self.verbosity > 0:
+            print(f"MADDPG agent saved to {save_path}")
+
+    def load(self, load_path):
+        """
+        Load the MADDPG agent's actor and critic networks from the specified path.
+
+        Parameters:
+            load_path (str): Path to the saved model file.
+        """
+        checkpoint = torch.load(load_path)
+
+        # Load actor and critic networks
+        for i, actor in enumerate(self.actors):
+            actor.load_state_dict(checkpoint["actors"][i])
+        for i, critic in enumerate(self.critics):
+            critic.load_state_dict(checkpoint["critics"][i])
+
+        # Load target actor and critic networks
+        for i, target_actor in enumerate(self.target_actors):
+            target_actor.load_state_dict(checkpoint["target_actors"][i])
+        for i, target_critic in enumerate(self.target_critics):
+            target_critic.load_state_dict(checkpoint["target_critics"][i])
+
+        # Load optimizers
+        for i, optimizer in enumerate(self.actor_optimizers):
+            optimizer.load_state_dict(checkpoint["actor_optimizers"][i])
+        for i, optimizer in enumerate(self.critic_optimizers):
+            optimizer.load_state_dict(checkpoint["critic_optimizers"][i])
+
+        if self.verbosity > 0:
+            print(f"MADDPG agent loaded from {load_path}")

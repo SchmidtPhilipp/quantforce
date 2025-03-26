@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import os
 import warnings
+from .preprocessor import add_technical_indicators
 
 def download_data(tickers, start, end, interval="1d", progress=False, cache_dir="data_cache", verbosity=0):
     """
@@ -46,3 +47,30 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
 
 
     return data
+
+def get_data(tickers, start, end, indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"), verbosity=0):
+    """
+    Downloads historical financial data and adds technical indicators.  
+    """
+    train_data = download_data(tickers, start, end, verbosity=verbosity)
+    train_data = add_technical_indicators(train_data)  
+    train_data = drop_columns(train_data, indicators)
+    return train_data
+
+
+def drop_columns(data, indicators):
+    """
+    Drops all columns that are not 'Close' or specified indicators.
+
+    Parameters:
+        data (pd.DataFrame): The input data with multi-indexed columns.
+        indicators (list[str]): List of indicator names to retain.
+
+    Returns:
+        pd.DataFrame: Filtered data containing only 'Close' and specified indicator columns.
+    """
+    # Keep only 'Close' and columns matching the specified indicators
+    filtered_columns = [
+        col for col in data.columns if col[1] == "Close" or col[1] in indicators
+    ]
+    return data.loc[:, filtered_columns]

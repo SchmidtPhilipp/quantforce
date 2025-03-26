@@ -6,14 +6,12 @@ from agents.dqn_agent import DQNAgent
 from agents.random_agent import RandomAgent
 from agents.maddpg_agent import MADDPGAgent
 from envs.portfolio_agent_generator import create_portfolio_env
-from data.downloader import download_data
-from data.preprocessor import add_technical_indicators
 from train import train_agent
 from evaluate import evaluate_agent
 from utils.start_tensorboard import start_tensorboard
 from utils.safari import focus_tensorboard_tab
-from utils.save_config import save_config
 import warnings
+from data.downloader import get_data
 
 
 def load_config(path):
@@ -33,7 +31,7 @@ def main():
     if args.config:
         config_path = args.config
     else:
-        config_path = "configs/dqn_msft.json"
+        config_path = "configs/maddpg_msft.json"
         print(f"Keine Konfigurationsdatei angegeben. Verwende Standardkonfiguration: {config_path}")
 
     config = load_config(config_path)
@@ -45,8 +43,7 @@ def main():
 
     ##################################
     # Training setup
-    train_data = download_data(tickers, config["train_start"], config["train_end"])
-    train_data = add_technical_indicators(train_data)  
+    train_data = get_data(tickers, config["train_start"], config["train_end"], indicators=config["indicators"])
 
     train_env = create_portfolio_env(
         data=train_data,
@@ -85,8 +82,7 @@ def main():
 
             ##################################
             # Evaluation setup
-            eval_data = download_data(tickers, config["eval_start"], config["eval_end"])
-            eval_data = add_technical_indicators(eval_data)  
+            eval_data = get_data(tickers, config["eval_start"], config["eval_end"], indicators=config["indicators"])
 
             eval_env = create_portfolio_env(
                 data=eval_data,
