@@ -119,15 +119,16 @@ class PortfolioEnv(gym.Env):
                 return obs, reward, done, {}
 
             new_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
-            asset_returns = new_prices / (old_prices + 1e-15) - 1
+            asset_returns = new_prices / (old_prices + 1e-15)
+
             if self.verbosity > 0:
                 print(f"Old prices: {old_prices} | New prices: {new_prices} | Returns: {asset_returns}")
                 print(f"Asset weights: {asset_weights} | Cash weight: {cash_weight}")
 
             portfolio_return = cash_weight * 1.0 + np.dot(asset_weights, asset_returns)
 
-            self.balance *= (1 + portfolio_return)
-            reward = np.log(1 + portfolio_return)
+            self.balance *= (portfolio_return)
+            reward = np.log(portfolio_return)
             rewards.append(reward)
 
             obs = self.data.iloc[self.current_step].values.astype(np.float32)

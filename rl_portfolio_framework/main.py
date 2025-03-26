@@ -13,6 +13,7 @@ from evaluate import evaluate_agent
 from utils.start_tensorboard import start_tensorboard
 from utils.safari import focus_tensorboard_tab
 from utils.save_config import save_config
+import warnings
 
 
 def load_config(path):
@@ -77,38 +78,51 @@ def main():
         run_name=run_name
     )
     ##################################
+    try:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")  # Alle Warnungen abfangen
 
-    ##################################
-    # Evaluation setup
-    eval_data = download_data(tickers, config["eval_start"], config["eval_end"])
-    eval_data = add_technical_indicators(eval_data)  
 
-    eval_env = create_portfolio_env(
-        data=eval_data,
-        initial_balance=config.get("initial_balance", 1000),
-        verbosity=config.get("verbosity", 0),
-        n_agents=config.get("n_agents", 1),
-        shared_obs=config.get("shared_obs", True),
-        shared_action=config.get("shared_action", True)
-    )
+            ##################################
+            # Evaluation setup
+            eval_data = download_data(tickers, config["eval_start"], config["eval_end"])
+            eval_data = add_technical_indicators(eval_data)  
 
-    if config["agent"] == "DQNAgent":
-        eval_agent_instance = DQNAgent(
-            obs_dim=eval_env.observation_space.shape[0],
-            act_dim=eval_env.action_space.shape[0]
-        )
-    elif config["agent"] == "MADDPGAgent":
-        eval_agent_instance = MADDPGAgent(
-            obs_dim=eval_env.observation_space.shape[0],
-            act_dim=eval_env.action_space.shape[0],
-            n_agents=config.get("n_agents", 1)
-        )
-    else:
-        raise ValueError(f"Unknown agent type: {config["agent"]}")
+            eval_env = create_portfolio_env(
+                data=eval_data,
+                initial_balance=config.get("initial_balance", 1000),
+                verbosity=config.get("verbosity", 0),
+                n_agents=config.get("n_agents", 1),
+                shared_obs=config.get("shared_obs", True),
+                shared_action=config.get("shared_action", True)
+            )
 
-    eval_agent_instance.load(load_path)
+            if config["agent"] == "DQNAgent":
+                eval_agent_instance = DQNAgent(
+                    obs_dim=eval_env.observation_space.shape[0],
+                    act_dim=eval_env.action_space.shape[0]
+                )
+            elif config["agent"] == "MADDPGAgent":
+                eval_agent_instance = MADDPGAgent(
+                    obs_dim=eval_env.observation_space.shape[0],
+                    act_dim=eval_env.action_space.shape[0],
+                    n_agents=config.get("n_agents", 1)
+                )
+            else:
+                raise ValueError(f"Unknown agent type: {config["agent"]}")
 
-    evaluate_agent(env=eval_env, agent=eval_agent_instance, config=config, run_name=run_name)
+            eval_agent_instance.load(load_path)
+
+
+            evaluate_agent(env=eval_env, agent=eval_agent_instance, config=config, run_name=run_name)
+
+            # Überprüfen, ob eine RuntimeWarning aufgetreten ist
+            for warning in w:
+                if issubclass(warning.category, RuntimeWarning):
+                    print(f"RuntimeWarning während der Evaluation: {warning.message}")
+    except Exception as e:
+        print(f"Error during evaluation: {e}")
+    
     ##################################
 
     # END
