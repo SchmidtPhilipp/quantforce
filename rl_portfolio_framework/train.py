@@ -1,5 +1,6 @@
 from trainer.logger import Logger
 import os
+import numpy as np
 
 def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
     run_name = "TRAIN_" + (run_name or "default")
@@ -15,7 +16,7 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
 
-            # Überprüfen Sie die Form der Zustände
+            # Check the shape of states
             if state.shape != next_state.shape:
                 raise ValueError(f"Inconsistent state shapes: {state.shape} vs {next_state.shape}")
 
@@ -23,8 +24,12 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             agent.train()
 
             # Log per-step metrics
-            for agent_idx, agent_reward in enumerate(reward):
-                logger.log_scalar(f"01_train/agent_{agent_idx}_reward", agent_reward)
+            if isinstance(reward, (list, np.ndarray)):  # Multi-agent rewards
+                for agent_idx, agent_reward in enumerate(reward):
+                    logger.log_scalar(f"01_train/agent_{agent_idx}_reward", agent_reward)
+            else:  # Single-agent reward
+                logger.log_scalar("01_train/agent_0_reward", reward)
+
             logger.log_scalar("01_train/portfolio_value", env.balance)
             logger.next_step()
 
@@ -33,13 +38,20 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             steps += 1
 
         # Log episode summary
-        for agent_idx, agent_reward in enumerate(total_reward):
-            logger.log_scalar(f"01_train/agent_{agent_idx}_total_reward_of_episode", agent_reward)
+        if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
+            for agent_idx, agent_reward in enumerate(total_reward):
+                logger.log_scalar(f"01_train/agent_{agent_idx}_total_reward_of_episode", agent_reward)
+        else:  # Single-agent reward
+            logger.log_scalar("01_train/agent_0_total_reward_of_episode", total_reward)
 
         logger.next_step()
 
         # Print episode summary for multiple agents
-        agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
+        if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
+            agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
+        else:  # Single-agent reward
+            agent_rewards_str = f"Agent 0: {total_reward:.4f}"
+
         print(f"[Train] Episode {ep+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
         
     # ✅ Save model into run folder

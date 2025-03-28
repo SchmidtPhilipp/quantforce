@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import random
+from agents.model_builder import ModelBuilder
 
 class Actor(nn.Module):
     """
@@ -59,7 +60,7 @@ class MADDPGAgent:
         critic_optimizers (list): List of optimizers for critic networks.
         memory (list): Replay memory for storing transitions.
     """
-    def __init__(self, obs_dim, act_dim, n_agents, lr=1e-3, gamma=0.99, tau=0.01, verbosity=0):
+    def __init__(self, obs_dim, act_dim, n_agents, actor_config=None, critic_config=None, lr=1e-3, gamma=0.99, tau=0.01, verbosity=0):
         """
         Initialize the MADDPG agent.
 
@@ -77,13 +78,32 @@ class MADDPGAgent:
         self.tau = tau
         self.verbosity = verbosity
 
-        # Initialize actors and critics for each agent
-        self.actors = [Actor(obs_dim, act_dim) for _ in range(n_agents)]
-        self.critics = [Critic(obs_dim * n_agents, act_dim * n_agents) for _ in range(n_agents)]
-        self.target_actors = [Actor(obs_dim, act_dim) for _ in range(n_agents)]
-        self.target_critics = [Critic(obs_dim * n_agents, act_dim * n_agents) for _ in range(n_agents)]
+        # Dynamically generate the default actor and critic configs based on obs_dim and act_dim
+        default_actor_config = [
+            {"type": "Linear", "params": {"in_features": obs_dim, "out_features": 128}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 128, "out_features": 64}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 64, "out_features": act_dim}}
+        ]
 
-        # Initialize optimizers for actors and critics
+        default_critic_config = [
+            {"type": "Linear", "params": {"in_features": obs_dim * n_agents + act_dim * n_agents, "out_features": 128}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 128, "out_features": 64}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 64, "out_features": 1}}
+        ]
+
+        # Use the default configs if no custom configs are provided
+        actor_config = actor_config or default_actor_config
+        critic_config = critic_config or default_critic_config
+
+        # Create actor and critic networks
+        self.actors = [ModelBuilder(actor_config).build() for _ in range(n_agents)]
+        self.critics = [ModelBuilder(critic_config).build() for _ in range(n_agents)]
+
+        # Create target networks
+        self.target_actors = [ModelBuilder(actor_config).build() for _ in range(n_agents)]
+        self.target_critics = [ModelBuilder(critic_config).build() for _ in range(n_agents)]
+
+        # Optimizers
         self.actor_optimizers = [optim.Adam(actor.parameters(), lr=lr) for actor in self.actors]
         self.critic_optimizers = [optim.Adam(critic.parameters(), lr=lr) for critic in self.critics]
 
