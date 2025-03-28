@@ -5,43 +5,6 @@ import numpy as np
 import random
 from agents.model_builder import ModelBuilder
 
-class Actor(nn.Module):
-    """
-    Actor network for the MADDPG agent.
-    This network takes the state as input and outputs the action.
-    """
-    def __init__(self, obs_dim, act_dim):
-        super(Actor, self).__init__()
-        self.fc1 = nn.Linear(obs_dim, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, act_dim)
-        self.relu = nn.ReLU()
-        self.tanh = nn.Tanh()
-
-    def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.tanh(self.fc3(x))
-        return x
-
-class Critic(nn.Module):
-    """
-    Critic network for the MADDPG agent.
-    This network takes the state and action as input and outputs the Q-value.
-    """
-    def __init__(self, obs_dim, act_dim):
-        super(Critic, self).__init__()
-        self.fc1 = nn.Linear(obs_dim + act_dim, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 1)
-        self.relu = nn.ReLU()
-
-    def forward(self, x, a):
-        x = self.relu(self.fc1(torch.cat([x, a], dim=1)))
-        x = self.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
 class MADDPGAgent:
     """
     Multi-Agent Deep Deterministic Policy Gradient (MADDPG) agent.
@@ -176,11 +139,19 @@ class MADDPGAgent:
                 # Get the actions for the next states from the target actors
                 next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)]
                 next_actions = torch.cat(next_actions, dim=1)
+
+                # Concatenate next_states and next_actions
+                next_inputs = torch.cat([next_states.view(32, -1), next_actions], dim=-1)
+
                 # Compute the target Q value
-                target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_states.view(32, -1), next_actions).squeeze()
+                target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_inputs).squeeze()
+
+            # Concatenate states and actions for the current Q value
+            current_inputs = torch.cat([states.view(32, -1), actions.view(32, -1)], dim=-1)
 
             # Compute the current Q value
-            current_q = self.critics[i](states.view(32, -1), actions.view(32, -1)).squeeze()
+            current_q = self.critics[i](current_inputs).squeeze()
+
             # Compute the critic loss
             critic_loss = nn.MSELoss()(current_q, target_q)
 
@@ -195,8 +166,12 @@ class MADDPGAgent:
             # Update actor
             current_actions = [self.actors[j](states[:, j, :]) if j == i else actions[:, j, :] for j in range(self.n_agents)]
             current_actions = torch.cat(current_actions, dim=1)
+
+            # Concatenate states and current actions
+            actor_inputs = torch.cat([states.view(32, -1), current_actions], dim=-1)
+
             # Compute the actor loss
-            actor_loss = -self.critics[i](states.view(32, -1), current_actions).mean()
+            actor_loss = -self.critics[i](actor_inputs).mean()
 
             # Optimize the actor
             self.actor_optimizers[i].zero_grad()
