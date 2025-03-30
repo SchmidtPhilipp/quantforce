@@ -4,7 +4,7 @@ from envs.base_portfolio_env import BasePortfolioEnv
 
 
 class SingleAgentPortfolioEnv(BasePortfolioEnv):
-    def __init__(self, data, initial_balance=1_000, verbosity=0, trade_cost_percent=0.0, trade_cost_fixed=0.0):
+    def __init__(self, data, initial_balance=100_000, verbosity=1, trade_cost_percent=0.0, trade_cost_fixed=0.0):
         """
         Single-Agent Portfolio Environment mit Handelskosten.
 
@@ -26,6 +26,9 @@ class SingleAgentPortfolioEnv(BasePortfolioEnv):
             dtype=np.float32
         )
         self.previous_weights = np.zeros(self.n_assets + 1)  # Start mit 100% Cash
+        self.cash = initial_balance  # Startkapital in Cash
+        self.asset_holdings = np.zeros(self.n_assets)  # Start mit 0 Assets
+        self.verbosity = verbosity
 
     def _get_observation(self):
         """
@@ -46,9 +49,10 @@ class SingleAgentPortfolioEnv(BasePortfolioEnv):
             done (bool): Ob die Episode beendet ist.
             info (dict): Zusätzliche Informationen.
         """
-        # Aktion validieren und normalisieren
-        weights = np.clip(action, 0, 1)
-        weights /= np.sum(weights) + 1e-8
+        # Aktion validieren und normalisieren mit Softmax
+        max_action = np.max(action)  # Für numerische Stabilität
+        exp_action = np.exp(action - max_action)  # Subtrahiere max_action für Stabilität
+        weights = exp_action / np.sum(exp_action)  # Softmax-Normalisierung
 
         cash_weight = weights[-1]
         asset_weights = weights[:-1]
@@ -72,31 +76,38 @@ class SingleAgentPortfolioEnv(BasePortfolioEnv):
         if np.any(old_prices <= 0) or np.any(new_prices <= 0):
             raise ValueError("Ungültige Preise gefunden (<= 0). Überprüfen Sie die Eingabedaten.")
 
-        # Prozentuale Rendite berechnen
-        asset_returns = new_prices / old_prices - 1
+        # Berechnung des aktuellen Portfoliowerts
+        current_portfolio_value = self.cash + np.sum(self.asset_holdings * new_prices)
 
-        # Portfolio-Rendite berechnen
-        portfolio_return = cash_weight * 1.0 + np.dot(asset_weights, asset_returns)
+        # Zielverteilung berechnen (basierend auf der Aktion)
+        target_cash = current_portfolio_value * cash_weight
+        target_asset_values = current_portfolio_value * asset_weights
+
+        # Berechnung der Zielanzahl der Assets
+        target_asset_numbers = np.floor(target_asset_values / new_prices)
+
+        # Berechnung der Differenz zwischen aktueller und Zielverteilung
+        asset_differences = target_asset_numbers - self.asset_holdings
 
         # Handelskosten berechnen
-        trade_amounts = np.abs(weights - self.previous_weights)  # Änderungen in den Gewichten
-        trade_costs = np.sum(trade_amounts[:-1] * self.trade_cost_percent) + np.sum(trade_amounts > 0) * self.trade_cost_fixed
+        buy_costs = np.sum(np.maximum(asset_differences, 0) * new_prices)  # Kosten für Käufe
+        sell_proceeds = np.sum(np.maximum(-asset_differences, 0) * new_prices)  # Einnahmen aus Verkäufen
+        trade_costs_percent = np.sum(np.abs(asset_differences) * new_prices * self.trade_cost_percent)
+        trade_costs_fixed = np.sum(asset_differences != 0) * self.trade_cost_fixed
+        total_trade_costs = trade_costs_percent + trade_costs_fixed
 
-        # Portfolio-Rendite nach Abzug der Handelskosten
-        portfolio_return -= trade_costs
+        # Aktualisierung von Cash und Asset-Holdings
+        self.cash += sell_proceeds - buy_costs - total_trade_costs
+        self.asset_holdings = target_asset_numbers
 
-        # Robustheit: Überprüfen, ob die Portfolio-Rendite gültig ist
-        if portfolio_return < -1:
-            portfolio_return = -1  # Verlust auf maximal 100% begrenzen
+        # Portfolio-Wert berechnen
+        portfolio_value = self.cash + np.sum(self.asset_holdings * new_prices)
+
+        # Belohnung berechnen (absolute Veränderung des Portfoliowerts nach Abzug der Handelskosten)
+        reward = portfolio_value - self.balance
 
         # Balance aktualisieren
-        self.balance *= (1 + portfolio_return)
-
-        # Belohnung berechnen
-        reward = portfolio_return
-
-        # Aktualisiere vorherige Gewichte
-        self.previous_weights = weights
+        self.balance = portfolio_value
 
         # Nächste Beobachtung abrufen
         obs = self.data.iloc[self.current_step].values.astype(np.float32)
@@ -105,9 +116,7 @@ class SingleAgentPortfolioEnv(BasePortfolioEnv):
         if self.verbosity > 0:
             print(f"Step: {self.current_step} | Reward: {reward:.4f} | Balance: {self.balance:.2f}")
             print(f"Action: {action} | Weights: {weights} | Prices: {new_prices}")
-            print(f"Portfolio return: {portfolio_return:.4f} | Asset returns: {asset_returns}")
-            print(f"Trade costs: {trade_costs:.4f} | Trade amounts: {trade_amounts}")
-            print(f"Obs: {obs}")
-            print(f"Observation shape: {obs.shape}")
+            print(f"Target asset numbers: {target_asset_numbers} | Current asset holdings: {self.asset_holdings}")
+            print(f"Remaining cash: {self.cash:.2f} | Trade costs: {total_trade_costs:.4f}")
 
         return obs, reward, done, {}

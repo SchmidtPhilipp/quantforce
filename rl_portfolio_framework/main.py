@@ -31,7 +31,7 @@ def main():
     if args.config:
         config_path = args.config
     else:
-        config_path = "configs/maddpg_msft.json"
+        config_path = "configs/dqn_msft.json"
         print(f"Keine Konfigurationsdatei angegeben. Verwende Standardkonfiguration: {config_path}")
 
     config = load_config(config_path)
@@ -47,11 +47,13 @@ def main():
 
     train_env = create_portfolio_env(
         data=train_data,
-        initial_balance=config.get("initial_balance", 1000),
+        initial_balance=config.get("initial_balance", 100_000),
         verbosity=config.get("verbosity", 0),
         n_agents=config.get("n_agents", 1),
         shared_obs=config.get("shared_obs", True),
-        shared_action=config.get("shared_action", True)
+        shared_action=config.get("shared_action", True),
+        trade_cost_percent=config.get("trade_cost_percent", 0.01),
+        trade_cost_fixed=config.get("trade_cost_fixed", 1.0)
     )
 
     if config["agent"] == "DQNAgent":
@@ -83,7 +85,7 @@ def main():
 
     eval_env = create_portfolio_env(
         data=eval_data,
-        initial_balance=config.get("initial_balance", 1000),
+        initial_balance=config.get("initial_balance", 100_000),
         verbosity=config.get("verbosity", 0),
         n_agents=config.get("n_agents", 1),
         shared_obs=config.get("shared_obs", True),

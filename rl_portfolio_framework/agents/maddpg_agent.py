@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import numpy as np
 import random
 from agents.model_builder import ModelBuilder
@@ -89,7 +90,7 @@ class MADDPGAgent:
             states (list): List of states for each agent.
 
         Returns:
-            actions (list): List of actions for each agent.
+            actions (list): List of normalized actions for each agent.
         """
         actions = []
         for i, actor in enumerate(self.actors):
@@ -99,9 +100,13 @@ class MADDPGAgent:
             state = torch.FloatTensor(state).unsqueeze(0)
             with torch.no_grad():
                 action = actor(state).squeeze().numpy()
+            
+            # Normalize the action using Softmax
+            action = F.softmax(torch.FloatTensor(action), dim=0).numpy()
+            
             actions.append(action)
             if self.verbosity > 0:
-                print(f"Agent {i} action: {action}")
+                print(f"Agent {i} action (normalized): {action}")
         return actions
 
     def store(self, transition):
@@ -138,6 +143,11 @@ class MADDPGAgent:
             with torch.no_grad():
                 # Get the actions for the next states from the target actors
                 next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)]
+                
+                # Normalize each agent's actions
+                next_actions = [F.softmax(action, dim=1) for action in next_actions]
+                
+                # Concatenate normalized actions
                 next_actions = torch.cat(next_actions, dim=1)
 
                 # Concatenate next_states and next_actions

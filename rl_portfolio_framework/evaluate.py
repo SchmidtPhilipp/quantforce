@@ -19,7 +19,16 @@ def runs_single_evaluation(env, agent):
         next_state, reward, done, _ = env.step(action)
         balances.append(env.balance)
         state = next_state
+        
+        if hasattr(env, "n_agents") and env.n_agents > 1:
+            action = np.mean(action, axis=0)
+
         weights_over_time.append(action)
+
+    print(f"📈 Evaluation Summary:")
+    print(f"Final Portfolio Value: {balances[-1]:.2f}")
+    print(f"Final Asset Holdings: {env.asset_holdings}")
+    print("-" * 50)
 
     return balances, weights_over_time
 

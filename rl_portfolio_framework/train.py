@@ -53,6 +53,9 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
             agent_rewards_str = f"Agent 0: {total_reward:.4f}"
 
         print(f"[Train] Episode {ep+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
+        print(f"Portfolio Value: {env.balance:.2f}")
+        print(f"Asset Holdings: {env.asset_holdings}")
+        print("-" * 50)
         
     # ✅ Save model into run folder
     if save_path is None:
