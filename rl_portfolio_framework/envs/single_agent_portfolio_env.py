@@ -120,3 +120,15 @@ class SingleAgentPortfolioEnv(BasePortfolioEnv):
             print(f"Remaining cash: {self.cash:.2f} | Trade costs: {total_trade_costs:.4f}")
 
         return obs, reward, done, {}
+    
+
+    def reset(self):
+        """
+        Setzt das Environment zurück und gibt die erste Beobachtung zurück.
+        """
+        self.current_step = 0
+        self.balance = self.initial_balance
+        self.cash = self.initial_balance
+        self.asset_holdings = np.zeros(self.n_assets)
+        obs = self._get_observation()
+        return obs

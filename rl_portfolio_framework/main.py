@@ -121,5 +121,5 @@ if __name__ == "__main__":
     main()
 
 
-# TODO: Option implementieren für Agenten welche nicht nur den aktuellen State 
-# sondern auch die Historie betrachten
+
+
