@@ -46,7 +46,8 @@
 # Generelle TODOs
 # DONE: Tensorboard Logging
 
-
+# TODO: Hyperparameter Tuning
+# TODO: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
 # TODO: Visualisierungen erstellen.
 # TODO: Tracken der besten implementierungen. 
 

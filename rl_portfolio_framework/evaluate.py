@@ -13,6 +13,7 @@ def runs_single_evaluation(env, agent):
     done = False
     balances = [env.balance]
     weights_over_time = []
+    asset_holdings = []
 
     while not done:
         action = agent.act(state)
@@ -24,13 +25,14 @@ def runs_single_evaluation(env, agent):
             action = np.mean(action, axis=0)
 
         weights_over_time.append(action)
+        asset_holdings.append(env.asset_holdings)
 
     print(f"📈 Evaluation Summary:")
     print(f"Final Portfolio Value: {balances[-1]:.2f}")
     print(f"Final Asset Holdings: {env.asset_holdings}")
     print("-" * 50)
 
-    return balances, weights_over_time
+    return balances, weights_over_time, asset_holdings
 
 
 def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
@@ -49,7 +51,7 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     }
 
     for run in range(n_runs):
-        balances, weights_over_time = runs_single_evaluation(env, agent)
+        balances, weights_over_time, asset_holdings = runs_single_evaluation(env, agent)
 
         # Store data
         logger.add_run_data(balances, weights_over_time)

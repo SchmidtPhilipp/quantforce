@@ -5,6 +5,7 @@ import os
 from agents.dqn_agent import DQNAgent
 from agents.random_agent import RandomAgent
 from agents.maddpg_agent import MADDPGAgent
+from agents.ppo_agent import PPOAgent
 from envs.portfolio_agent_generator import create_portfolio_env
 from train import train_agent
 from evaluate import evaluate_agent
@@ -67,6 +68,21 @@ def main():
             act_dim=train_env.action_space.shape[0],
             n_agents=config.get("n_agents", 1)
         )
+    elif config["agent"] == "RandomAgent":
+        train_agent_instance = RandomAgent(
+            obs_dim=train_env.observation_space.shape[0],
+            act_dim=train_env.action_space.shape[0]
+        )
+    elif config["agent"] == "PPOAgent":
+        train_agent_instance = PPOAgent(
+            obs_dim=train_env.observation_space.shape[0],
+            act_dim=train_env.action_space.shape[0],
+            model_config=config.get("model_config", None),
+            lr=config.get("lr", 3e-4),
+            gamma=config.get("gamma", 0.99),
+            eps_clip=config.get("eps_clip", 0.2),
+            k_epochs=config.get("k_epochs", 4)
+        )
     else:
         raise ValueError(f"Unknown agent type: {config['agent']}")
 
@@ -102,6 +118,21 @@ def main():
             obs_dim=eval_env.observation_space.shape[0],
             act_dim=eval_env.action_space.shape[0],
             n_agents=config.get("n_agents", 1)
+        )
+    elif config["agent"] == "RandomAgent":
+        eval_agent_instance = RandomAgent(
+            obs_dim=eval_env.observation_space.shape[0],
+            act_dim=eval_env.action_space.shape[0]
+        )
+    elif config["agent"] == "PPOAgent":
+        eval_agent_instance = PPOAgent(
+            obs_dim=eval_env.observation_space.shape[0],
+            act_dim=eval_env.action_space.shape[0],
+            model_config=config.get("model_config", None),
+            lr=config.get("lr", 3e-4),
+            gamma=config.get("gamma", 0.99),
+            eps_clip=config.get("eps_clip", 0.2),
+            k_epochs=config.get("k_epochs", 4)
         )
     else:
         raise ValueError(f"Unknown agent type: {config["agent"]}")

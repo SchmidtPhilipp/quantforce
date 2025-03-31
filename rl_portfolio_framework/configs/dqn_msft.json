@@ -8,6 +8,7 @@
     "eval_end": "2022-01-01",
     "episodes": 10,
     "lr": 0.001,
-    "gamma": 0.99
+    "gamma": 0.99,
+    "verbosity": 0
   }
   
