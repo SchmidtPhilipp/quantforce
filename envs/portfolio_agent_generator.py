@@ -8,6 +8,6 @@ def create_portfolio_env(data, initial_balance=1_000, verbosity=0, n_agents=1, s
     if n_agents == 1:
         return SingleAgentPortfolioEnv(data, initial_balance, verbosity, trade_cost_percent, trade_cost_fixed)
     elif shared_action:
-        return MultiAgentSharedActionPortfolioEnv(data, initial_balance, verbosity, n_agents)
+        return MultiAgentSharedActionPortfolioEnv(data, initial_balance, verbosity, n_agents, shared_obs=shared_obs)
     else:
-        return MultiAgentIndividualActionPortfolioEnv(data, initial_balance, verbosity, n_agents)
+        return MultiAgentIndividualActionPortfolioEnv(data, initial_balance, verbosity, n_agents, shared_obs=shared_obs)

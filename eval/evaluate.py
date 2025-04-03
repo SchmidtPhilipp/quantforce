@@ -1,4 +1,4 @@
-from trainer.logger import Logger
+from train.logger import Logger
 from utils.metrics import (
     calculate_returns, sharpe_ratio, sortino_ratio,
     max_drawdown, volatility, cumulative_return,

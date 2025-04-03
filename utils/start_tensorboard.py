@@ -1,7 +1,6 @@
 import subprocess
 import webbrowser
 import socket
-import os
 import time
 import shutil
 from utils.safari import bring_safari_tab_to_front

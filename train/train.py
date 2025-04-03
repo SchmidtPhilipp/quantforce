@@ -1,4 +1,4 @@
-from trainer.logger import Logger
+from .logger import Logger
 import os
 import numpy as np
 
@@ -15,10 +15,6 @@ def train_agent(env, agent, save_path=None, n_episodes=10, run_name=None):
         while not done:
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
-
-            # Check the shape of states
-            if state.shape != next_state.shape:
-                raise ValueError(f"Inconsistent state shapes: {state.shape} vs {next_state.shape}")
 
             agent.store((state, action, reward, next_state))
             agent.train()

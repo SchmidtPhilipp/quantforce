@@ -4,7 +4,7 @@ from envs.base_portfolio_env import BasePortfolioEnv
 
 class MultiAgentSharedActionPortfolioEnv(BasePortfolioEnv):
     """
-    Multi-Agent Portfolio Environment with shared or non-shared observations and shared actions.
+    Multi-Agent Portfolio Environment with shared actions and shared or non-shared observations.
 
     Parameters:
         data (pd.DataFrame): Historical data for the assets.
@@ -13,23 +13,37 @@ class MultiAgentSharedActionPortfolioEnv(BasePortfolioEnv):
         n_agents (int): Number of agents in the environment.
         shared_obs (bool): Whether all agents share the same observation.
     """
-    def __init__(self, data, initial_balance=1_000, verbosity=0, n_agents=2, shared_obs=True):
+    def __init__(self, data, initial_balance=1_000, verbosity=0, n_agents=2, shared_obs=False, trade_cost_percent=0.0, trade_cost_fixed=0.0):
         super().__init__(data, initial_balance, verbosity, n_agents)
         self.shared_obs = shared_obs
+        self.trade_cost_percent = trade_cost_percent
+        self.trade_cost_fixed = trade_cost_fixed
 
-        # Verify that n_assets == n_agents if shared_obs is False
-        if not shared_obs and self.n_assets != self.n_agents:
-            raise ValueError(
-                f"Non-shared observations require n_assets == n_agents, but got n_assets={self.n_assets} and n_agents={self.n_agents}."
+        # Initialize shared cash and asset holdings
+        self.cash = initial_balance
+        self.asset_holdings = np.zeros(self.n_assets)
+        self.balance = initial_balance
+
+        # Set observation space based on shared_obs
+        if self.shared_obs:
+            # Shared observation: all assets and indicators
+            self.observation_space = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(self.data.shape[1],),
+                dtype=np.float32
+            )
+        else:
+            # Non-shared observation: only one asset and its indicators per agent
+            asset_split = self.data.shape[1] // self.n_agents
+            self.observation_space = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(asset_split,),
+                dtype=np.float32
             )
 
         self.action_space = spaces.Box(low=0, high=1, shape=(self.n_assets + 1,), dtype=np.float32)
-        self.observation_space = spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(self.data.shape[1],),
-            dtype=np.float32
-        )
 
         if self.verbosity > 0:
             print(f"MultiAgentSharedActionPortfolioEnv initialized with {self.n_agents} agents.")
@@ -40,27 +54,20 @@ class MultiAgentSharedActionPortfolioEnv(BasePortfolioEnv):
         Returns the current observation for the agents.
 
         Returns:
-            obs (np.ndarray): If shared_obs is True, all agents receive the same observation (shape: [n_agents, n_assets]).
-                              If shared_obs is False, each agent receives an individual observation corresponding to one asset
-                              (shape: [n_agents, n_assets_per_agent]).
+            obs (list of np.ndarray): A list of observations, one for each agent.
         """
         obs = self.data.iloc[self.current_step].values.astype(np.float32)
 
         if self.shared_obs:
-            # All agents receive the same observation (all assets)
-            shared_obs = np.tile(obs, (self.n_agents, 1))  # Repeat the same observation for all agents
-            if self.verbosity > 0:
-                print(f"Shared observation provided to all agents: {shared_obs}")
-            return shared_obs
+            # All agents receive the same observation
+            return [obs for _ in range(self.n_agents)]  # List of identical observations
         else:
             # Each agent receives an observation corresponding to one asset
             asset_split = self.data.shape[1] // self.n_agents
-            individual_obs = np.array([
+            individual_obs = [
                 obs[i * asset_split:(i + 1) * asset_split] for i in range(self.n_agents)
-            ])
-            if self.verbosity > 0:
-                print(f"Non-shared observations provided to agents: {individual_obs}")
-            return individual_obs
+            ]
+            return individual_obs  # List of individual observations
 
     def step(self, actions):
         """
@@ -70,18 +77,19 @@ class MultiAgentSharedActionPortfolioEnv(BasePortfolioEnv):
             actions (np.ndarray): Array of actions from each agent (shape: [n_agents, action_dim]).
 
         Returns:
-            obs (np.ndarray): Next observation(s) for the agents.
+            obs (list of np.ndarray): Next observation(s) for the agents.
             rewards (np.ndarray): Rewards for each agent (shape: [n_agents]).
             done (bool): Whether the episode is finished.
             info (dict): Additional information.
         """
-        # Compute the shared action as the mean of all agent actions
-        final_action = np.mean(actions, axis=0)
-        final_action = np.clip(final_action, 0, 1)
-        final_action /= np.sum(final_action) + 1e-8
+        # Aggregate actions (e.g., average across all agents)
+        collective_action = np.mean(actions, axis=0)
+        max_action = np.max(collective_action)  # For numerical stability
+        exp_action = np.exp(collective_action - max_action)  # Subtract max_action for stability
+        weights = exp_action / np.sum(exp_action)  # Softmax normalization
 
-        cash_weight = final_action[-1]
-        asset_weights = final_action[:-1]
+        cash_weight = weights[-1]
+        asset_weights = weights[:-1]
 
         # Get prices for the current and next steps
         old_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
@@ -89,32 +97,60 @@ class MultiAgentSharedActionPortfolioEnv(BasePortfolioEnv):
         done = self.current_step >= len(self.data)
 
         if done:
-            rewards = np.zeros(self.n_agents, dtype=np.float32)
-            obs = np.zeros((self.n_agents, self.data.shape[1]), dtype=np.float32)
+            reward = 0.0
+            obs = [np.zeros(self.observation_space.shape, dtype=np.float32) for _ in range(self.n_agents)]
             if self.verbosity > 0:
                 print("Episode finished!")
-            return obs, rewards, done, {}
+            return obs, [reward] * self.n_agents, done, {}
 
         new_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
 
-        # Calculate asset returns and portfolio return
-        asset_returns = new_prices / (old_prices + 1e-15) - 1
-        portfolio_return = cash_weight * 1.0 + np.dot(asset_weights, asset_returns)
+        # Calculate the current portfolio value
+        current_portfolio_value = self.cash + np.sum(self.asset_holdings * new_prices)
 
-        # Update balance and calculate rewards
-        self.balance *= (1 + portfolio_return)
-        reward = np.log(1 + portfolio_return) if portfolio_return > -1 else -np.inf
-        rewards = np.full(self.n_agents, reward, dtype=np.float32)
+        # Calculate target distribution
+        target_cash = current_portfolio_value * cash_weight
+        target_asset_values = current_portfolio_value * asset_weights
+
+        # Calculate target asset numbers
+        target_asset_numbers = np.floor(target_asset_values / new_prices)
+
+        # Calculate differences and trade costs
+        asset_differences = target_asset_numbers - self.asset_holdings
+        buy_costs = np.sum(np.maximum(asset_differences, 0) * new_prices)
+        sell_proceeds = np.sum(np.maximum(-asset_differences, 0) * new_prices)
+        trade_costs_percent = np.sum(np.abs(asset_differences) * new_prices * self.trade_cost_percent)
+        trade_costs_fixed = np.sum(asset_differences != 0) * self.trade_cost_fixed
+        total_trade_costs = trade_costs_percent + trade_costs_fixed
+
+        # Update cash and asset holdings
+        self.cash += sell_proceeds - buy_costs - total_trade_costs
+        self.asset_holdings = target_asset_numbers
+
+        # Calculate portfolio value and reward
+        portfolio_value = self.cash + np.sum(self.asset_holdings * new_prices)
+        reward = portfolio_value - self.balance
+        self.balance = portfolio_value
+
+        # Debugging information
+        if self.verbosity > 0:
+            print(f"Step: {self.current_step} | Reward: {reward:.4f} | Balance: {self.balance:.2f}")
+            print(f"Action: {collective_action} | Weights: {weights} | Prices: {new_prices}")
+            print(f"Target asset numbers: {target_asset_numbers} | Current asset holdings: {self.asset_holdings}")
+            print(f"Remaining cash: {self.cash:.2f} | Trade costs: {total_trade_costs:.4f}")
 
         # Get the next observation(s)
         obs = self._get_observation()
 
-        # Debugging information
-        if self.verbosity > 0:
-            print(f"Step: {self.current_step} | Rewards: {rewards} | Balance: {self.balance:.2f}")
-            print(f"Actions: {actions} | Final Action: {final_action}")
-            print(f"Old Prices: {old_prices} | New Prices: {new_prices}")
-            print(f"Portfolio Return: {portfolio_return:.4f} | Asset Returns: {asset_returns}")
-            print(f"Observation(s): {obs}")
+        return obs, np.array([reward] * self.n_agents), done, {}
 
-        return obs, rewards, done, {}
+    def reset(self):
+        """
+        Resets the environment and returns the first observation.
+        """
+        self.current_step = 0
+        self.cash = self.initial_balance
+        self.asset_holdings = np.zeros(self.n_assets)
+        self.balance = self.initial_balance
+        obs = self._get_observation()
+        return obs

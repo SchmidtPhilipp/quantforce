@@ -46,6 +46,8 @@
 # Generelle TODOs
 # DONE: Tensorboard Logging
 
+# TODO: Datenklassen für reward, state und action implementieren.
+
 # TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
 
