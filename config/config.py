@@ -1,22 +1,14 @@
 import json
-import argparse
 
 class Config:
-    def __init__(self):
+    def __init__(self, config_path):
         """
-        Loads and validates the configuration from a JSON file or CLI arguments.
+        Loads and validates the configuration from a JSON file.
+
+        Parameters:
+            config_path (str): Path to the configuration file.
         """
-        # CLI arg: --config configs/dqn_msft.json
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--config", type=str, help="Path to config file")
-        args = parser.parse_args()
-
-        if args.config:
-            self.config_path = args.config
-        else:
-            self.config_path = "configs/maddpg_msft.json"
-            print(f"Keine Konfigurationsdatei angegeben. Verwende Standardkonfiguration: {self.config_path}")
-
+        self.config_path = config_path
         self.data = self._load_config()
         self._set_defaults()
         self._validate_config()
@@ -40,15 +32,15 @@ class Config:
             "enable_tensorboard": False
         }
 
-        print("#"*50)
+        print("#" * 50)
         print("Config:")
         for key, default_value in defaults.items():
             if key not in self.data:
-                print(f'"{key}" not set; default value "{default_value}" applied.')
+                print(f'{key} not set; default value "{default_value}" applied.')
                 self.data[key] = default_value
             else:
-                print(f'"{key}" set to "{self.data[key]}".')
-        print("#"*50)
+                print(f'{key} set to "{self.data[key]}".')
+        print("#" * 50)
 
     def _validate_config(self):
         """Validates the configuration and adjusts invalid settings."""
@@ -66,8 +58,7 @@ class Config:
             )
             self.data["n_agents"] = len(self.data["tickers"])
 
-        print("#"*50)
-
+        print("#" * 50)
 
     def _generate_run_name(self):
         """Generates a unique run name based on the configuration."""
