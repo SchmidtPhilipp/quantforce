@@ -19,7 +19,7 @@ def is_vscode_extension_installed(extension_id):
     except Exception:
         return False
 
-def start_tensorboard(logdir="runs", port=6006, mode="safari"):
+def start_tensorboard(logdir="runs", port=6004, mode="safari"):
     tb_url = f"http://localhost:{port}"
 
     if not is_port_in_use(port):

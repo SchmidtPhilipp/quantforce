@@ -8,17 +8,24 @@ from .base_agent import BaseAgent
 def create_agent(agent_type, env, config):
 
 
-
-
     agent_mapping = {
+        "RandomAgent": (RandomAgent, {}),
         "DQNAgent": (DQNAgent, {
             "model_config": config.get("model_config", None),
             "lr": config.get("lr", 1e-3),
             "gamma": config.get("gamma", 0.99),
             "batch_size": config.get("batch_size", 32)
         }),
-        "MADDPGAgent": (MADDPGAgent, {"n_agents": config.get("n_agents", 2)}),
-        "RandomAgent": (RandomAgent, {}),
+
+        # Multi-Agent DQN
+        "MADDPGAgent": (MADDPGAgent, {
+            "n_agents": config["n_agents"], 
+            "lr": config["lr"],
+            "gamma": config["gamma"],
+            "batch_size": config["batch_size"],
+            "tau": config["tau"],
+            }),
+
         "PPOAgent": (PPOAgent, {
             "model_config": config.get("model_config", None),
             "lr": config.get("lr", 3e-4),

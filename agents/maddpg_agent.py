@@ -24,7 +24,17 @@ class MADDPGAgent:
         critic_optimizers (list): List of optimizers for critic networks.
         memory (list): Replay memory for storing transitions.
     """
-    def __init__(self, obs_dim, act_dim, n_agents, actor_config=None, critic_config=None, lr=1e-3, gamma=0.99, tau=0.01, verbosity=0):
+    def __init__(self, 
+                 obs_dim, 
+                 act_dim, 
+                 n_agents, 
+                 actor_config=None, 
+                 critic_config=None, 
+                 lr=1e-3, 
+                 gamma=0.99, 
+                 tau=0.01,
+                 verbosity=0, 
+                 batch_size=32):
         """
         Initialize the MADDPG agent.
 
@@ -37,6 +47,7 @@ class MADDPGAgent:
             tau (float): Soft update parameter for target networks.
             verbosity (int): Verbosity level for logging.
         """
+        self.batch_size = batch_size
         self.n_agents = n_agents
         self.gamma = gamma
         self.tau = tau
@@ -126,11 +137,11 @@ class MADDPGAgent:
         """
         Train the agents by sampling a batch of transitions from the replay memory.
         """
-        if len(self.memory) < 32:
+        if len(self.memory) < self.batch_size:
             return
 
         # Sample a batch of transitions from the replay memory
-        batch = random.sample(self.memory, 32)
+        batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states = zip(*batch)
 
         states = torch.FloatTensor(np.array(states))

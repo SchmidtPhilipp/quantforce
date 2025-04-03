@@ -26,16 +26,18 @@ def runs_single_evaluation(env, agent, config):
         if not config["shared_action"]:
             asset_weight, cash_weight = calculate_actions_from_individual_actions(action, env.n_agents)
             action = np.concatenate((asset_weight, [cash_weight]), axis=0)
-        else:
+        elif not config["shared_obs"]:
             action = np.mean(action, axis=0)
+        
 
         weights_over_time.append(action)
         asset_holdings.append(env.asset_holdings)
 
-    print(f"📈 Evaluation Summary:")
-    print(f"Final Portfolio Value: {balances[-1]:.2f}")
-    print(f"Final Asset Holdings: {env.asset_holdings}")
-    print("-" * 50)
+    if config["verbosity"] > 0:
+        print(f"📈 Evaluation Summary:")
+        print(f"Final Portfolio Value: {balances[-1]:.2f}")
+        print(f"Final Asset Holdings: {env.asset_holdings}")
+        print("-" * 50)
 
     return balances, weights_over_time, asset_holdings
 
@@ -62,7 +64,7 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
         logger.add_run_data(balances, weights_over_time)
 
         # Log portfolio value at last timestep
-        logger.log_scalar("02_eval/portfolio_value_final", balances[-1])
+        #logger.log_scalar("02_eval/portfolio_value_final", balances[-1])
 
         # Log final weights
         # Log weights at each step

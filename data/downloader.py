@@ -19,34 +19,57 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
     Returns:
         pd.DataFrame: A multi-indexed DataFrame (ticker, OHLCV) with cleaned historical data.
     """
+    # Ensure tickers is a list
+    if isinstance(tickers, str):
+        tickers = [tickers]
 
     # Create cache directory if it doesn't exist
     os.makedirs(cache_dir, exist_ok=True)
 
-    # Generate cache file path
-    tickers_str = tickers if isinstance(tickers, str) else "-".join(tickers)
-    cache_file = os.path.join(cache_dir, f"{tickers_str}_{start}_{end}_{interval}.csv")
+    all_data = []
 
-    # Check if cached data exists
-    if os.path.exists(cache_file):
-        if verbosity > 0:
-            print(f"Loading data from cache: {cache_file}")
-        data = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
-    else:
-        # Download data with separate groups per ticker (multi-indexed columns)
-        warnings.filterwarnings("ignore", category=ResourceWarning)
-        data = yf.download(tickers, start=start, end=end, interval=interval, group_by="tickers", progress=progress)
+    for ticker in tickers:
+        # Generate cache file path for each ticker
+        cache_file = os.path.join(cache_dir, f"{ticker}_{start}_{end}_{interval}.csv")
 
-        # Fill missing values forward and backward to ensure continuity
-        data = data.ffill().bfill()
+        # Check if cached data exists
+        if os.path.exists(cache_file):
+            if verbosity > 0:
+                print(f"Loading data from cache: {cache_file}")
+            data = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
+        else:
+            # Download data for the ticker
+            warnings.filterwarnings("ignore", category=ResourceWarning)
+            data = yf.download(ticker, start=start, end=end, interval=interval, progress=progress)
 
-        # Save data to cache
-        data.to_csv(cache_file)
-        if verbosity > 0:
-            print(f"Data cached to: {cache_file}")
+            # Fill missing values forward and backward to ensure continuity
+            data = data.ffill().bfill()
+
+            # Save data to cache
+            data.to_csv(cache_file)
+            if verbosity > 0:
+                print(f"Data cached to: {cache_file}")
+
+        # Append the data to the list
+        all_data.append(data)
+
+    # Combine all ticker data into a single DataFrame
+    combined_data = pd.concat(all_data, axis=1)
+
+    # Debugging: Check the structure of the combined data
+    if verbosity > 0:
+        print(f"Combined data structure:\n{combined_data.head()}")
 
 
-    return data
+    # Swap levels of the MultiIndex columns to have 'Ticker' as the first level
+    combined_data.columns = pd.MultiIndex.from_tuples(
+        [(ticker, field) for ticker, field in combined_data.columns]
+    )
+    combined_data = combined_data.swaplevel(axis=1)
+
+
+    return combined_data
+
 
 def get_data(tickers, start, end, indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"), verbosity=0):
     """
