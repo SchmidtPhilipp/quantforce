@@ -33,7 +33,7 @@ class Config:
             "initial_balance": 100_000,
             "verbosity": 0,
             "n_agents": 1,
-            "shared_obs": False,
+            "shared_obs": True,
             "shared_action": False,
             "trade_cost_percent": 0.01,
             "trade_cost_fixed": 1.0,
@@ -41,13 +41,13 @@ class Config:
         }
 
         print("#"*50)
-        print("Configuration Report:")
+        print("Config:")
         for key, default_value in defaults.items():
             if key not in self.data:
                 print(f'"{key}" not set; default value "{default_value}" applied.')
                 self.data[key] = default_value
             else:
-                print(f'  "{key}" set to "{self.data[key]}".')
+                print(f'"{key}" set to "{self.data[key]}".')
         print("#"*50)
 
     def _validate_config(self):

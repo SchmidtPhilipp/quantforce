@@ -74,20 +74,7 @@ class MultiAgentIndividualActionPortfolioEnv(BasePortfolioEnv):
             info (dict): Additional information.
         """
         # Aggregate actions: Each agent votes for one asset
-        actions = np.array(actions)
-
-        asset_actions = actions[:, :-1].flatten()  # All but the last column (cash)
-        cash_action = actions[:, -1].flatten()  # Last column (cash)
-        cash_action = cash_action.sum()
-
-        aggregated_action = np.concatenate((asset_actions, [cash_action]), axis=0)
-
-        # Normalize actions to ensure they sum to 1
-        aggregated_action = aggregated_action / (np.sum(aggregated_action) + 1e-8)  # Avoid division by zero 
-
-        # Calculate weights for assets and cash
-        asset_weights = aggregated_action[:-1]
-        cash_weight = aggregated_action[-1]
+        asset_weights, cash_weight = calculate_actions_from_individual_actions(actions, self.n_agents)
 
         # Get prices for the current and next steps
         old_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
@@ -96,7 +83,7 @@ class MultiAgentIndividualActionPortfolioEnv(BasePortfolioEnv):
 
         if done:
             reward = 0.0
-            obs = [np.zeros(self.data.shape[1] // self.n_agents, dtype=np.float32) for _ in range(self.n_agents)]
+            obs = [np.zeros(self.observation_space.shape, dtype=np.float32) for _ in range(self.n_agents)]
             if self.verbosity > 0:
                 print("Episode finished!")
             return obs, [reward] * self.n_agents, done, {}
@@ -133,7 +120,7 @@ class MultiAgentIndividualActionPortfolioEnv(BasePortfolioEnv):
         # Debugging information
         if self.verbosity > 0:
             print(f"Step: {self.current_step} | Reward: {reward:.4f} | Balance: {self.balance:.2f}")
-            print(f"Aggregated Action: {aggregated_action} | Asset Weights: {asset_weights} | Cash Weight: {cash_weight}")
+            print(f"Asset Weights: {asset_weights} | Cash Weight: {cash_weight}")
             print(f"Target asset numbers: {target_asset_numbers} | Current asset holdings: {self.asset_holdings}")
             print(f"Remaining cash: {self.cash:.2f} | Trade costs: {total_trade_costs:.4f}")
 
@@ -152,3 +139,23 @@ class MultiAgentIndividualActionPortfolioEnv(BasePortfolioEnv):
         self.balance = self.initial_balance
         obs = self._get_observation()
         return obs
+    
+
+
+def calculate_actions_from_individual_actions(actions, n_agents):
+    actions = np.array(actions)
+
+    asset_actions = actions[:, :-1].flatten()  # All but the last column (cash)
+    cash_action = actions[:, -1].flatten()  # Last column (cash)
+    cash_action = cash_action.sum()
+
+    aggregated_action = np.concatenate((asset_actions, [cash_action]), axis=0)
+
+    # Normalize actions to ensure they sum to 1
+    aggregated_action = aggregated_action / (np.sum(aggregated_action) + 1e-8)  # Avoid division by zero 
+
+    # Calculate weights for assets and cash
+    asset_weights = aggregated_action[:-1]
+    cash_weight = aggregated_action[-1]
+
+    return asset_weights, cash_weight

@@ -6,9 +6,10 @@ from utils.metrics import (
 )
 from utils.log_weights import log_weights
 import numpy as np
+from envs.multi_agent_individual_action_portfolio_env import calculate_actions_from_individual_actions
 
 
-def runs_single_evaluation(env, agent):
+def runs_single_evaluation(env, agent, config):
     state = env.reset()
     done = False
     balances = [env.balance]
@@ -21,7 +22,11 @@ def runs_single_evaluation(env, agent):
         balances.append(env.balance)
         state = next_state
         
-        if hasattr(env, "n_agents") and env.n_agents > 1:
+        # Here i have to check if the action is shared or not
+        if not config["shared_action"]:
+            asset_weight, cash_weight = calculate_actions_from_individual_actions(action, env.n_agents)
+            action = np.concatenate((asset_weight, [cash_weight]), axis=0)
+        else:
             action = np.mean(action, axis=0)
 
         weights_over_time.append(action)
@@ -51,7 +56,7 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     }
 
     for run in range(n_runs):
-        balances, weights_over_time, asset_holdings = runs_single_evaluation(env, agent)
+        balances, weights_over_time, asset_holdings = runs_single_evaluation(env, agent, config)
 
         # Store data
         logger.add_run_data(balances, weights_over_time)
