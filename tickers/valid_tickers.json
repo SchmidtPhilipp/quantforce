@@ -53628,5 +53628,39 @@
         "currency": "USD",
         "exchange": "PCX",
         "ipo_year": "N/A"
+    },
+    {
+        "ticker": "BZAI",
+        "name": "Blaize Holdings, Inc.",
+        "sector": "Technology",
+        "industry": "Software - Application",
+        "country": "United States",
+        "market_cap": 226726336,
+        "currency": "USD",
+        "exchange": "NGM",
+        "ipo_year": "N/A",
+        "dividend_yield": "N/A",
+        "beta": 0.156,
+        "trailing_pe": "N/A",
+        "forward_pe": "N/A",
+        "fifty_two_week_high": 29.61,
+        "fifty_two_week_low": 1.7
+    },
+    {
+        "ticker": "BZFD",
+        "name": "BuzzFeed, Inc.",
+        "sector": "Communication Services",
+        "industry": "Internet Content & Information",
+        "country": "United States",
+        "market_cap": 71656872,
+        "currency": "USD",
+        "exchange": "NCM",
+        "ipo_year": "N/A",
+        "dividend_yield": "N/A",
+        "beta": 3.598,
+        "trailing_pe": "N/A",
+        "forward_pe": -9.3,
+        "fifty_two_week_high": 5.68,
+        "fifty_two_week_low": 1.26
     }
 ]
