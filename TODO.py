@@ -1,9 +1,9 @@
-
 ##################################################
 # Dataloader
 # DONE: Erstellung eines Dataloaders für die Daten
 # DONE: Cashe auf single ticker basis speichern.
 # TODO: Alle ticker herausfinden.
+# TODO: Datamanger implementieren. Sollte alle daten laden können. Vorhandene Daten ergänzen können. etc...
 # TODO: Survival bias umgehen.
 
 ##################################################
@@ -16,7 +16,6 @@
 # DONE: Single Agent Portfolio Environment
 # DONE: Multi Agent Portfolio Environment mit Shared Observation
 # DONE: Multi Agent Portfolio Environment mit Shared Observation und Shared Action
-
 # TODO: Option implementieren für Agenten welche nicht nur den aktuellen State 
 # sondern auch die Historie betrachten
 
@@ -46,10 +45,8 @@
 # DONE: Tensorboard Logging
 
 # TODO: Datenklassen für reward, state und action implementieren.
-
 # TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
-
 # TODO: Hyperparameter Tuning
 # DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
 # TODO: Visualisierungen erstellen.
