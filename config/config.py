@@ -1,4 +1,6 @@
 import json
+import os
+from datetime import datetime
 
 class Config:
     def __init__(self, config_path):
@@ -66,9 +68,17 @@ class Config:
 
         
     def _generate_run_name(self):
-        """Generates a unique run name based on the configuration."""
-        tickers = self.data.get("tickers", [])
-        return f"{self.data['agent']}_{'-'.join(tickers)}_{self.data['train_episodes']}ep"
+        """
+        Generates a unique run name based on the configuration file name and a timestamp.
+        """
+        # Extract the base name of the configuration file (without extension)
+        config_name = os.path.splitext(os.path.basename(self.config_path))[0]
+
+        # Generate a timestamp in the format YYYYMMDD_HHMMSS
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Combine the config name and timestamp to create the run name
+        return f"{config_name}_{timestamp}"
 
     def get(self, key, default=None):
         """Gets a configuration value with an optional default."""

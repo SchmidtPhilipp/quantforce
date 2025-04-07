@@ -162,13 +162,13 @@ class MADDPGAgent:
                 next_actions = torch.cat(next_actions, dim=1)
 
                 # Concatenate next_states and next_actions
-                next_inputs = torch.cat([next_states.view(32, -1), next_actions], dim=-1)
+                next_inputs = torch.cat([next_states.view(self.batch_size, -1), next_actions], dim=-1)
 
                 # Compute the target Q value
                 target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_inputs).squeeze()
 
             # Concatenate states and actions for the current Q value
-            current_inputs = torch.cat([states.view(32, -1), actions.view(32, -1)], dim=-1)
+            current_inputs = torch.cat([states.view(self.batch_size, -1), actions.view(self.batch_size, -1)], dim=-1)
 
             # Compute the current Q value
             current_q = self.critics[i](current_inputs).squeeze()
@@ -189,7 +189,7 @@ class MADDPGAgent:
             current_actions = torch.cat(current_actions, dim=1)
 
             # Concatenate states and current actions
-            actor_inputs = torch.cat([states.view(32, -1), current_actions], dim=-1)
+            actor_inputs = torch.cat([states.view(self.batch_size, -1), current_actions], dim=-1)
 
             # Compute the actor loss
             actor_loss = -self.critics[i](actor_inputs).mean()

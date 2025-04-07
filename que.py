@@ -109,6 +109,7 @@ def main():
 
     # Process each configuration file
     for config_path in config_files:
+        process_config(config_path, processed_folder)
         try:
             process_config(config_path, processed_folder)
         except Exception as e:

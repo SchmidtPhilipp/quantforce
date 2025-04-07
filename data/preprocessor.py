@@ -42,6 +42,17 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
     Returns:
         pd.DataFrame: DataFrame with added technical indicators.
     """
+    if not indicators:
+        print("No indicators specified. Returning the original data.")
+        return data
+
+    valid_indicators = {"sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"}
+    selected_indicators = set(indicators).intersection(valid_indicators)
+
+    if not selected_indicators:
+        print("No valid indicators found in the provided list. Returning the original data.")
+        return data
+
     data = data.copy()
     enriched = {}
 
@@ -53,32 +64,39 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
         low = data[(ticker, "Low")]
         volume = data[(ticker, "Volume")]
 
-        if "sma" in indicators:
+        if "sma" in selected_indicators:
             enriched[(ticker, "sma")] = compute_sma(close)
 
-        if "rsi" in indicators:
+        if "rsi" in selected_indicators:
             enriched[(ticker, "rsi")] = compute_rsi(close)
 
-        if "macd" in indicators:
+        if "macd" in selected_indicators:
             enriched[(ticker, "macd")] = compute_macd(close)
 
-        if "ema" in indicators:
+        if "ema" in selected_indicators:
             enriched[(ticker, "ema")] = compute_ema(close)
 
-        if "adx" in indicators:
+        if "adx" in selected_indicators:
             enriched[(ticker, "adx")] = compute_adx(high, low, close)
 
-        if "bb" in indicators:
+        if "bb" in selected_indicators:
             enriched[(ticker, "bb_upper")], enriched[(ticker, "bb_lower")] = compute_bollinger_bands(close)
 
-        if "atr" in indicators:
+        if "atr" in selected_indicators:
             enriched[(ticker, "atr")] = compute_atr(high, low, close)
 
-        if "obv" in indicators:
+        if "obv" in selected_indicators:
             enriched[(ticker, "obv")] = compute_obv(close, volume)
 
+    if not enriched:
+        print("No indicators were computed. Returning the original data.")
+        return data
+
     enriched_df = pd.DataFrame(enriched, index=data.index)
-    enriched_df.columns = pd.MultiIndex.from_tuples(enriched_df.columns)
+
+    # Ensure MultiIndex columns only if enriched_df is not empty
+    if not enriched_df.empty:
+        enriched_df.columns = pd.MultiIndex.from_tuples(enriched_df.columns)
 
     result = pd.concat([data, enriched_df], axis=1)
     return result.dropna()

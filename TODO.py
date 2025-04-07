@@ -24,31 +24,20 @@
 # DONE: DQN Agent
 # DONE: MADDPG Agent
 # DONE: Model Builder implementiert
+# TODO: Loss function for MADDPG Agent
 # TODO: MADDPG Agenten mit TIPP
 # TODO: MADDPG Agenten mit CPPI
-# TODO: Laden der Modelkonfigurationen aus der config datei. 
 
-# Andere Agenten:
-# TODO: PPO Agent
-# TODO: A2C Agent
-# TODO: DDPG Agent
-# TODO: SAC Agent
-# TODO: TD3 Agent
-# TODO: DDPG Agent mit TIPP
-
-# TODO: Ensemble Agenten
-# TODO: Ensemble Agenten mit TIPP
-# TODO: Ensemble Agenten mit CPPI
 
 ##################################################
 # Generelle TODOs
 # DONE: Tensorboard Logging
+# DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
 
-# TODO: Datenklassen für reward, state und action implementieren.
+# TODO: Datenklassen für reward, state und action implementieren?
 # TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
 # TODO: Hyperparameter Tuning
-# DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
 # TODO: Visualisierungen erstellen.
 # TODO: Tracken der besten implementierungen. 
 
@@ -60,3 +49,22 @@
 # DONE: Test für den Environment
 # TODO: Test für den DQN Agent
 # DONE: Test für den MADDPG Agent
+
+
+
+######################################
+# Künftige Erweiterungen
+
+# Andere Agenten:
+# TODO: PPO Agent
+# TODO: A2C Agent
+# TODO: DDPG Agent
+# TODO: SAC Agent
+# TODO: TD3 Agent
+# TODO: DDPG Agent mit TIPP
+
+# TODO: Laden der Modelkonfigurationen aus der config datei. 
+
+# TODO: Ensemble Agenten
+# TODO: Ensemble Agenten mit TIPP
+# TODO: Ensemble Agenten mit CPPI
