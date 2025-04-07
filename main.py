@@ -89,7 +89,7 @@ def main():
     if args.config:
         config_path = args.config
     else:
-        config_path = "configs/default/dqn_msft.json"
+        config_path = "configs/maddpg_msft.json"
         print(f"No configuration file provided. Using default configuration: {config_path}")
 
 

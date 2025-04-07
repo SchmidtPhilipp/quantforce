@@ -73,16 +73,16 @@ def check_ticker(ticker):
             "sector": sector,
             "industry": industry,
             "country": country,
-            "market_cap": market_cap,
+            #"market_cap": market_cap,
             "currency": currency,
             "exchange": exchange,
             "ipo_year": ipo_year,
-            "dividend_yield": dividend_yield,
-            "beta": beta,
-            "trailing_pe": trailing_pe,
-            "forward_pe": forward_pe,
-            "fifty_two_week_high": fifty_two_week_high,
-            "fifty_two_week_low": fifty_two_week_low
+            #"dividend_yield": dividend_yield,
+            #"beta": beta,
+            #"trailing_pe": trailing_pe,
+            #"forward_pe": forward_pe,
+            #"fifty_two_week_high": fifty_two_week_high,
+            #"fifty_two_week_low": fifty_two_week_low
         }
     except Exception as e:
         print(f"Error processing ticker {ticker}: {e}")

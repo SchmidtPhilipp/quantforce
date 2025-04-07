@@ -12,10 +12,22 @@ from envs.multi_agent_individual_action_portfolio_env import calculate_actions_f
 def runs_single_evaluation(env, agent, config):
     state = env.reset()
     done = False
-    balances = [env.balance]
-    weights_over_time = []
-    asset_holdings = []
 
+    # Initialize balances
+    balances = [env.balance]
+
+    # Initialize weights over time
+    weights_over_time = []
+    initial_weigths = np.zeros((env.n_assets + 1))
+    initial_weigths[-1] = 1
+    weights_over_time.append(initial_weigths)
+
+    # Initialize asset holdings
+    asset_holdings = []
+    initial_asset_holdings = np.zeros((env.n_assets))
+    asset_holdings.append(initial_asset_holdings)
+
+    # Run one evaluation loop
     while not done:
         action = agent.act(state)
         next_state, reward, done, _ = env.step(action)
@@ -29,7 +41,6 @@ def runs_single_evaluation(env, agent, config):
         elif not config["shared_obs"]:
             action = np.mean(action, axis=0)
         
-
         weights_over_time.append(action)
         asset_holdings.append(env.asset_holdings)
 
@@ -61,16 +72,7 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
         balances, weights_over_time, asset_holdings = runs_single_evaluation(env, agent, config)
 
         # Store data
-        logger.add_run_data(balances, weights_over_time)
-
-        # Log portfolio value at last timestep
-        #logger.log_scalar("02_eval/portfolio_value_final", balances[-1])
-
-        # Log final weights
-        # Log weights at each step
-        for step, weights in enumerate(weights_over_time):
-            log_weights(logger, tickers, weights, step=step)
-
+        logger.add_run_data(balances, weights_over_time, asset_holdings)
         logger.next_step()
     
         # Compute metrics
@@ -91,11 +93,20 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     mean_balances = np.mean(balances_array, axis=0)
     std_balances = np.std(balances_array, axis=0)
 
+    # calculate the mean and std of the weights
+    all_weights = np.array(logger.weights)
+    mean_weights = np.mean(all_weights, axis=0)
+    std_weights = np.std(all_weights, axis=0)
+
+    # calculate mean and stad of the asset holdings
+    
+
     logger.step = 0
 
     for t in range(len(mean_balances)):
         logger.log_scalar("02_eval/portfolio_value_mean", mean_balances[t])
         logger.log_scalar("02_eval/portfolio_value_std", std_balances[t])
+        log_weights(logger, tickers, mean_weights[t,:], step=t)
         logger.next_step()
 
     logger.step = 0

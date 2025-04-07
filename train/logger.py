@@ -18,6 +18,7 @@ class Logger:
         # Optional accumulators
         self.balances = []
         self.weights = []
+        self.asset_holdings = []
         self.metrics = {}
         self.config = {}
 
@@ -40,9 +41,10 @@ class Logger:
     def log_emulated_histogram(self, name, values, bins=10, step=None):
         pass
 
-    def add_run_data(self, balances, weights):
+    def add_run_data(self, balances, weights, asset_holdings):
         self.balances.append(balances)
         self.weights.append(weights)
+        self.asset_holdings.append(asset_holdings)
 
     def save_evaluation_data(self, config=None):
         # Save balances
@@ -53,6 +55,10 @@ class Logger:
         # Save weights
         weights_array = np.array(self.weights)
         np.save(os.path.join(self.run_path, "weights.npy"), weights_array)
+
+        # Save asset holdings
+        assets_array = np.array(self.asset_holdings)
+        np.save(os.path.join(self.run_path, "assets.npy"), assets_array)
 
         # Save metrics
         summary = {

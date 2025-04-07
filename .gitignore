@@ -4,6 +4,8 @@ configs/
 runs/
 temp/
 good_runs/ 
+cache/
+data_cache/
 
 # Python-Cache-Ordner überall im Projekt ignorieren
 **/__pycache__/
