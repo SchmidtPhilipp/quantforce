@@ -5,24 +5,12 @@ import torch.nn.functional as F
 import numpy as np
 import random
 from agents.model_builder import ModelBuilder
+from utils.loss_functions.loss_functions import weighted_mse_correlation_loss
+from utils.correlation import compute_correlation
 
 class MADDPGAgent:
     """
-    Multi-Agent Deep Deterministic Policy Gradient (MADDPG) agent.
-    This class implements the MADDPG algorithm for multiple agents.
-
-    Attributes:
-        n_agents (int): Number of agents.
-        gamma (float): Discount factor for future rewards.
-        tau (float): Soft update parameter for target networks.
-        verbosity (int): Verbosity level for logging.
-        actors (list): List of actor networks for each agent.
-        critics (list): List of critic networks for each agent.
-        target_actors (list): List of target actor networks for each agent.
-        target_critics (list): List of target critic networks for each agent.
-        actor_optimizers (list): List of optimizers for actor networks.
-        critic_optimizers (list): List of optimizers for critic networks.
-        memory (list): Replay memory for storing transitions.
+    Multi-Agent Deep Deterministic Policy Gradient (MADDPG) agent with support for custom loss functions.
     """
     def __init__(self, 
                  obs_dim, 
@@ -34,7 +22,9 @@ class MADDPGAgent:
                  gamma=0.99, 
                  tau=0.01,
                  verbosity=0, 
-                 batch_size=32):
+                 batch_size=32,
+                 loss_function=None,
+                 lambda_=0.5):
         """
         Initialize the MADDPG agent.
 
@@ -46,12 +36,18 @@ class MADDPGAgent:
             gamma (float): Discount factor for future rewards.
             tau (float): Soft update parameter for target networks.
             verbosity (int): Verbosity level for logging.
+            batch_size (int): Batch size for training.
+            loss_function (callable): Custom loss function for training the critic. Defaults to nn.MSELoss.
         """
         self.batch_size = batch_size
         self.n_agents = n_agents
         self.gamma = gamma
         self.tau = tau
         self.verbosity = verbosity
+        self.lambda_ = lambda_ # Custom weighting factor for the loss function
+
+        # Use the provided loss function or default to MSELoss
+        self.loss_function = loss_function or nn.MSELoss()
 
         # Dynamically generate the default actor and critic configs based on obs_dim and act_dim
         default_actor_config = [
@@ -173,8 +169,16 @@ class MADDPGAgent:
             # Compute the current Q value
             current_q = self.critics[i](current_inputs).squeeze()
 
-            # Compute the critic loss
-            critic_loss = nn.MSELoss()(current_q, target_q)
+            # Compute the correlation penalty
+            correlation_penality = 0.0
+            for j in range(self.n_agents):
+                if j != i:
+                    correlation_penality += compute_correlation(actions[:, i], actions[:, j])
+
+            correlation_penality = correlation_penality
+
+            # Compute the critic loss using the custom loss function
+            critic_loss = self.lambda_*self.loss_function(current_q, target_q) + (1-self.lambda_)*correlation_penality
 
             # Optimize the critic
             self.critic_optimizers[i].zero_grad()
