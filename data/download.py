@@ -3,7 +3,7 @@ import pandas as pd
 import yfinance as yf
 import warnings
 
-def download_and_cache_by_time(ticker, start, end, interval="1d", cache_dir="data_cache", verbosity=0):
+def download_and_cache_by_time(ticker, start, end, interval="1d", cache_dir="data/data_cache", verbosity=0):
     """
     Downloads and caches historical data for a single ticker, organized by time intervals.
 

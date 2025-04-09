@@ -4,7 +4,7 @@ import os
 import warnings
 from .preprocessor import add_technical_indicators
 
-def download_data(tickers, start, end, interval="1d", progress=False, cache_dir="data_cache", verbosity=0):
+def download_data(tickers, start, end, interval="1d", progress=False, cache_dir="data/data_cache", verbosity=0):
     """
     Downloads historical financial data using yfinance and performs forward/backward filling.
 

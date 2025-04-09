@@ -27,10 +27,8 @@ class Config:
             "initial_balance": 100_000,
             "verbosity": 0,
             "n_agents": 1,
-            "shared_obs": True,
-            "shared_action": True,
-            "trade_cost_percent": 0.01,
-            "trade_cost_fixed": 1.0,
+            "trade_cost_percent": 0.00,
+            "trade_cost_fixed": 0.0,
             "enable_tensorboard": True,
             "model_config": None,
             "tau": 0.01, # Target network update rate
@@ -50,22 +48,7 @@ class Config:
 
     def _validate_config(self):
         """Validates the configuration and adjusts invalid settings."""
-        if not self.data["shared_obs"] and self.data["n_agents"] != len(self.data["tickers"]):
-            print(
-                f"WARNING: Number of agents (n_agents={self.data['n_agents']}) does not match "
-                f"the number of assets (tickers={len(self.data['tickers'])}). Adjusting n_agents to match tickers."
-            )
-            print("-" * 50)
-            self.data["n_agents"] = len(self.data["tickers"])
-
-        if not self.data["shared_action"] and self.data["n_agents"] != len(self.data["tickers"]):
-            print(
-                f"WARNING: Number of agents (n_agents={self.data['n_agents']}) does not match "
-                f"the number of assets (tickers={len(self.data['tickers'])}). Adjusting n_agents to match tickers."
-            )
-            print("-" * 50)
-            self.data["n_agents"] = len(self.data["tickers"])
-
+        return
         
     def _generate_run_name(self):
         """

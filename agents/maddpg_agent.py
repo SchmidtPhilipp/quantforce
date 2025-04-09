@@ -24,7 +24,7 @@ class MADDPGAgent:
                  verbosity=0, 
                  batch_size=32,
                  loss_function=None,
-                 lambda_=0.5):
+                 lambda_=1.0):
         """
         Initialize the MADDPG agent.
 

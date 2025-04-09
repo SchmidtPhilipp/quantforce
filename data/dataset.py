@@ -50,7 +50,7 @@ class TimeBasedDataset(Dataset):
             all specified tickers over a range of consecutive time intervals.
     """
 
-    def __init__(self, cache_dir="cache", 
+    def __init__(self, cache_dir="data/data_cache", 
                  tickers=None, 
                  timesteps=1, 
                  start_date=None, 
