@@ -113,7 +113,7 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
             target_asset_values = current_actor_portfolio_value * actor_asset_weight
 
             # Calculate target asset numbers
-            target_asset_numbers = np.floor(target_asset_values / new_prices)
+            target_asset_numbers = np.floor(target_asset_values / (new_prices + 1e-10))
 
             # Calculate differences and trade costs
             asset_differences = target_asset_numbers - self.actor_asset_holdings[i]

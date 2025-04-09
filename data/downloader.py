@@ -50,6 +50,27 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
             if verbosity > 0:
                 print(f"Data cached to: {cache_file}")
 
+        
+        
+        # Test if the data length is the length we expect
+        estimated_length = (pd.to_datetime(end) - pd.to_datetime(start)).days
+        if len(data) != estimated_length:
+            print(f"Warning: Data length for {ticker} is {len(data)}. Expected: {estimated_length}.")
+            
+        # Equalize data lengths
+        date_range = pd.date_range(start=start, end=end, freq="D")  # Generate a complete date range
+        data = data.reindex(date_range)  # Reindex to ensure all dates are present
+        data = data.ffill() # Fill any remaining missing values
+        data = data.fillna(0)  # Fill missing values with 0 (or use .ffill().bfill() if preferred)
+
+        # Test if the data length is the length we expect
+        estimated_length = (pd.to_datetime(end) - pd.to_datetime(start)).days
+        if len(data) != estimated_length:
+            print(f"Warning: Data length for {ticker} is {len(data)}. Expected: {estimated_length}.")
+
+        # Plot closing prices for each ticker
+        # data.plot(y="Close", title=f"{ticker} Closing Prices", figsize=(10, 5))
+
         # Append the data to the list
         all_data.append(data)
 
@@ -60,13 +81,11 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
     if verbosity > 0:
         print(f"Combined data structure:\n{combined_data.head()}")
 
-
     # Swap levels of the MultiIndex columns to have 'Ticker' as the first level
     combined_data.columns = pd.MultiIndex.from_tuples(
         [(ticker, field) for ticker, field in combined_data.columns]
     )
     combined_data = combined_data.swaplevel(axis=1)
-
 
     return combined_data
 
