@@ -24,7 +24,7 @@
 # DONE: DQN Agent
 # DONE: MADDPG Agent
 # DONE: Model Builder implementiert
-# TODO: Loss function for MADDPG Agent
+# DONE: Loss function for MADDPG Agent
     # TODO: 2 It seems like all agents are learning the same thing. Maybe we somewhere loose the gradients? 
 
 # TODO: MADDPG Agenten mit TIPP

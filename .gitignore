@@ -9,5 +9,6 @@ data_cache/
 
 # Python-Cache-Ordner überall im Projekt ignorieren
 **/__pycache__/
+**/data_cache/
 
 .DS_Store

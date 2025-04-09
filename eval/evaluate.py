@@ -6,7 +6,6 @@ from utils.metrics import (
 )
 from utils.log_weights import log_weights
 import numpy as np
-from envs.multi_agent_individual_action_portfolio_env import calculate_actions_from_individual_actions
 
 
 def runs_single_evaluation(env, agent, config):
@@ -17,10 +16,10 @@ def runs_single_evaluation(env, agent, config):
     balances = [env.balance]
 
     # Initialize weights over time
-    weights_over_time = []
-    initial_weigths = np.zeros((env.n_assets + 1))
-    initial_weigths[-1] = 1
-    weights_over_time.append(initial_weigths)
+    actions = []
+    initial_weigths = np.zeros((env.n_agents, env.n_assets + 1))
+    initial_weigths[:,-1] = np.ones((env.n_agents))
+    actions.append(initial_weigths)
 
     # Initialize asset holdings
     asset_holdings = []
@@ -33,15 +32,8 @@ def runs_single_evaluation(env, agent, config):
         next_state, reward, done, _ = env.step(action)
         balances.append(env.balance)
         state = next_state
-        
-        # Here i have to check if the action is shared or not
-        if not config["shared_action"]:
-            asset_weight, cash_weight = calculate_actions_from_individual_actions(action, env.n_agents)
-            action = np.concatenate((asset_weight, [cash_weight]), axis=0)
-        elif not config["shared_obs"]:
-            action = np.mean(action, axis=0)
-        
-        weights_over_time.append(action)
+
+        actions.append(action) # Note have dim (runs, n_agents, n_assets + 1)
         asset_holdings.append(env.asset_holdings)
 
     if config["verbosity"] > 0:
@@ -50,7 +42,7 @@ def runs_single_evaluation(env, agent, config):
         print(f"Final Asset Holdings: {env.asset_holdings}")
         print("-" * 50)
 
-    return balances, weights_over_time, asset_holdings
+    return balances, actions, asset_holdings
 
 
 def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
@@ -94,9 +86,9 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     std_balances = np.std(balances_array, axis=0)
 
     # calculate the mean and std of the weights
-    all_weights = np.array(logger.weights)
-    mean_weights = np.mean(all_weights, axis=0)
-    std_weights = np.std(all_weights, axis=0)
+    actions = np.array(logger.weights)
+    mean_actions = np.mean(actions, axis=0)
+    std_actions = np.std(actions, axis=0)
 
     # calculate mean and stad of the asset holdings
     
@@ -106,7 +98,7 @@ def evaluate_agent(env, agent, config, run_name=None, n_runs=100):
     for t in range(len(mean_balances)):
         logger.log_scalar("02_eval/portfolio_value_mean", mean_balances[t])
         logger.log_scalar("02_eval/portfolio_value_std", std_balances[t])
-        log_weights(logger, tickers, mean_weights[t,:], step=t)
+        log_weights(logger, tickers, mean_actions[t,:,:], t)
         logger.next_step()
 
     logger.step = 0
