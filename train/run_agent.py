@@ -63,19 +63,18 @@ def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, 
                 agent.train()
 
             # Log per-step metrics
-            if isinstance(reward, (list, np.ndarray)):  # Multi-agent rewards
-                for agent_idx, agent_reward in enumerate(reward):
-                    logger.log_scalar(f"01_{run_type.lower()}/agent_{agent_idx}_reward", agent_reward)
-            else:  # Single-agent reward
-                logger.log_scalar(f"01_{run_type.lower()}/agent_0_reward", reward)
+            if train:
+                if isinstance(reward, (list, np.ndarray)):  # Multi-agent rewards
+                    for agent_idx, agent_reward in enumerate(reward):
+                        logger.log_scalar(f"01_{run_type.lower()}/agent_{agent_idx}_reward", agent_reward)
+                else:  # Single-agent reward
+                    logger.log_scalar(f"01_{run_type.lower()}/agent_0_reward", reward)
 
-            logger.log_scalar(f"01_{run_type.lower()}/portfolio_value", env.balance)
-
-        
+                logger.log_scalar(f"01_{run_type.lower()}/portfolio_value", env.balance)
+                        
             asset_tracker.log(logger, tickers)
-
-
             logger.next_step()
+            
 
             # Track portfolio balance
             episode_balances.append(env.balance)
@@ -95,36 +94,39 @@ def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, 
         #########################################
         #### Log episode summary
         #########################################
-        if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
-            for agent_idx, agent_reward in enumerate(total_reward):
-                logger.log_scalar(f"01_{run_type.lower()}/agent_{agent_idx}_total_reward_of_episode", agent_reward)
-        else:  # Single-agent reward
-            logger.log_scalar(f"01_{run_type.lower()}/agent_0_total_reward_of_episode", total_reward)
+        if train:
+            if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
+                for agent_idx, agent_reward in enumerate(total_reward):
+                    logger.log_scalar(f"01_{run_type.lower()}/agent_{agent_idx}_total_reward_of_episode", agent_reward)
+            else:  # Single-agent reward
+                logger.log_scalar(f"01_{run_type.lower()}/agent_0_total_reward_of_episode", total_reward)
 
-        logger.next_step()
+            logger.next_step()
 
-        # Print episode summary
-        if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
-            agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
-        else:  # Single-agent reward
-            agent_rewards_str = f"Agent 0: {total_reward:.4f}"
+            # Print episode summary
+            if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
+                agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
+            else:  # Single-agent reward
+                agent_rewards_str = f"Agent 0: {total_reward:.4f}"
 
-        print(f"[{run_type}] Episode {ep+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
-        print(f"Portfolio Value: {env.balance:.2f}")
-        print(f"Total Reward: {np.sum(total_reward):.4f}")
-        print(f"Asset Holdings: {env.asset_holdings}")
+            print(f"[{run_type}] Episode {ep+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
+            print(f"Portfolio Value: {env.balance:.2f}")
+            print(f"Total Reward: {np.sum(total_reward):.4f}")
+            print(f"Asset Holdings: {env.asset_holdings}")
 
         # Calculate and print metrics for the episode
         metrics.calculate(episode_balances)
-        metrics.print_report()
-        print("-" * 50)
 
-        ## Log actions, asset holdings, and balances
-        #for step in range(len(asset_tracker.actions)):
-            #asset_tracker.log(logger, tickers, step)
+        if train:
+            metrics.print_report()
+            print("-" * 50)
 
     # Log portfolio mean and std over time
-    logger.log_portfolio_statistics()
+    if not train:
+        logger.log_portfolio_statistics()
+
+        metrics.print_report()
+        print("-" * 50)
 
     # Save model (only during training)
     if train:
