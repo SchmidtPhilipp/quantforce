@@ -6,7 +6,7 @@ import random
 from agents.model_builder import ModelBuilder
 
 class DQNAgent(BaseAgent):
-    def __init__(self, obs_dim, act_dim, model_config=None, lr=1e-3, gamma=0.99, batch_size=32):
+    def __init__(self, obs_dim, act_dim, model_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000):
         super().__init__()
 
         # Dynamically generate the default config based on obs_dim and act_dim
@@ -30,16 +30,29 @@ class DQNAgent(BaseAgent):
         self.loss_fn = torch.nn.MSELoss()
         self.memory = []
 
-    def act(self, state):
-        state = torch.FloatTensor(state).unsqueeze(0)
+        self.buffer_max_size = buffer_max_size
+
+    def act(self, state: torch.Tensor, epsilon: float = 0.0) -> int:
+        """
+        Selects an action based on the current state and epsilon-greedy policy.
+        Args:
+            state (np.ndarray): The current state of the environment.
+            epsilon (float): Probability of selecting a random action.
+        Returns:
+            action (int): The selected action.
+        """
         with torch.no_grad():
-            logits = self.model(state).squeeze()
-            probs = torch.softmax(logits, dim=0).numpy()
-            return probs / np.sum(probs)
+            logits = self.model(state)
+
+            if random.random() < epsilon:
+                logits = torch.rand(logits.shape)
+
+            probs = torch.softmax(logits, dim=1)
+            return probs / probs.sum()
 
     def store(self, transition):
         self.memory.append(transition)
-        if len(self.memory) > 10000:
+        if len(self.memory) > self.buffer_max_size:
             self.memory.pop(0)
 
     def train(self):

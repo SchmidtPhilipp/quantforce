@@ -1,6 +1,7 @@
 from gymnasium import spaces
 import numpy as np
 from envs.base_portfolio_env import BasePortfolioEnv
+import torch
 
 class MultiAgentPortfolioEnv(BasePortfolioEnv):
     """
@@ -51,10 +52,10 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
         Returns:
             obs (list of np.ndarray): A list of observations, one for each agent.
         """
-        obs = self.data.iloc[self.current_step].values.astype(np.float32)
+        obs = torch.tensor(self.data.iloc[self.current_step].values, dtype=torch.float32)
 
         # All agents receive the same observation
-        return [obs for _ in range(self.n_agents)]  # List of identical observations
+        return obs.repeat(self.n_agents, 1)  # List of identical observations
 
 
     def step(self, actions):
@@ -70,6 +71,17 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
             done (bool): Whether the episode is finished.
             info (dict): Additional information.
         """
+        actions = np.array(actions)
+        # Normalize the actions
+        actions = np.clip(actions, 0, 1)
+
+        if self.n_agents > 1:
+            actions = actions / np.sum(actions, axis=1, keepdims=True)
+        else: 
+            actions = actions / np.sum(actions)
+
+
+
         # Get prices for the current and next steps
         old_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
 
@@ -85,23 +97,14 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
 
         new_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
 
-        
 
-        # Normalize the actions
-        actions = np.array(actions)
-        actions = np.clip(actions, 0, 1)
-
-        if self.n_agents > 1:
-            actions = actions / np.sum(actions, axis=1, keepdims=True)
-        else: 
-            actions = actions / np.sum(actions)
 
         rewards = []
         for i in range(self.n_agents):
             if self.n_agents > 1:
                 action = actions[i]
             else:
-                action = actions
+                action = actions[i]
 
             actor_cash_weight = action[-1]
             actor_asset_weight = action[:-1]

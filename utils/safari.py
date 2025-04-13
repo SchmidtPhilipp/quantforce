@@ -67,3 +67,20 @@ def refresh_tensorboard_tab(title_match="TensorBoard", url_match="http://localho
     end tell
     '''
     subprocess.run(["osascript", "-e", applescript])
+
+
+def refresh_current_safari_window():
+    """
+    Refreshes the current active window in Safari.
+    """
+    applescript = '''
+    tell application "Safari"
+        if (count of windows) > 0 then
+            tell front window
+                set current_tab to current tab
+                set current_tab's URL to (current_tab's URL) -- Refresh the current tab
+            end tell
+        end if
+    end tell
+    '''
+    subprocess.run(["osascript", "-e", applescript])

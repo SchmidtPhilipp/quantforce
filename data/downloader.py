@@ -49,24 +49,12 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
             data.to_csv(cache_file)
             if verbosity > 0:
                 print(f"Data cached to: {cache_file}")
-
-        
-        
-        # Test if the data length is the length we expect
-        estimated_length = (pd.to_datetime(end) - pd.to_datetime(start)).days
-        if len(data) != estimated_length:
-            print(f"Warning: Data length for {ticker} is {len(data)}. Expected: {estimated_length}.")
             
         # Equalize data lengths
         date_range = pd.date_range(start=start, end=end, freq="D")  # Generate a complete date range
         data = data.reindex(date_range)  # Reindex to ensure all dates are present
-        data = data.ffill() # Fill any remaining missing values
-        data = data.fillna(0)  # Fill missing values with 0 (or use .ffill().bfill() if preferred)
-
-        # Test if the data length is the length we expect
-        estimated_length = (pd.to_datetime(end) - pd.to_datetime(start)).days
-        if len(data) != estimated_length:
-            print(f"Warning: Data length for {ticker} is {len(data)}. Expected: {estimated_length}.")
+        data = data.ffill().bfill() # Fill any remaining missing values
+        #data = data.fillna(0)  # Fill missing values with 0 (or use .ffill().bfill() if preferred)
 
         # Plot closing prices for each ticker
         # data.plot(y="Close", title=f"{ticker} Closing Prices", figsize=(10, 5))

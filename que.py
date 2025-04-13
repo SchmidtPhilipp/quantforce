@@ -1,6 +1,21 @@
 import argparse
 import os
 import shutil
+import random
+import numpy as np
+import torch
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+        
+
+# Set a different seed for each training run
+set_seed(random.randint(0, 10000))
 
 from train.process import process_config
 
@@ -28,14 +43,14 @@ def main():
 
     # Process each configuration file
     for config_path in config_files:
+        
         process_config(config_path)
 
         # Move the processed config to the processed folder
         shutil.move(config_path, os.path.join(processed_folder, os.path.basename(config_path)))
         print(f"Configuration {config_path} processed and moved to {processed_folder}.")
-
         try:
-            process_config(config_path, processed_folder)
+            continue
         except Exception as e:
             print(f"Error processing configuration {config_path}: {e}")
             continue

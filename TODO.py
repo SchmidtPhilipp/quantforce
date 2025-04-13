@@ -25,18 +25,15 @@
 # DONE: MADDPG Agent
 # DONE: Model Builder implementiert
 # DONE: Loss function for MADDPG Agent
-    # TODO: 2 It seems like all agents are learning the same thing. Maybe we somewhere loose the gradients? 
-
+    # DONE: 2 It seems like all agents are learning the same thing. Maybe we somewhere loose the gradients? 
 # TODO: MADDPG Agenten mit TIPP
 # TODO: MADDPG Agenten mit CPPI
-
 
 ##################################################
 # Generelle TODOs
 # DONE: Tensorboard Logging
 # DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
-
-# TODO: Datenklassen für reward, state und action implementieren?
+# TODO: Alles von listen und arrays auf tensors umstellen.
 # TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
 # TODO: Hyperparameter Tuning
@@ -45,14 +42,11 @@
 
 ##################################################
 # Tests
-
 # DONE: Test für den Dataloader
 # DONE: Test für den Preprocessor
 # DONE: Test für den Environment
 # TODO: Test für den DQN Agent
 # DONE: Test für den MADDPG Agent
-
-
 
 ######################################
 # Künftige Erweiterungen
@@ -64,9 +58,7 @@
 # TODO: SAC Agent
 # TODO: TD3 Agent
 # TODO: DDPG Agent mit TIPP
-
 # TODO: Laden der Modelkonfigurationen aus der config datei. 
-
 # TODO: Ensemble Agenten
 # TODO: Ensemble Agenten mit TIPP
 # TODO: Ensemble Agenten mit CPPI

@@ -89,32 +89,39 @@ class MADDPGAgent:
         if self.verbosity > 0:
             print(f"MADDPGAgent initialized with {self.n_agents} agents.")
 
-    def act(self, states):
+    def act(self, states: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
         """
-        Select actions for each agent based on the current policy (actor network).
+        Select actions for each agent based on the current policy (actor network) with epsilon-greedy exploration.
 
         Parameters:
-            states (list): List of states for each agent.
+            states (torch.Tensor): A tensor of states for all agents (shape: [n_agents, obs_dim]).
+            epsilon (float): Probability of selecting a random action.
 
         Returns:
-            actions (list): List of normalized actions for each agent.
+            actions (torch.Tensor): A tensor of normalized actions for all agents (shape: [n_agents, act_dim]).
         """
         actions = []
+
         for i, actor in enumerate(self.actors):
-            state = states[i]
-            if not isinstance(state, (list, np.ndarray)):
-                state = [state]  # Ensure state is a sequence
-            state = torch.FloatTensor(state).unsqueeze(0)
+            state = states[i].unsqueeze(0)  # Add batch dimension (shape: [1, obs_dim])
+
             with torch.no_grad():
-                action = actor(state).squeeze().numpy()
-            
+                logits = actor(state).squeeze(0)  # Remove batch dimension (shape: [act_dim])
+
+            if random.random() < epsilon:
+                # Generate random logits for exploration
+                logits = torch.rand(logits.shape)
+
             # Normalize the action using Softmax
-            action = F.softmax(torch.FloatTensor(action), dim=0).numpy()
-            
+            action = torch.softmax(logits, dim=0)
+
             actions.append(action)
+
             if self.verbosity > 0:
                 print(f"Agent {i} action (normalized): {action}")
-        return actions
+
+        # Stack actions into a single tensor (shape: [n_agents, act_dim])
+        return torch.stack(actions)
 
     def store(self, transition):
         """

@@ -1,6 +1,10 @@
 import json
 import os
+import inspect
 from datetime import datetime
+from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler
+from train.scheduler.epsilon_scheduler import InverseSigmoidEpsilonScheduler
+from train.scheduler.epsilon_scheduler import ExponentialEpsilonScheduler
 
 class Config:
     def __init__(self, config_path):
@@ -33,7 +37,7 @@ class Config:
             "model_config": None,
             "tau": 0.01, # Target network update rate
             "gamma": 0.99, # Discount factor
-            "buffer_size": 1_000, # Replay buffer size
+            "batch_size": 64, # Replay buffer size
         }
 
         print("-" * 50)
@@ -70,3 +74,36 @@ class Config:
     def __getitem__(self, key):
         """Allows dictionary-like access to the configuration."""
         return self.data[key]
+
+    def load_scheduler(self):
+        """
+        Dynamically loads and initializes the epsilon scheduler from the config.
+
+        Returns:
+            object: An instance of the specified scheduler class.
+        """
+        exploration_config = self.data.get("EXPLORATION_CONFIGS", {})
+        scheduler_class_name = exploration_config.get("scheduler_class")
+        scheduler_params = exploration_config.get("params", {})
+
+        if not scheduler_class_name:
+            raise ValueError("Scheduler class name is not specified in the config.")
+
+        # Dynamically import the scheduler class (assuming it's in the `train.scheduler.epsilon_scheduler` module)
+        try:
+            from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler, ExponentialEpsilonScheduler
+            scheduler_class = globals()[scheduler_class_name]
+        except KeyError:
+            raise ImportError(f"Scheduler class '{scheduler_class_name}' not found.")
+
+        # Validate that all required parameters are provided
+        required_params = inspect.signature(scheduler_class).parameters
+        missing_params = [
+            param for param in required_params
+            if param not in scheduler_params and required_params[param].default == inspect.Parameter.empty
+        ]
+        if missing_params:
+            raise ValueError(f"Missing required parameters for '{scheduler_class_name}': {missing_params}")
+
+        # Instantiate the scheduler with the provided parameters
+        return scheduler_class(**scheduler_params)

@@ -1,11 +1,11 @@
 from config.config import Config
 from envs.portfolio_agent_generator import create_portfolio_env
-from train.train import train_agent
-from eval.evaluate import evaluate_agent
 from utils.start_tensorboard import start_tensorboard
 from utils.safari import focus_tensorboard_tab
 from data.downloader import get_data
 from agents.create_agent import create_agent
+from utils.safari import refresh_current_safari_window
+from train.run_agent import run_agent
 
 def process_config(config_path):
     """
@@ -19,6 +19,8 @@ def process_config(config_path):
 
     if config.get("enable_tensorboard"):
         start_tensorboard(mode="safari", port=6005)
+        focus_tensorboard_tab()
+        refresh_current_safari_window()
 
     ##################################
     # Training setup
@@ -33,13 +35,20 @@ def process_config(config_path):
         trade_cost_fixed=config["trade_cost_fixed"]
     )
 
+    # Create an Agent
     train_agent_instance = create_agent(config["agent"], train_env, config.data)
 
-    load_path = train_agent(
+    # Create an epsilon scheduler
+    epsilon_scheduler = config.load_scheduler()
+
+    load_path = run_agent(
         env=train_env,
         agent=train_agent_instance,
+        config=config.data,
         n_episodes=config["train_episodes"],
-        run_name=config.run_name
+        run_name=config.run_name,
+        epsilon_scheduler=epsilon_scheduler,
+        train = True,
     )
     ##################################
 
@@ -56,17 +65,22 @@ def process_config(config_path):
         trade_cost_fixed=config["trade_cost_fixed"]
     )
 
-    eval_agent_instance = create_agent(config["agent"], eval_env, config.data)
+    eval_agent_instance = train_agent_instance
 
-    eval_agent_instance.load(load_path)
+    #eval_agent_instance.load(load_path)
 
-    evaluate_agent(env=eval_env, 
-                   agent=eval_agent_instance, 
-                   config=config.data, 
-                   run_name=config.run_name,
-                   n_runs=config["eval_episodes"])
+    run_agent(
+        env=eval_env, 
+        agent=eval_agent_instance, 
+        config=config.data, 
+        run_name=config.run_name,
+        n_episodes=config["eval_episodes"], 
+        epsilon_scheduler=None,
+        train=False)
     ##################################
 
     # END
     if config.get("enable_tensorboard"):
         focus_tensorboard_tab()
+        refresh_current_safari_window()
+        

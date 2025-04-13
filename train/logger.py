@@ -79,3 +79,28 @@ class Logger:
 
     def close(self):
         self.writer.close()
+
+    def log_portfolio_statistics(self):
+        """
+        Logs the portfolio mean and standard deviation over time.
+        """
+        if not self.balances:
+            print("No balances recorded. Skipping portfolio statistics logging.")
+            return
+
+        # Convert balances to a NumPy array
+        balances_array = np.array(self.balances)  # shape: (n_runs, n_steps)
+        mean_balances = np.mean(balances_array, axis=0)
+        std_balances = np.std(balances_array, axis=0)
+
+        # Reset step counter for logging
+        self.step = 0
+
+        # Log mean and std for each time step
+        for t in range(len(mean_balances)):
+            self.log_scalar("02_eval/portfolio_value_mean", mean_balances[t])
+            self.log_scalar("02_eval/portfolio_value_std", std_balances[t])
+            self.next_step()
+
+        # Reset step counter after logging
+        self.step = 0
