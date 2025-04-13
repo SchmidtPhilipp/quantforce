@@ -69,7 +69,7 @@ class Metrics:
             "calmar": [],
         }
 
-    def calculate(self, balances):
+    def append(self, balances):
         """
         Calculate metrics for a single run and store them.
 
@@ -119,7 +119,7 @@ class Metrics:
             else:
                 print(f"{name.capitalize():<20s}: {stats['mean']:.4f} ± {stats['std']:.4f}")
 
-    def log_metrics(self, logger):
+    def log_metrics(self, logger, run_type="train"):
         """
         Log metrics using a logger.
 
@@ -128,5 +128,20 @@ class Metrics:
         """
         summary = self.mean_and_std()
         for name, stats in summary.items():
-            logger.log_scalar(f"metrics/{name}_mean", stats["mean"])
-            logger.log_scalar(f"metrics/{name}_std", stats["std"])
+            logger.log_scalar(f"{run_type}_metrics/{name}_mean", stats["mean"])
+            logger.log_scalar(f"{run_type}_metrics/{name}_std", stats["std"])
+
+
+    def reset(self):
+        """
+        Reset the metrics.
+        """
+        self.metrics = {
+            "sharpe": [],
+            "sortino": [],
+            "drawdown": [],
+            "volatility": [],
+            "cumulative": [],
+            "annualized": [],
+            "calmar": [],
+        }

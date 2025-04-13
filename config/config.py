@@ -107,3 +107,16 @@ class Config:
 
         # Instantiate the scheduler with the provided parameters
         return scheduler_class(**scheduler_params)
+    
+    def save(self, save_path=None):
+        """
+        Saves the configuration to a JSON file.
+
+        Parameters:
+            save_path (str): Path to save the configuration file.
+        """
+        if save_path is None:
+            save_path = os.path.join(self.run_name, "config.json")
+        with open(save_path, "w") as f:
+            json.dump(self.data, f, indent=4)
+    

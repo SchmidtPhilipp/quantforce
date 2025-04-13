@@ -185,3 +185,10 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
 
         obs = self._get_observation()
         return obs
+    
+
+    def get_timesteps(self):
+        """
+        Returns the number of timesteps in the environment.
+        """
+        return len(self.data)

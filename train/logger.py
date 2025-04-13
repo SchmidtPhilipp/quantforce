@@ -46,61 +46,7 @@ class Logger:
         self.weights.append(weights)
         self.asset_holdings.append(asset_holdings)
 
-    def save_evaluation_data(self, config=None):
-        # Save balances
-        balances_array = np.array(self.balances)
-        pd.DataFrame(balances_array.T).to_csv(os.path.join(self.run_path, "balances.csv"), index=False)
-        np.save(os.path.join(self.run_path, "balances.npy"), balances_array)
-
-        # Save weights
-        weights_array = np.array(self.weights)
-        np.save(os.path.join(self.run_path, "weights.npy"), weights_array)
-
-        # Save asset holdings
-        assets_array = np.array(self.asset_holdings)
-        np.save(os.path.join(self.run_path, "assets.npy"), assets_array)
-
-        # Save metrics
-        summary = {
-            "mean": {k: float(np.mean(v)) for k, v in self.metrics.items()},
-            "std": {k: float(np.std(v)) for k, v in self.metrics.items()}
-        }
-        with open(os.path.join(self.run_path, "metrics_summary.json"), "w") as f:
-            json.dump(summary, f, indent=2)
-
-        pd.DataFrame(self.metrics).to_csv(os.path.join(self.run_path, "metrics_all.csv"), index=False)
-
-        # Save config
-        if config:
-            self.config = config
-        if self.config:
-            with open(os.path.join(self.run_path, "config.json"), "w") as f:
-                json.dump(self.config, f, indent=2)
-
     def close(self):
         self.writer.close()
 
-    def log_portfolio_statistics(self):
-        """
-        Logs the portfolio mean and standard deviation over time.
-        """
-        if not self.balances:
-            print("No balances recorded. Skipping portfolio statistics logging.")
-            return
 
-        # Convert balances to a NumPy array
-        balances_array = np.array(self.balances)  # shape: (n_runs, n_steps)
-        mean_balances = np.mean(balances_array, axis=0)
-        std_balances = np.std(balances_array, axis=0)
-
-        # Reset step counter for logging
-        self.step = 0
-
-        # Log mean and std for each time step
-        for t in range(len(mean_balances)):
-            self.log_scalar("02_eval/portfolio_value_mean", mean_balances[t])
-            self.log_scalar("02_eval/portfolio_value_std", std_balances[t])
-            self.next_step()
-
-        # Reset step counter after logging
-        self.step = 0

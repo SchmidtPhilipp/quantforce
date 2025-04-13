@@ -44,7 +44,7 @@ def process_config(config_path):
     load_path = run_agent(
         env=train_env,
         agent=train_agent_instance,
-        config=config.data,
+        config=config,
         n_episodes=config["train_episodes"],
         run_name=config.run_name,
         epsilon_scheduler=epsilon_scheduler,
@@ -72,7 +72,7 @@ def process_config(config_path):
     run_agent(
         env=eval_env, 
         agent=eval_agent_instance, 
-        config=config.data, 
+        config=config, 
         run_name=config.run_name,
         n_episodes=config["eval_episodes"], 
         epsilon_scheduler=None,

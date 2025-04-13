@@ -10,6 +10,7 @@ class BaseAgent:
             raise ValueError("No model defined in agent.")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(self.model.state_dict(), path)
+        print(f"✅ Agent saved to: {path}")
 
     def load(self, path):
         if self.model is None:
