@@ -1,11 +1,11 @@
 from .logger import Logger
 from utils.metrics import Metrics
 import os
-import numpy as np
 from utils.AssetTracker import AssetTracker
+from tqdm import tqdm  # Import tqdm for progress tracking
 
 
-def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, epsilon_scheduler=None, train=True):
+def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, epsilon_scheduler=None, train=True, use_tqdm=True):
     """
     Runs the agent in the given environment for training or evaluation.
 
@@ -18,6 +18,7 @@ def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, 
         run_name (str): Name of the run for logging.
         epsilon_scheduler (EpsilonScheduler): Scheduler for epsilon decay (only used in training).
         train (bool): If True, runs training; if False, runs evaluation.
+        use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
 
     Returns:
         dict: Metrics collected during the run (for evaluation).
@@ -41,12 +42,15 @@ def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, 
         from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler
         epsilon_scheduler = LinearEpsilonScheduler(epsilon_start=1.0, epsilon_min=0.01)
 
+
     for ep in range(n_episodes):
         state = env.reset()
-        total_reward = 0 # Note: this might not necessarily be a scalar.
+        total_reward = 0
         done = False
         steps = 0
 
+        # Initialize tqdm progress bar if enabled
+        progress_bar = tqdm(total=env.get_timesteps(), desc=f"{run_type} Episode {ep+1}/{n_episodes}", unit="step", ncols=200) if use_tqdm else None
         while not done:
             # Use epsilon-greedy policy for exploration during training
             epsilon = epsilon_scheduler.epsilon if train else 0.0
@@ -60,46 +64,51 @@ def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, 
             if train:
                 agent.store((state, action, reward, next_state))
                 agent.train()
-                        
+
             state = next_state
             total_reward += reward
             steps += 1
 
-        asset_tracker.log_episode(logger)
-        asset_tracker.print_episode_summary(run_type=run_type, episode=ep)
+            # Update the unified progress bar if enabled
+            if use_tqdm:
+                progress_bar.update(1)
 
-        # append metrics for this episode
+        asset_tracker.log_episode(logger)
+        
+        # Close tqdm progress bar if enabled
+        if use_tqdm:
+            progress_bar.close()
+
+
+        # Append metrics for this episode
         metrics.append(asset_tracker.get_episode_data("balances", ep))
 
         # Update epsilon using the scheduler (only during training)
         if train:
             epsilon_scheduler.step(ep + 1, n_episodes)
             logger.log_scalar(f"{run_type}_epsilon/epsilon", epsilon_scheduler.epsilon, step=ep)
-
+            
+            asset_tracker.print_episode_summary(run_type=run_type, episode=ep)
             metrics.print_report()
             print("-" * 50)
-
-            # Reset the metrics for the next episode
             metrics.reset()
 
         # End the episode
-        asset_tracker.end_episode()
+        asset_tracker.end_episode() # Last task of the episode !!
 
     # Log portfolio mean and std over time
     if not train:
-        asset_tracker.log_statistics(logger) # only makes sense for evaluation
-
+        asset_tracker.log_statistics(logger)  # Only makes sense for evaluation
         metrics.print_report()
         metrics.log_metrics(logger, run_type=run_type)
-        print("-" * 50)
 
     # Save model (only during training)
     if train:
         agent.save(os.path.join(logger.run_path, "agent.pt"))
-        
+
     # Close the logger
     logger.close()
-    
+
     # Save asset tracker data
     asset_tracker.save(os.path.join(logger.run_path, run_type))
 

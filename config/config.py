@@ -41,7 +41,7 @@ class Config:
         }
 
         print("-" * 50)
-        print("Config:")
+        print("✅ Config:")
         for key, default_value in defaults.items():
             if key not in self.data:
                 print(f'{key} not set; default value "{default_value}" applied.')

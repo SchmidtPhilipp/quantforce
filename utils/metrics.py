@@ -110,14 +110,10 @@ class Metrics:
         summary = self.mean_and_std()
         print("\n📊 Metrics Summary:")
         for name, stats in summary.items():
-            if name in ["sharpe", "sortino", "calmar"]:  # Ratios
-                print(f"{name.capitalize():<20s}: {stats['mean']:.4f} ± {stats['std']:.4f}")
-            elif name in ["drawdown", "cumulative", "annualized"]:  # Percentages
-                print(f"{name.capitalize():<20s}: {stats['mean'] * 100:.2f}% ± {stats['std'] * 100:.2f}%")
-            elif name == "volatility":  # Volatility as percentage
-                print(f"{name.capitalize():<20s}: {stats['mean'] * 100:.2f}% ± {stats['std'] * 100:.2f}%")
+            if name in ["drawdown", "cumulative", "annualized", "volatility"]:  # Percentages
+                print(f"{name.capitalize():<12s}: {stats['mean'] * 100:>7.2f}% ± {stats['std'] * 100:>4.2f}%")
             else:
-                print(f"{name.capitalize():<20s}: {stats['mean']:.4f} ± {stats['std']:.4f}")
+                print(f"{name.capitalize():<12s}: {stats['mean']:>8.3f} ± {stats['std']:>5.3f}")
 
     def log_metrics(self, logger, run_type="train"):
         """

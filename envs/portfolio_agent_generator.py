@@ -8,6 +8,6 @@ def create_portfolio_env(data,
                          trade_cost_fixed=0.0):
 
     
-    print("Creating Multi Agent Portfolio Environment")
+    print("📈 Creating Multi Agent Portfolio Environment")
     print("-" * 50)
     return MultiAgentPortfolioEnv(data, initial_balance, verbosity, n_agents, trade_cost_percent, trade_cost_fixed)

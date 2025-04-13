@@ -157,7 +157,7 @@ class AssetTracker:
         """
 
         tickers = self.tickers
-        for timestep in range(self.current_timestep):
+        for timestep in range(0, self.timesteps):
             # Log portfolio balance
             for agent_idx in range(self.n_agents):
                 # Log balances
@@ -200,7 +200,6 @@ class AssetTracker:
         Parameters:
             logger (Logger): Logger instance for logging.
         """
-        step = logger.step
         for timestep in range(self.timesteps):
         # Log statistics for each agent
             for agent_idx in range(self.n_agents):
@@ -231,28 +230,10 @@ class AssetTracker:
         else:  # Single-agent reward
             agent_rewards_str = f"Agent 0: {total_reward:.4f}"
 
-        print(f"[{run_type}] Episode {episode+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
+        print(f"📈[{run_type}] Episode {episode+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
         print(f"Portfolio Value: {self.balances[episode, steps-1]:.2f}")
         print(f"Total Reward: {np.sum(total_reward):.4f}")
         print(f"Asset Holdings: {self.asset_holdings[episode, steps-1]}")
-
-    def print_summary(self):
-        """
-        Prints a summary of the actions, asset holdings, and balances over the episode.
-        """
-        print("\n📊 Asset Tracker Summary:")
-        for step in range(self.current_timestep):
-            actions = self.actions[self.current_episode, step]
-            holdings = self.asset_holdings[self.current_episode, step]
-            actor_balance = self.actor_balances[self.current_episode, step]
-            print(f"Step {step}:")
-            for agent_idx in range(self.n_agents):
-                print(f"  Agent {agent_idx}:")
-                print(f"    Balance: {actor_balance[agent_idx]:.2f}")
-                print(f"    Actions (Weights): {actions[agent_idx]}")
-                print(f"    Asset Holdings: {holdings[agent_idx]}")
-        print("-" * 50)
-
 
     def save(self, run_path):
         """
