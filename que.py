@@ -13,7 +13,6 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
         
-
 # Set a different seed for each training run
 set_seed(random.randint(0, 10000))
 

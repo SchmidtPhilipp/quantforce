@@ -36,8 +36,11 @@ def process_config(config_path):
     )
 
     # Create an Agent
-    train_agent_instance = create_agent(config["agent"], train_env, config.data)
-
+    #train_agent_instance = create_agent(config["agent"], train_env, config.data)
+    # Create an Agent
+    obs_dim = train_env.observation_space.shape[0]
+    act_dim = train_env.action_space.shape[0]
+    train_agent_instance = config.load_agent(obs_dim, act_dim)
     # Create an epsilon scheduler
     epsilon_scheduler = config.load_scheduler()
 

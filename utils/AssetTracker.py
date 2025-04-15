@@ -208,6 +208,10 @@ class AssetTracker:
                 logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}/mean_reward", np.mean(self.rewards[:,timestep,agent_idx], axis=0), step=timestep)
                 logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}/std_reward", np.std(self.rewards[:,timestep,agent_idx], axis=0), step=timestep)
 
+                for i, t in enumerate(self.tickers):
+                    logger.log_scalar(f"{self.tensorboard_prefix}_assets_mean/agent_{agent_idx}/{t}_mean_weight", np.mean(self.asset_holdings[:,timestep,agent_idx, i], axis=0), step=timestep)
+                    logger.log_scalar(f"{self.tensorboard_prefix}_assets_std/agent_{agent_idx}/{t}_std_weight", np.std(self.asset_holdings[:,timestep,agent_idx, i], axis=0), step=timestep)
+
             logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/mean_portfolio_value", np.mean(self.balances[:,timestep], axis=0), step=timestep)
             logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/std_portfolio_value", np.std(self.balances[:,timestep], axis=0), step=timestep)
 

@@ -50,7 +50,7 @@ def run_agent(env, agent, config, save_path=None, n_episodes=10, run_name=None, 
         steps = 0
 
         # Initialize tqdm progress bar if enabled
-        progress_bar = tqdm(total=env.get_timesteps(), desc=f"{run_type} Episode {ep+1}/{n_episodes}", unit="step", ncols=200) if use_tqdm else None
+        progress_bar = tqdm(total=env.get_timesteps(), desc=f"{run_type} Episode {ep+1}/{n_episodes}", unit="step", ncols=80) if use_tqdm else None
         while not done:
             # Use epsilon-greedy policy for exploration during training
             epsilon = epsilon_scheduler.epsilon if train else 0.0

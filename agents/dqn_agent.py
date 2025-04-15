@@ -6,23 +6,21 @@ import random
 from agents.model_builder import ModelBuilder
 
 class DQNAgent(BaseAgent):
-    def __init__(self, obs_dim, act_dim, model_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000):
+    def __init__(self, obs_dim, act_dim, actor_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000):
         super().__init__()
 
-        # Dynamically generate the default config based on obs_dim and act_dim
-        default_config = [
+        # Use the provided network architecture or a default one
+        default_architecture = [
             {"type": "Linear", "params": {"in_features": obs_dim, "out_features": 128}, "activation": "ReLU"},
             {"type": "Linear", "params": {"in_features": 128, "out_features": 128}, "activation": "ReLU"},
             {"type": "Linear", "params": {"in_features": 128, "out_features": 64}, "activation": "ReLU"},
             {"type": "Linear", "params": {"in_features": 64, "out_features": act_dim}}
         ]
-
-        # Use the default config if no custom config is provided
-        model_config = model_config or default_config
+        actor_config = actor_config or default_architecture
 
         # Use ModelBuilder to create the models
-        self.model = ModelBuilder(model_config).build()
-        self.target_model = ModelBuilder(model_config).build()
+        self.model = ModelBuilder(actor_config).build()
+        self.target_model = ModelBuilder(actor_config).build()
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.gamma = gamma

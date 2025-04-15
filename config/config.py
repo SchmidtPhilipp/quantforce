@@ -6,6 +6,12 @@ from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler
 from train.scheduler.epsilon_scheduler import InverseSigmoidEpsilonScheduler
 from train.scheduler.epsilon_scheduler import ExponentialEpsilonScheduler
 
+from agents.dqn_agent import DQNAgent  # Add other agents as needed
+from agents.maddpg_agent import MADDPGAgent  # Add other agents as needed
+from agents.model_builder import ModelBuilder
+from agents.base_agent import BaseAgent
+from agents.up_agent import UniversalPortfolioAgent
+
 class Config:
     def __init__(self, config_path):
         """
@@ -16,6 +22,11 @@ class Config:
         """
         self.config_path = config_path
         self.data = self._load_config()
+
+        agent_config = self.data.get("AGENT_CONFIGS", {})
+        agent_params = agent_config.get("params", {})
+        self.data["n_agents"] = agent_params.get("n_agents", 1)
+
         self._set_defaults()
         self._validate_config()
         self.run_name = self._generate_run_name()
@@ -34,7 +45,6 @@ class Config:
             "trade_cost_percent": 0.00,
             "trade_cost_fixed": 0.0,
             "enable_tensorboard": True,
-            "model_config": None,
             "tau": 0.01, # Target network update rate
             "gamma": 0.99, # Discount factor
             "batch_size": 64, # Replay buffer size
@@ -119,4 +129,49 @@ class Config:
             save_path = os.path.join(self.run_name, "config.json")
         with open(save_path, "w") as f:
             json.dump(self.data, f, indent=4)
-    
+
+    def load_agent(self, obs_dim, act_dim):
+        """
+        Dynamically loads and initializes the agent from the config.
+
+        Parameters:
+            obs_dim (int): Observation space dimension.
+            act_dim (int): Action space dimension.
+
+        Returns:
+            object: An instance of the specified agent class.
+        """
+        agent_config = self.data.get("AGENT_CONFIGS", {})
+        agent_class_name = agent_config.get("agent_class")
+        agent_params = agent_config.get("params", {})
+
+        if not agent_class_name:
+            raise ValueError("Agent class name is not specified in the config.")
+
+        # Dynamically import the agent class (assuming it's in the `agents` module)
+        try:
+            agent_class = globals()[agent_class_name]
+        except KeyError:
+            raise ImportError(f"Agent class '{agent_class_name}' not found.")
+        
+        n_agents = self.data["n_agents"]
+
+        # Replace placeholders in the network architecture with actual dimensions
+        if "actor_config" in agent_params:
+            for layer in agent_params["actor_config"]:
+                if "params" in layer:
+                    if "in_features" in layer["params"] and layer["params"]["in_features"] == "obs_dim":
+                        layer["params"]["in_features"] = obs_dim
+                    if "out_features" in layer["params"] and layer["params"]["out_features"] == "act_dim":
+                        layer["params"]["out_features"] = act_dim
+
+        if "critic_config" in agent_params:
+            for layer in agent_params["critic_config"]:
+                if "params" in layer:
+                    if "in_features" in layer["params"] and layer["params"]["in_features"] == "obs_dim * n_agents + act_dim * n_agents":
+                        layer["params"]["in_features"] = obs_dim * n_agents + act_dim * n_agents
+                    if "out_features" in layer["params"] and layer["params"]["out_features"] == "obs_dim":
+                        layer["params"]["out_features"] = 1
+
+        # Instantiate the agent with the provided parameters
+        return agent_class(obs_dim=obs_dim, act_dim=act_dim, **agent_params)

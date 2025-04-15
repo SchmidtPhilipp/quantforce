@@ -18,6 +18,8 @@
 # DONE: Multi Agent Portfolio Environment mit Shared Observation und Shared Action
 # TODO: Option implementieren für Agenten welche nicht nur den aktuellen State 
 # sondern auch die Historie betrachten
+# TODO: Im paper werden auch aktionen und cash als observations hinzugefügt.
+# TODO: Welche Reward funktion? log reward? oder nur stepreward? 
 
 ####################################################
 # Agenten
@@ -28,11 +30,13 @@
     # DONE: 2 It seems like all agents are learning the same thing. Maybe we somewhere loose the gradients? 
 # TODO: MADDPG Agenten mit TIPP
 # TODO: MADDPG Agenten mit CPPI
+# TODO: UP Agent
 
 ##################################################
 # Generelle TODOs
 # DONE: Tensorboard Logging
 # DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
+# TODO: CUDA, MPS, GPU Support
 # TODO: Alles von listen und arrays auf tensors umstellen.
 # TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
@@ -62,3 +66,13 @@
 # TODO: Ensemble Agenten
 # TODO: Ensemble Agenten mit TIPP
 # TODO: Ensemble Agenten mit CPPI
+
+
+
+
+
+###########################################################
+# Critics about the Paper
+# Actual Stocks are not mentioned. 
+# Only short train and test time. 
+
