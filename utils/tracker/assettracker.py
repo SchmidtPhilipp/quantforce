@@ -1,12 +1,12 @@
 import numpy as np
+import os
 
 class AssetTracker:
-    def __init__(self, n_episodes, n_agents, n_assets, timesteps, tickers, tensorboard_prefix="04_eval_assets"):
+    def __init__(self, n_agents, n_assets, timesteps, tickers, tensorboard_prefix="04_eval_assets", n_episodes=1):
         """
         Initializes the AssetTracker.
 
         Parameters:
-            n_episodes (int): Number of episodes to track.
             n_agents (int): Number of agents.
             n_assets (int): Number of assets.
             timesteps (int): Maximum number of timesteps per episode.
@@ -14,22 +14,35 @@ class AssetTracker:
             tensorboard_prefix (str): Prefix for TensorBoard logging.
         """
         self.tensorboard_prefix = tensorboard_prefix
-        self.n_episodes = n_episodes
         self.n_agents = n_agents
         self.n_assets = n_assets
         self.timesteps = timesteps
         self.tickers = tickers
 
-        # Initialize arrays to store data
-        self.actions = np.zeros((n_episodes, timesteps, n_agents, n_assets + 1))  # Actions (weights)
-        self.asset_holdings = np.zeros((n_episodes, timesteps, n_agents, n_assets))  # Asset holdings
-        self.actor_balances = np.zeros((n_episodes, timesteps, n_agents))  # Agent balances
-        self.balances = np.zeros((n_episodes, timesteps))  # Total portfolio balances
-        self.rewards = np.zeros((n_episodes, timesteps, n_agents))  # Rewards
+        # Initialize lists to store data dynamically
+        self.actions = []  # Actions (weights)
+        self.asset_holdings = []  # Asset holdings
+        self.actor_balances = []  # Agent balances
+        self.balances = []  # Total portfolio balances
+        self.rewards = []  # Rewards
 
         # Track the current episode and timestep
         self.current_episode = 0
         self.current_timestep = 0
+
+    def _ensure_episode_exists(self, episode_idx):
+        """
+        Ensures that the data structures are large enough to handle the given episode index.
+
+        Parameters:
+            episode_idx (int): The episode index to ensure exists.
+        """
+        while len(self.actions) <= episode_idx:
+            self.actions.append(np.zeros((self.timesteps, self.n_agents, self.n_assets + 1)))
+            self.asset_holdings.append(np.zeros((self.timesteps, self.n_agents, self.n_assets)))
+            self.actor_balances.append(np.zeros((self.timesteps, self.n_agents)))
+            self.balances.append(np.zeros(self.timesteps))
+            self.rewards.append(np.zeros((self.timesteps, self.n_agents)))
 
     def end_episode(self):
         """
@@ -37,7 +50,6 @@ class AssetTracker:
         """
         self.current_episode += 1
         self.current_timestep = 0
-
 
     def record_step(self, actions, asset_holdings, actor_balance, balance, reward):
         """
@@ -53,16 +65,18 @@ class AssetTracker:
         ep = self.current_episode
         ts = self.current_timestep
 
+        # Ensure the current episode exists
+        self._ensure_episode_exists(ep)
+
         # Store data in arrays
-        self.actions[ep, ts] = actions
-        self.asset_holdings[ep, ts] = asset_holdings
-        self.actor_balances[ep, ts] = actor_balance
-        self.balances[ep, ts] = balance
-        self.rewards[ep, ts] = reward
+        self.actions[ep][ts] = actions
+        self.asset_holdings[ep][ts] = asset_holdings
+        self.actor_balances[ep][ts] = actor_balance
+        self.balances[ep][ts] = balance
+        self.rewards[ep][ts] = reward
 
         # Increment timestep
         self.current_timestep += 1
-
 
     def get_episode_data(self, episode_idx):
         """
@@ -74,6 +88,7 @@ class AssetTracker:
         Returns:
             dict: A dictionary containing actions, asset holdings, balances, and rewards for the episode.
         """
+        self._ensure_episode_exists(episode_idx)
         return {
             "actions": self.actions[episode_idx],
             "asset_holdings": self.asset_holdings[episode_idx],
@@ -81,7 +96,6 @@ class AssetTracker:
             "balances": self.balances[episode_idx],
             "rewards": self.rewards[episode_idx],
         }
-    
 
     def get_episode_data(self, data_name, episode_idx=None):
         """
@@ -97,6 +111,8 @@ class AssetTracker:
         if episode_idx is None:
             episode_idx = self.current_episode-1
 
+        self._ensure_episode_exists(episode_idx)
+
         if data_name == "actions":
             return self.actions[episode_idx]
         elif data_name == "asset_holdings":
@@ -110,7 +126,6 @@ class AssetTracker:
         else:
             raise ValueError(f"Invalid data name: {data_name}")
 
-
     def calculate_statistics(self):
         """
         Calculates mean and standard deviation across episodes for evaluation.
@@ -118,33 +133,30 @@ class AssetTracker:
         Returns:
             dict: A dictionary containing mean and std for balances, actions, and rewards.
         """
-        mean_balances = np.mean(self.balances, axis=0)  # Mean across episodes
-        std_balances = np.std(self.balances, axis=0)
-
-        mean_actions = np.mean(self.actions, axis=0)
-        std_actions = np.std(self.actions, axis=0)
-
-        mean_rewards = np.mean(self.rewards, axis=0)
-        std_rewards = np.std(self.rewards, axis=0)
+        actions = np.concatenate(self.actions, axis=0)
+        asset_holdings = np.concatenate(self.asset_holdings, axis=0)
+        actor_balances = np.concatenate(self.actor_balances, axis=0)
+        balances = np.concatenate(self.balances, axis=0)
+        rewards = np.concatenate(self.rewards, axis=0)
 
         return {
-            "mean_balances": mean_balances,
-            "std_balances": std_balances,
-            "mean_actions": mean_actions,
-            "std_actions": std_actions,
-            "mean_rewards": mean_rewards,
-            "std_rewards": std_rewards,
+            "mean_balances": np.mean(balances, axis=0),
+            "std_balances": np.std(balances, axis=0),
+            "mean_actions": np.mean(actions, axis=0),
+            "std_actions": np.std(actions, axis=0),
+            "mean_rewards": np.mean(rewards, axis=0),
+            "std_rewards": np.std(rewards, axis=0),
         }
 
     def reset(self):
         """
         Resets the tracker for a new set of episodes.
         """
-        self.actions.fill(0)
-        self.asset_holdings.fill(0)
-        self.actor_balances.fill(0)
-        self.balances.fill(0)
-        self.rewards.fill(0)
+        self.actions = []
+        self.asset_holdings = []
+        self.actor_balances = []
+        self.balances = []
+        self.rewards = []
         self.current_episode = 0
         self.current_timestep = 0
 
@@ -161,25 +173,25 @@ class AssetTracker:
             # Log portfolio balance
             for agent_idx in range(self.n_agents):
                 # Log balances
-                logger.log_scalar(f"{self.tensorboard_prefix}_balance/agent_{agent_idx}/balance", self.actor_balances[self.current_episode, timestep][agent_idx])
+                logger.log_scalar(f"{self.tensorboard_prefix}_balance/agent_{agent_idx}/balance", self.actor_balances[self.current_episode][timestep][agent_idx])
 
                 # Log actions (weights)
                 for asset_idx, ticker in enumerate(tickers):
-                    logger.log_scalar(f"{self.tensorboard_prefix}_weights/agent_{agent_idx}/{ticker}_weight", self.actions[self.current_episode, timestep][agent_idx, asset_idx])
-                logger.log_scalar(f"{self.tensorboard_prefix}_weights/agent_{agent_idx}/cash_weight", self.actions[self.current_episode, timestep][agent_idx, -1])
+                    logger.log_scalar(f"{self.tensorboard_prefix}_weights/agent_{agent_idx}/{ticker}_weight", self.actions[self.current_episode][timestep][agent_idx, asset_idx])
+                logger.log_scalar(f"{self.tensorboard_prefix}_weights/agent_{agent_idx}/cash_weight", self.actions[self.current_episode][timestep][agent_idx, -1])
 
                 # Log asset holdings
                 for asset_idx, ticker in enumerate(tickers):
-                    logger.log_scalar(f"{self.tensorboard_prefix}_assets/agent_{agent_idx}/{ticker}_holding", self.asset_holdings[self.current_episode, timestep][agent_idx, asset_idx])
+                    logger.log_scalar(f"{self.tensorboard_prefix}_assets/agent_{agent_idx}/{ticker}_holding", self.asset_holdings[self.current_episode][timestep][agent_idx, asset_idx])
 
                 # Log rewards
-                if isinstance(self.rewards[self.current_episode, timestep], (list, np.ndarray)):  # Multi-agent reward
-                    logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}_reward", self.rewards[self.current_episode, timestep][agent_idx])
+                if isinstance(self.rewards[self.current_episode][timestep], (list, np.ndarray)):  # Multi-agent reward
+                    logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}_reward", self.rewards[self.current_episode][timestep][agent_idx])
                 else:  # Single-agent reward
-                    logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_0_reward", self.rewards[self.current_episode, timestep])
+                    logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_0_reward", self.rewards[self.current_episode][timestep])
                 
             # Log total portfolio value
-            logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/portfolio_value", self.balances[self.current_episode, timestep])
+            logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/portfolio_value", self.balances[self.current_episode][timestep])
 
             logger.next_step()
 
@@ -203,17 +215,17 @@ class AssetTracker:
         for timestep in range(self.timesteps):
         # Log statistics for each agent
             for agent_idx in range(self.n_agents):
-                logger.log_scalar(f"{self.tensorboard_prefix}_balance/agent_{agent_idx}/mean_balance", np.mean(self.actor_balances[:,timestep, agent_idx], axis=0), step=timestep)
-                logger.log_scalar(f"{self.tensorboard_prefix}_balance/agent_{agent_idx}/std_balance", np.std(self.actor_balances[:,timestep,agent_idx], axis=0), step=timestep)
-                logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}/mean_reward", np.mean(self.rewards[:,timestep,agent_idx], axis=0), step=timestep)
-                logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}/std_reward", np.std(self.rewards[:,timestep,agent_idx], axis=0), step=timestep)
+                logger.log_scalar(f"{self.tensorboard_prefix}_balance/agent_{agent_idx}/mean_balance", np.mean([ep[timestep, agent_idx] for ep in self.actor_balances], axis=0), step=timestep)
+                logger.log_scalar(f"{self.tensorboard_prefix}_balance/agent_{agent_idx}/std_balance", np.std([ep[timestep, agent_idx] for ep in self.actor_balances], axis=0), step=timestep)
+                logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}/mean_reward", np.mean([ep[timestep, agent_idx] for ep in self.rewards], axis=0), step=timestep)
+                logger.log_scalar(f"{self.tensorboard_prefix}_reward/agent_{agent_idx}/std_reward", np.std([ep[timestep, agent_idx] for ep in self.rewards], axis=0), step=timestep)
 
                 for i, t in enumerate(self.tickers):
-                    logger.log_scalar(f"{self.tensorboard_prefix}_assets_mean/agent_{agent_idx}/{t}_mean_weight", np.mean(self.asset_holdings[:,timestep,agent_idx, i], axis=0), step=timestep)
-                    logger.log_scalar(f"{self.tensorboard_prefix}_assets_std/agent_{agent_idx}/{t}_std_weight", np.std(self.asset_holdings[:,timestep,agent_idx, i], axis=0), step=timestep)
+                    logger.log_scalar(f"{self.tensorboard_prefix}_assets_mean/agent_{agent_idx}/{t}_mean_weight", np.mean([ep[timestep, agent_idx, i] for ep in self.asset_holdings], axis=0), step=timestep)
+                    logger.log_scalar(f"{self.tensorboard_prefix}_assets_std/agent_{agent_idx}/{t}_std_weight", np.std([ep[timestep, agent_idx, i] for ep in self.asset_holdings], axis=0), step=timestep)
 
-            logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/mean_portfolio_value", np.mean(self.balances[:,timestep], axis=0), step=timestep)
-            logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/std_portfolio_value", np.std(self.balances[:,timestep], axis=0), step=timestep)
+            logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/mean_portfolio_value", np.mean([ep[timestep] for ep in self.balances], axis=0), step=timestep)
+            logger.log_scalar(f"{self.tensorboard_prefix}_portfolio/std_portfolio_value", np.std([ep[timestep] for ep in self.balances], axis=0), step=timestep)
 
     def print_episode_summary(self, run_type=None, episode=None):
         """
@@ -235,9 +247,9 @@ class AssetTracker:
             agent_rewards_str = f"Agent 0: {total_reward:.4f}"
 
         print(f"📈[{run_type}] Episode {episode+1:>3} | Steps: {steps} | Rewards: {agent_rewards_str}")
-        print(f"Portfolio Value: {self.balances[episode, steps-1]:.2f}")
+        print(f"Portfolio Value: {self.balances[episode][steps-1]:.2f}")
         print(f"Total Reward: {np.sum(total_reward):.4f}")
-        print(f"Asset Holdings: {self.asset_holdings[episode, steps-1]}")
+        print(f"Asset Holdings: {self.asset_holdings[episode][steps-1]}")
 
     def save(self, run_path):
         """
@@ -246,5 +258,28 @@ class AssetTracker:
         Parameters:
             run_path (str): Path to save the data.
         """
+        run_path = os.path.join(run_path, f"asset_data.npz")
         np.savez(run_path, actions=self.actions, asset_holdings=self.asset_holdings, actor_balances=self.actor_balances, balances=self.balances, rewards=self.rewards)
-        print(f"Data saved to {run_path}")
+        print(f"Asset tracker data saved to {run_path}.")
+
+    @staticmethod
+    def load(npz_path):
+        """
+        Lädt die AssetTracker-Daten aus einer NPZ-Datei.
+        
+        :param npz_path: Pfad zur NPZ-Datei.
+        :return: Ein AssetTracker-Objekt mit geladenen Daten.
+        """
+        data = np.load(npz_path)
+        tracker = AssetTracker(
+            n_agents=data['actions'].shape[2],
+            n_assets=data['actions'].shape[3] - 1,
+            timesteps=data['actions'].shape[1],
+            tickers=[]  # Tickers müssen separat gesetzt werden
+        )
+        tracker.actions = data['actions']
+        tracker.asset_holdings = data['asset_holdings']
+        tracker.actor_balances = data['actor_balances']
+        tracker.balances = data['balances']
+        tracker.rewards = data['rewards']
+        return tracker

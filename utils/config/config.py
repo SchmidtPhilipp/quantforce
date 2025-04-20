@@ -48,6 +48,7 @@ class Config:
             "tau": 0.01, # Target network update rate
             "gamma": 0.99, # Discount factor
             "batch_size": 64, # Replay buffer size
+            "time_window_size": 365, # Time window size for the dataset
         }
 
         print("-" * 50)
@@ -72,7 +73,7 @@ class Config:
         config_name = os.path.splitext(os.path.basename(self.config_path))[0]
 
         # Generate a timestamp in the format YYYYMMDD_HHMMSS
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         # Combine the config name and timestamp to create the run name
         return f"{config_name}_{timestamp}"

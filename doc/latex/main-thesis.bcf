@@ -2361,10 +2361,10 @@
     <bcf:datasource type="file" datatype="bibtex" glob="false">0b_ai_referenzen.bib</bcf:datasource>
   </bcf:bibdata>
   <bcf:section number="0">
-    <bcf:citekey order="1" intorder="1">SuttonBarto2018</bcf:citekey>
-    <bcf:citekey order="2" intorder="1">Lowe2017</bcf:citekey>
-    <bcf:citekey order="3" intorder="1">Zhang2023</bcf:citekey>
-    <bcf:citekey order="4" intorder="1">Thakkar2021</bcf:citekey>
+    <bcf:citekey order="1" intorder="1">Lowe2017</bcf:citekey>
+    <bcf:citekey order="2" intorder="1">Zhang2023</bcf:citekey>
+    <bcf:citekey order="3" intorder="1">Thakkar2021</bcf:citekey>
+    <bcf:citekey order="4" intorder="1">Lowe2017</bcf:citekey>
     <bcf:citekey order="5" intorder="1">Shreve2004</bcf:citekey>
     <bcf:citekey order="6" intorder="1">BlackScholes1973</bcf:citekey>
     <bcf:citekey order="7" intorder="1">Bachelier1900</bcf:citekey>

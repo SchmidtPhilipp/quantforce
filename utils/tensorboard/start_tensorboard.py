@@ -3,7 +3,7 @@ import webbrowser
 import socket
 import time
 import shutil
-from utils.safari import bring_safari_tab_to_front
+from utils.tensorboard.safari import bring_safari_tab_to_front
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

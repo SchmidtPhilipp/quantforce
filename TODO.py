@@ -1,7 +1,15 @@
 ##################################################
+# Wichtige TODOs
+# TODO: Asset Tracker für beliebige anzahl an Episoden implementieren.
+
+
+
+
+##################################################
 # Dataloader
 # DONE: Erstellung eines Dataloaders für die Daten
 # DONE: Cashe auf single ticker basis speichern.
+# DONE: TimebasedDataset erstellen.
 # TODO: Alle ticker herausfinden.
 # TODO: Datamanger implementieren. Sollte alle daten laden können. Vorhandene Daten ergänzen können. etc...
 # TODO: Survival bias umgehen.
@@ -32,17 +40,35 @@
 # TODO: MADDPG Agenten mit CPPI
 # TODO: UP Agent
 
+# TODO: Methodik zum weitertrainieren der Agenten implementieren.
+
+##################################################
+# Risk Management
+
+# Agent seems to trade too much -> causes a lot of trading costs.
+# Impelment a filter? Or a epsilon region to trade? 
+# Would it make sense to sample many actions at a state and add them to the replay buffer?
+
+
+######################################################
+# Logging and other Stuff
+# DONE: Logging der Agenten
+# DONE: Logging der Agenten in Tensorboard
+# TODO: Report generator erstellen.
+
+
 ##################################################
 # Generelle TODOs
 # DONE: Tensorboard Logging
 # DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
 # TODO: CUDA, MPS, GPU Support
-# TODO: Alles von listen und arrays auf tensors umstellen.
+# DONE: Alles von listen und arrays auf tensors umstellen.
 # TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
 # TODO: Hyperparameter Tuning
 # TODO: Visualisierungen erstellen.
 # TODO: Tracken der besten implementierungen. 
+# TODO: Trainieren bis der total reward nicht mehr steigt.
 
 ##################################################
 # Tests

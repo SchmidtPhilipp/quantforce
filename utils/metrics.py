@@ -40,7 +40,7 @@ def cumulative_return(balances):
         return 0.0  # Return 0 if not enough data
     return balances[-1] / (balances[0] + 1e-8) - 1   
 
-def annualized_return(balances, periods_per_year=252):
+def annualized_return(balances, periods_per_year=365):
     if len(balances) < 2:
         return 0.0  # Return 0 if not enough data
     returns = calculate_returns(balances)
@@ -141,3 +141,12 @@ class Metrics:
             "annualized": [],
             "calmar": [],
         }
+
+    def save(self, path):
+        """
+        Save the metrics to a file.
+
+        Parameters:
+            path (str): Path to save the metrics.
+        """
+        np.savez(path, **self.metrics)

@@ -1,20 +1,20 @@
 \babel@toc {ngerman}{}\relax 
 \contentsline {section}{\numberline {1}Einleitung}{1}{section.0.1}%
-\contentsline {subsection}{\numberline {1.1}Motivation und Relevanz}{1}{subsection.0.1.1}%
-\contentsline {subsection}{\numberline {1.2}Forschungsziel und Fragestellungen}{1}{subsection.0.1.2}%
+\contentsline {subsection}{\numberline {1.1}Motivation und Problemstellung}{1}{subsection.0.1.1}%
+\contentsline {subsection}{\numberline {1.2}Forschungsfrage und Zielsetzung}{1}{subsection.0.1.2}%
 \contentsline {subsection}{\numberline {1.3}Methodik und Aufbau der Arbeit}{2}{subsection.0.1.3}%
-\contentsline {section}{\numberline {2}Grundlagen der Quantitativen Finanzwissenschaft}{3}{section.0.2}%
-\contentsline {subsection}{\numberline {2.1}Mathematische Modellierung in der Finanzwelt}{3}{subsection.0.2.1}%
+\contentsline {section}{\numberline {2}Grundlagen der Quantitativen Finanzwissenschaft}{2}{section.0.2}%
+\contentsline {subsection}{\numberline {2.1}Mathematische Modellierung in der Finanzwelt}{2}{subsection.0.2.1}%
 \contentsline {subsection}{\numberline {2.2}Stochastische Prozesse und Finanzmathematik}{3}{subsection.0.2.2}%
 \contentsline {subsubsection}{\nonumberline Wiener-Prozesse und Brown’sche Bewegung}{3}{subsubsection*.4}%
-\contentsline {subsubsection}{\nonumberline Martingale und arbitragefreie Märkte}{4}{subsubsection*.6}%
+\contentsline {subsubsection}{\nonumberline Martingale und arbitragefreie Märkte}{3}{subsubsection*.6}%
 \contentsline {subsection}{\numberline {2.3}Klassische Finanzmodelle}{4}{subsection.0.2.3}%
 \contentsline {subsection}{\numberline {2.4}Herausforderungen klassischer Finanzmodelle}{4}{subsection.0.2.4}%
 \contentsline {section}{\numberline {3}Reinforcement Learning in der Quantitativen Finanzwissenschaft}{5}{section.0.3}%
 \contentsline {subsection}{\numberline {3.1}Grundlagen des Reinforcement Learning}{5}{subsection.0.3.1}%
 \contentsline {subsection}{\numberline {3.2}Value-Based und Policy-Based Methoden}{6}{subsection.0.3.2}%
 \contentsline {subsubsection}{\nonumberline Value-Based Methoden}{6}{subsubsection*.8}%
-\contentsline {subsubsection}{\nonumberline Policy-Based Methoden}{7}{subsubsection*.10}%
+\contentsline {subsubsection}{\nonumberline Policy-Based Methoden}{6}{subsubsection*.10}%
 \contentsline {subsection}{\numberline {3.3}Deep Reinforcement Learning und Finanzmärkte}{7}{subsection.0.3.3}%
 \contentsline {subsection}{\numberline {3.4}Vergleich mit traditionellen Optimierungsmethoden}{7}{subsection.0.3.4}%
 \contentsline {subsection}{\numberline {3.5}Kritische Betrachtung der Anwendbarkeit im Finanzsektor}{8}{subsection.0.3.5}%

@@ -3,7 +3,10 @@ from ta.momentum import RSIIndicator
 from ta.trend import MACD, SMAIndicator, EMAIndicator, ADXIndicator
 from ta.volatility import BollingerBands, AverageTrueRange
 from ta.volume import OnBalanceVolumeIndicator
+import numpy as np
 
+# Import Series
+from pandas import Series
 
 def compute_sma(series, window=14):
     return SMAIndicator(series, window=window).sma_indicator()
@@ -31,7 +34,7 @@ def compute_atr(high, low, close, window=14):
 def compute_obv(close, volume):
     return OnBalanceVolumeIndicator(close=close, volume=volume).on_balance_volume()
 
-def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv")):
+def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"), verbosity=0):
     """
     Adds technical indicators to OHLCV data with MultiIndex columns (ticker, field).
 
@@ -50,7 +53,8 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
     selected_indicators = set(indicators).intersection(valid_indicators)
 
     if not selected_indicators:
-        print("No valid indicators found in the provided list. Returning the original data.")
+        if verbosity > 0:
+            print("No valid indicators found in the provided list. Returning the original data.")
         return data
 
     data = data.copy()
@@ -64,8 +68,16 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
         low = data[(ticker, "Low")]
         volume = data[(ticker, "Volume")]
 
+        # For sma we also allow sma25 and sma50 and so on so we have to check if sma is followed by a number
         if "sma" in selected_indicators:
-            enriched[(ticker, "sma")] = compute_sma(close)
+            # Check if the column name contains "sma" followed by a number
+            sma_columns = [col for col in data.columns if col[0] == ticker and "sma" in col[1]]
+            if sma_columns:
+                for col in sma_columns:
+                    window_size = int(col[1].replace("sma", ""))
+                    enriched[(ticker, f"sma{window_size}")] = compute_sma(close, window=window_size)
+            else:
+                enriched[(ticker, "sma")] = compute_sma(close)
 
         if "rsi" in selected_indicators:
             enriched[(ticker, "rsi")] = compute_rsi(close)
@@ -99,4 +111,4 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
         enriched_df.columns = pd.MultiIndex.from_tuples(enriched_df.columns)
 
     result = pd.concat([data, enriched_df], axis=1)
-    return result.dropna()
+    return result.ffill().bfill().dropna()

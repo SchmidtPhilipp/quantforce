@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.10.10)  16 MAR 2025 15:45
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.10.10)  19 APR 2025 12:30
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -2116,60 +2116,70 @@ Overfull \vbox (15.64151pt too high) has occurred while \output is active []
 
 
  <./logos/jku_en_black.pdf>] (././01-introduction.tex
-LaTeX Font Info:    Font shape `U/msa/m/n' will be
-(Font)              scaled to size 10.42007pt on input line 4.
-LaTeX Font Info:    Font shape `U/msa/m/n' will be
-(Font)              scaled to size 7.91925pt on input line 4.
-LaTeX Font Info:    Font shape `U/msa/m/n' will be
-(Font)              scaled to size 6.25204pt on input line 4.
-LaTeX Font Info:    Font shape `U/msb/m/n' will be
-(Font)              scaled to size 10.42007pt on input line 4.
-LaTeX Font Info:    Font shape `U/msb/m/n' will be
-(Font)              scaled to size 7.91925pt on input line 4.
-LaTeX Font Info:    Font shape `U/msb/m/n' will be
-(Font)              scaled to size 6.25204pt on input line 4.
 
-Underfull \hbox (badness 1845) in paragraph at lines 6--7
-[]\T1/ppl/m/up/12 Eine spe-zi-el-le Un-ter-ka-te-go-rie ist das [][]Multi-Agent
- Re-in-for-ce-ment Lear-ning[]
- []
+! Package glossaries Error: Glossary entry `markowitz_portfolio_theorie' has no
+t been defined.
 
-<././logos/jku_en_black.pdf, id=101, 757.14313pt x 356.71005pt>
+See the glossaries package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.15 ...wie das \gls{markowitz_portfolio_theorie} 
+                                                  oder regelbasierte Handels...
+
+You need to define a glossary entry before you can use it.
+
+<././logos/jku_en_black.pdf, id=98, 757.14313pt x 356.71005pt>
 File: ././logos/jku_en_black.pdf Graphic file (type pdf)
 <use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 15.
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 20.
 (pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
 [1
 
  <././logos/jku_en_black.pdf>]
 
-LaTeX Warning: Reference `sec:anwendungen' on page 2 undefined on input line 26
+LaTeX Warning: Reference `sec:anwendungen' on page 2 undefined on input line 22
 .
 
 
+LaTeX Warning: Reference `sec:vergleich' on page 2 undefined on input line 22.
+
+
 LaTeX Warning: Reference `sec:kritische_diskussion' on page 2 undefined on inpu
-t line 27.
+t line 22.
 
 
-LaTeX Warning: Reference `sec:fazit' on page 2 undefined on input line 28.
+LaTeX Warning: Reference `sec:fazit' on page 2 undefined on input line 22.
 
 ) (././02.tex
+LaTeX Font Info:    Font shape `U/msa/m/n' will be
+(Font)              scaled to size 10.42007pt on input line 4.
+LaTeX Font Info:    Font shape `U/msa/m/n' will be
+(Font)              scaled to size 7.91925pt on input line 4.
+LaTeX Font Info:    Font shape `U/msa/m/n' will be
+(Font)              scaled to size 6.25204pt on input line 4.
+LaTeX Font Info:    Font shape `U/msb/m/n' will be
+(Font)              scaled to size 10.42007pt on input line 4.
+LaTeX Font Info:    Font shape `U/msb/m/n' will be
+(Font)              scaled to size 7.91925pt on input line 4.
+LaTeX Font Info:    Font shape `U/msb/m/n' will be
+(Font)              scaled to size 6.25204pt on input line 4.
 File: ././logos/jku_en_black.pdf Graphic file (type pdf)
 <use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 5.
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 11.
 (pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
  [2]
-File: ././logos/jku_en_black.pdf Graphic file (type pdf)
-<use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 22.
-(pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
- [3]
 LaTeX Font Info:    Trying to load font information for U+fplmbb on input line 
 23.
 
 (/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ufplmbb.fd
 File: ufplmbb.fd 2003/10/30 Fontinst v1.914 font definitions for U/fplmbb.
 )
+File: ././logos/jku_en_black.pdf Graphic file (type pdf)
+<use ././logos/jku_en_black.pdf>
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 33.
+(pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
+ [3]
 
 LaTeX Warning: Citation 'Markowitz1952' on page 4 undefined on input line 34.
 
@@ -2179,26 +2189,22 @@ Underfull \hbox (badness 1983) in paragraph at lines 34--35
 -les Mo-dell zur Portfolio-
  []
 
+) (././03.tex
 File: ././logos/jku_en_black.pdf Graphic file (type pdf)
 <use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 42.
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 5.
 (pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
-[4]) (././03.tex
+ [4]
 File: ././logos/jku_en_black.pdf Graphic file (type pdf)
 <use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 16.
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 27.
 (pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
  [5]
-File: ././logos/jku_en_black.pdf Graphic file (type pdf)
-<use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 44.
-(pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
- [6]
 
-LaTeX Warning: Citation 'Williams1992' on page 7 undefined on input line 44.
+LaTeX Warning: Citation 'Williams1992' on page 6 undefined on input line 44.
 
 
-LaTeX Warning: Citation 'Sutton2000' on page 7 undefined on input line 45.
+LaTeX Warning: Citation 'Sutton2000' on page 6 undefined on input line 45.
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 45--46
@@ -2207,19 +2213,24 @@ rung und
  []
 
 
-LaTeX Warning: Citation 'Dixon2020' on page 7 undefined on input line 49.
-
-
-LaTeX Warning: Citation 'Lillicrap2016' on page 7 undefined on input line 53.
+LaTeX Warning: Citation 'Dixon2020' on page 6 undefined on input line 49.
 
 File: ././logos/jku_en_black.pdf Graphic file (type pdf)
 <use ././logos/jku_en_black.pdf>
-Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 62.
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 50.
+(pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
+[6]
+
+LaTeX Warning: Citation 'Lillicrap2016' on page 7 undefined on input line 53.
+
+
+LaTeX Warning: Citation 'Fischer2018' on page 7 undefined on input line 63.
+
+File: ././logos/jku_en_black.pdf Graphic file (type pdf)
+<use ././logos/jku_en_black.pdf>
+Package pdftex.def Info: ././logos/jku_en_black.pdf  used on input line 70.
 (pdftex.def)             Requested size: 56.9055pt x 26.80652pt.
 [7]
-
-LaTeX Warning: Citation 'Fischer2018' on page 8 undefined on input line 63.
-
 
 LaTeX Warning: Citation 'Alderman2021' on page 8 undefined on input line 72.
 
@@ -2554,10 +2565,10 @@ main-thesis.acr
 ././logos/jku_en_black.pdf
   ././02.tex
 ././logos/jku_en_black.pdf
-././logos/jku_en_black.pdf
  ufplmbb.fd    2003/10/30 Fontinst v1.914 font definitions for U/fplmbb.
 ././logos/jku_en_black.pdf
   ././03.tex
+././logos/jku_en_black.pdf
 ././logos/jku_en_black.pdf
 ././logos/jku_en_black.pdf
 ././logos/jku_en_black.pdf
@@ -2575,15 +2586,23 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
 LaTeX Warning: There were undefined references.
 
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+
+Package biblatex Warning: Please (re)run Biber on the file:
+(biblatex)                main-thesis
+(biblatex)                and rerun LaTeX afterwards.
+
 Package logreq Info: Writing requests to 'main-thesis.run.xml'.
 \openout1 = `main-thesis.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 58082 strings out of 476025
- 1239960 string characters out of 5790016
- 2171362 words of memory out of 5000000
- 77528 multiletter control sequences out of 15000+600000
+ 58085 strings out of 476025
+ 1240014 string characters out of 5790016
+ 2171363 words of memory out of 5000000
+ 77536 multiletter control sequences out of 15000+600000
  581983 words of font info for 166 fonts, out of 8000000 for 9000
  1143 hyphenation exceptions out of 8191
  110i,26n,125p,10606b,2459s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -2607,10 +2626,6 @@ ferenced but does not exist, replaced by a fixed one
 pdfTeX warning (dest): name{glo:reinforcement_learning} has been referenced but
  does not exist, replaced by a fixed one
 
-
-pdfTeX warning (dest): name{glo:ml} has been referenced but does not exist, rep
-laced by a fixed one
-
 </usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb><
 /usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></
 usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/euler/euex10.pfb>
@@ -2624,10 +2639,10 @@ r/local/texlive/2023/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local
 /texlive/2023/texmf-dist/fonts/type1/urw/palatino/uplb8a.pfb></usr/local/texliv
 e/2023/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb></usr/local/texlive/2023/
 texmf-dist/fonts/type1/urw/palatino/uplri8a.pfb>
-Output written on main-thesis.pdf (13 pages, 183573 bytes).
+Output written on main-thesis.pdf (13 pages, 182102 bytes).
 PDF statistics:
- 447 PDF objects out of 1000 (max. 8388607)
- 383 compressed objects within 4 object streams
- 86 named destinations out of 1000 (max. 500000)
+ 436 PDF objects out of 1000 (max. 8388607)
+ 372 compressed objects within 4 object streams
+ 81 named destinations out of 1000 (max. 500000)
  201 words of extra memory for PDF output out of 10000 (max. 10000000)
 

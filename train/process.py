@@ -1,11 +1,13 @@
 from config.config import Config
 from envs.portfolio_agent_generator import create_portfolio_env
-from utils.start_tensorboard import start_tensorboard
-from utils.safari import focus_tensorboard_tab
+from utils.tensorboard.start_tensorboard import start_tensorboard
+from utils.tensorboard.safari import focus_tensorboard_tab
 from data.downloader import get_data
 from agents.create_agent import create_agent
-from utils.safari import refresh_current_safari_window
+from utils.tensorboard.safari import refresh_current_safari_window
 from train.run_agent import run_agent
+from data.dataset import TimeBasedDataset
+from torch.utils.data import DataLoader
 
 def process_config(config_path):
     """
@@ -24,10 +26,13 @@ def process_config(config_path):
 
     ##################################
     # Training setup
-    train_data = get_data(config["tickers"], config["train_start"], config["train_end"], indicators=config["indicators"])
+    train_dataset = TimeBasedDataset(config["tickers"], config["train_start"], config["train_end"], "1d", config["time_window_size"], indicators=config["indicators"])
+    
+    # Wrap with DataLoader
+    train_dataloader = DataLoader(train_dataset, shuffle=False) # Shuffle should never be true for time series data # Batch size of 1 for time series data!
 
     train_env = create_portfolio_env(
-        data=train_data,
+        data=train_dataloader,
         initial_balance=config["initial_balance"],
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],
@@ -57,10 +62,14 @@ def process_config(config_path):
 
     ##################################
     # Evaluation setup
-    eval_data = get_data(config["tickers"], config["eval_start"], config["eval_end"], indicators=config["indicators"])
+    eval_dataset = TimeBasedDataset(config["tickers"], config["eval_start"], config["eval_end"], "1d", config["time_window_size"], indicators=config["indicators"])
+    
+    # Wrap with DataLoader
+    eval_dataloader = DataLoader(eval_dataset, shuffle=False) # Shuffle should never be true for time series data # Batch size of 1 for time series data!
+
 
     eval_env = create_portfolio_env(
-        data=eval_data,
+        data=eval_dataloader,
         initial_balance=config["initial_balance"],
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],

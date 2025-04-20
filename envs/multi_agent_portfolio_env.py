@@ -1,9 +1,9 @@
 from gymnasium import spaces
 import numpy as np
-from envs.base_portfolio_env import BasePortfolioEnv
 import torch
+import gymnasium as gym
 
-class MultiAgentPortfolioEnv(BasePortfolioEnv):
+class MultiAgentPortfolioEnv(gym.Env):
     """
     Multi-Agent Portfolio Environment with shared actions and shared or non-shared observations.
 
@@ -15,7 +15,18 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
         shared_obs (bool): Whether all agents share the same observation.
     """
     def __init__(self, data, initial_balance=1_000, verbosity=0, n_agents=2, trade_cost_percent=0.0, trade_cost_fixed=0.0):
-        super().__init__(data, initial_balance, verbosity, n_agents)
+
+        self.data = data
+        self.data_iterator = iter(self.data)
+
+        self.n_assets = len(data.dataset.data.columns.get_level_values(0).unique())
+        self.window_size = data.dataset.window_size
+        self.initial_balance = initial_balance
+        self.balance = initial_balance
+        self.current_step = 0
+        self.verbosity = verbosity
+        self.n_agents = n_agents
+    
         self.trade_cost_percent = trade_cost_percent
         self.trade_cost_fixed = trade_cost_fixed
 
@@ -25,19 +36,18 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
         self.balance = initial_balance
 
         # Initialize actor cash and asset holdings for each agent
-        self.actor_cash = np.zeros(self.n_agents)
-        self.actor_cash.fill(initial_balance//self.n_agents)
+        self.actor_cash = np.zeros((self.n_agents,1)).fill(initial_balance // self.n_agents)
         self.actor_asset_holdings = np.zeros((self.n_agents, self.n_assets))
-        self.actor_balance = np.zeros(self.n_agents)
-        self.actor_balance.fill(initial_balance//self.n_agents)
+        self.actor_balance = np.zeros(self.n_agents).fill(initial_balance // self.n_agents)
 
-        # Shared observation: all assets and indicators
-        self.observation_space = spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(self.data.shape[1],),
-            dtype=np.float32
-        )
+        # Initialize last actions (all cash initially)
+        self.last_actions = np.zeros((self.n_agents, self.n_assets + 1))
+        self.last_actions[:, -1] = 1  # Set the last entry (cash) to 1
+
+        self.n_external_observables = len(self.data.dataset.data.columns)*self.window_size 
+
+        # Shared observation: all assets and indicators + actions
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.n_external_observables + self.n_assets + 1 + self.n_assets + 1,), dtype=np.float32)
 
         # Action space: weights for each asset and cash
         self.action_space = spaces.Box(low=0, high=1, shape=(self.n_assets + 1,), dtype=np.float32)
@@ -52,11 +62,23 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
         Returns:
             obs (list of np.ndarray): A list of observations, one for each agent.
         """
-        obs = torch.tensor(self.data.iloc[self.current_step].values, dtype=torch.float32)
+        # Get the current data for the timestep
+        #current_observations = torch.tensor(self.data.iloc[self.current_step].values, dtype=torch.float32)
+
+        current_observations = next(self.data_iterator).squeeze(0) # remove the batch dimension
+        current_observations = current_observations.flatten()
+        current_observations = current_observations.repeat(self.n_agents, 1)
+
+        current_actions = torch.tensor(self.last_actions, dtype=torch.float32)
+
+        current_holdings = torch.tensor(self.actor_asset_holdings, dtype=torch.float32)
+        current_cash = torch.tensor(self.actor_cash, dtype=torch.float32).unsqueeze(0)
+
+        # Combine the data with the last actions
+        obs = torch.cat([current_observations, current_actions, current_holdings, current_cash], dim=1)
 
         # All agents receive the same observation
-        return obs.repeat(self.n_agents, 1)  # List of identical observations
-
+        return obs
 
     def step(self, actions):
         """
@@ -71,19 +93,19 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
             done (bool): Whether the episode is finished.
             info (dict): Additional information.
         """
-        actions = np.array(actions)
         # Normalize the actions
-        actions = np.clip(actions, 0, 1)
+        actions = np.clip(np.array(actions), 0, 1)
 
         if self.n_agents > 1:
             actions = actions / np.sum(actions, axis=1, keepdims=True)
-        else: 
+        else:
             actions = actions / np.sum(actions)
 
-
+        # Save the actions for the next observation
+        self.last_actions = actions
 
         # Get prices for the current and next steps
-        old_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
+        old_prices = self.data.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step+self.window_size-1].values
 
         self.current_step += 1
         done = self.current_step >= len(self.data)
@@ -95,17 +117,11 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
                 print("Episode finished!")
             return obs, [reward] * self.n_agents, done, {}
 
-        new_prices = self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values
-
-
+        new_prices = self.data.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step+self.window_size-1].values
 
         rewards = []
         for i in range(self.n_agents):
-            if self.n_agents > 1:
-                action = actions[i]
-            else:
-                action = actions[i]
-
+            action = actions[i]
             actor_cash_weight = action[-1]
             actor_asset_weight = action[:-1]
 
@@ -142,26 +158,11 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
         self.cash = np.sum(self.actor_cash)
         self.asset_holdings = np.sum(self.actor_asset_holdings, axis=0)
         self.balance = np.sum(self.actor_balance)
-        # Calculate the overall reward
-        reward = np.mean(rewards)
-
 
         # Debugging information
         if self.verbosity > 0:
-            print(f"Step: {self.current_step} | Reward: {reward:.4f} | Balance: {self.balance:.2f}")
-            print("-" * 50)
-            for i in range(self.n_agents):
-                print(f"Agent {i} Actions: {actions[i]}")
-                print(f"Agent {i}: Cash: {self.actor_cash[i]:.2f} | Asset Holdings: {self.actor_asset_holdings[i]}")
-                print(f"Agent {i} Portfolio Value: {self.actor_balance[i]:.2f}")
-                print(f"Agent {i} Reward: {rewards[i]:.4f}")
-                print("-" * 50)
+            print(f"Step: {self.current_step} | Rewards: {rewards} | Balance: {self.balance:.2f}")
 
-            print(f"Total Cash: {self.cash:.2f} | Total Asset Holdings: {self.asset_holdings}")
-            print("-" * 50)
-
-
-        # Get the next observation(s)
         obs = self._get_observation()
 
         return obs, np.array(rewards), done, {}
@@ -174,18 +175,21 @@ class MultiAgentPortfolioEnv(BasePortfolioEnv):
         self.cash = self.initial_balance
         self.asset_holdings = np.zeros(self.n_assets)
         self.balance = self.initial_balance
+        self.data_iterator = iter(self.data)
 
         # Reset actor cash and asset holdings for each agent
         self.actor_cash = np.zeros(self.n_agents)
-        self.actor_cash.fill(self.initial_balance//self.n_agents)
+        self.actor_cash.fill(self.initial_balance // self.n_agents)
         self.actor_asset_holdings = np.zeros((self.n_agents, self.n_assets))
         self.actor_balance = np.zeros(self.n_agents)
-        self.actor_balance.fill(self.initial_balance//self.n_agents)
-        
+        self.actor_balance.fill(self.initial_balance // self.n_agents)
+
+        # Reset last actions to all cash
+        self.last_actions = np.zeros((self.n_agents, self.n_assets + 1))
+        self.last_actions[:, -1] = 1  # Set the last entry (cash) to 1
 
         obs = self._get_observation()
         return obs
-    
 
     def get_timesteps(self):
         """

@@ -83,7 +83,7 @@ def get_data(tickers, start, end, indicators=("sma", "rsi", "macd", "ema", "adx"
     Downloads historical financial data and adds technical indicators.  
     """
     train_data = download_data(tickers, start, end, verbosity=verbosity)
-    train_data = add_technical_indicators(train_data, indicators=indicators)  
+    train_data = add_technical_indicators(train_data, indicators=indicators, verbosity=verbosity)  
     train_data = drop_columns(train_data, indicators)
     return train_data
 

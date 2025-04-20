@@ -7,11 +7,10 @@ from datetime import datetime
 
 class Logger:
     def __init__(self, run_name=None, log_dir="runs"):
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         run_name = run_name or "default"
         self.run_name = run_name
         self.step = 0
-        self.run_path = os.path.join(log_dir, f"{run_name}_{timestamp}")
+        self.run_path = os.path.join(log_dir, f"{run_name}")
         os.makedirs(self.run_path, exist_ok=True)
         self.writer = SummaryWriter(self.run_path)
 

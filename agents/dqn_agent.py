@@ -46,6 +46,7 @@ class DQNAgent(BaseAgent):
                 logits = torch.rand(logits.shape)
 
             probs = torch.softmax(logits, dim=1)
+
             return probs / probs.sum()
 
     def store(self, transition):
