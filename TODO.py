@@ -1,7 +1,7 @@
 ##################################################
 # Wichtige TODOs
-# TODO: Asset Tracker für beliebige anzahl an Episoden implementieren.
-
+# DONE: Asset Tracker für beliebige anzahl an Episoden implementieren.
+# TODO: Implementiere einen generallen Tracker.
 
 
 
@@ -44,7 +44,7 @@
 
 ##################################################
 # Risk Management
-
+# TODO:
 # Agent seems to trade too much -> causes a lot of trading costs.
 # Impelment a filter? Or a epsilon region to trade? 
 # Would it make sense to sample many actions at a state and add them to the replay buffer?

@@ -1,4 +1,4 @@
-from config.config import Config
+from utils.config.config import Config
 from envs.portfolio_agent_generator import create_portfolio_env
 from utils.tensorboard.start_tensorboard import start_tensorboard
 from utils.tensorboard.safari import focus_tensorboard_tab
