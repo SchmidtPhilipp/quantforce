@@ -63,21 +63,24 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
     tickers = sorted(set(t for t, field in data.columns if field == "Close"))
 
     for ticker in tickers:
-        close = data[(ticker, "Close")]
-        high = data[(ticker, "High")]
-        low = data[(ticker, "Low")]
-        volume = data[(ticker, "Volume")]
+        close = data[(ticker, "Close")].squeeze()
+        high = data[(ticker, "High")].squeeze()
+        low = data[(ticker, "Low")].squeeze()
+        volume = data[(ticker, "Volume")].squeeze()
 
-        # For sma we also allow sma25 and sma50 and so on so we have to check if sma is followed by a number
+        # Ensure that close, high, low, and volume are Series
+        if not isinstance(close, Series):
+            close = pd.Series(close.values, index=data.index, name="Close")
+        if not isinstance(high, Series):
+            high = pd.Series(high.values, index=data.index, name="High")
+        if not isinstance(low, Series):
+            low = pd.Series(low.values, index=data.index, name="Low")
+        if not isinstance(volume, Series):
+            volume = pd.Series(volume.values, index=data.index, name="Volume")
+
+        # Compute indicators as before
         if "sma" in selected_indicators:
-            # Check if the column name contains "sma" followed by a number
-            sma_columns = [col for col in data.columns if col[0] == ticker and "sma" in col[1]]
-            if sma_columns:
-                for col in sma_columns:
-                    window_size = int(col[1].replace("sma", ""))
-                    enriched[(ticker, f"sma{window_size}")] = compute_sma(close, window=window_size)
-            else:
-                enriched[(ticker, "sma")] = compute_sma(close)
+            enriched[(ticker, "sma")] = compute_sma(close)
 
         if "rsi" in selected_indicators:
             enriched[(ticker, "rsi")] = compute_rsi(close)

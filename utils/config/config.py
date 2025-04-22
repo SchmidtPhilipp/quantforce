@@ -5,6 +5,7 @@ from datetime import datetime
 from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler
 from train.scheduler.epsilon_scheduler import InverseSigmoidEpsilonScheduler
 from train.scheduler.epsilon_scheduler import ExponentialEpsilonScheduler
+from train.scheduler.epsilon_scheduler import PeriodicEpsilonScheduler
 
 from agents.dqn_agent import DQNAgent  # Add other agents as needed
 from agents.maddpg_agent import MADDPGAgent  # Add other agents as needed
@@ -75,8 +76,12 @@ class Config:
         # Generate a timestamp in the format YYYYMMDD_HHMMSS
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+        # Generate a random name using the `names` library
+        import names
+        name = names.get_first_name()
+
         # Combine the config name and timestamp to create the run name
-        return f"{config_name}_{timestamp}"
+        return f"{config_name}_{timestamp}_{name}"
 
     def get(self, key, default=None):
         """Gets a configuration value with an optional default."""
@@ -102,7 +107,6 @@ class Config:
 
         # Dynamically import the scheduler class (assuming it's in the `train.scheduler.epsilon_scheduler` module)
         try:
-            from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler, ExponentialEpsilonScheduler
             scheduler_class = globals()[scheduler_class_name]
         except KeyError:
             raise ImportError(f"Scheduler class '{scheduler_class_name}' not found.")

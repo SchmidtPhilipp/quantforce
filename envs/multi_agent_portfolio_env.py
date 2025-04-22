@@ -115,7 +115,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             obs = [np.zeros(self.observation_space.shape, dtype=np.float32) for _ in range(self.n_agents)]
             if self.verbosity > 0:
                 print("Episode finished!")
-            return obs, [reward] * self.n_agents, done, {}
+            return obs, np.array([reward] * self.n_agents), done, {}
 
         new_prices = self.data.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step+self.window_size-1].values
 

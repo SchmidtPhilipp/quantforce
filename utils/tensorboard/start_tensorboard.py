@@ -19,7 +19,7 @@ def is_vscode_extension_installed(extension_id):
     except Exception:
         return False
 
-def start_tensorboard(logdir="runs", port=6004, mode="safari"):
+def start_tensorboard(logdir="runs", port=6004, mode="safari", reload_interval=30):
     tb_url = f"http://localhost:{port}"
 
     if not is_port_in_use(port):
@@ -27,7 +27,8 @@ def start_tensorboard(logdir="runs", port=6004, mode="safari"):
         subprocess.Popen([
             "tensorboard",
             f"--logdir={logdir}",
-            f"--port={port}"
+            f"--port={port}",
+            f"--reload_interval={reload_interval}",
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(3)
     else:

@@ -76,6 +76,7 @@ class Metrics:
         Parameters:
             balances (list): Portfolio balances over time.
         """
+        balances = balances.squeeze()
         returns = calculate_returns(balances)
         drawdown = max_drawdown(balances)
         annual_ret = annualized_return(balances)

@@ -103,43 +103,89 @@ class Tracker:
 
     def log(self, logger):
         """
-        Logs all tracked values using the provided logger.
+        Logs all tracked values for the last episode using the provided logger.
 
         Parameters:
             logger (Logger): Logger instance for logging.
         """
-        for name, value in self.tracked_values.items():
-            dimensions = value["dimensions"]
-            for ep_idx, episode_data in enumerate(value["data"]):
-                for ts in range(self.timesteps):
-                    if len(dimensions) == 2:  # 2D data (e.g., timesteps x episodes)
-                        logger.log_scalar(
-                            f"{self.tensorboard_prefix}/{name}/timestep_{ts}",
-                            episode_data[ts],
-                            step=ep_idx,
-                        )
-                    elif len(dimensions) == 3:  # 3D data (e.g., timesteps x agents x episodes)
-                        for agent_idx in range(episode_data.shape[1]):
-                            logger.log_scalar(
-                                f"{self.tensorboard_prefix}/{name}/agent_{agent_idx}/timestep_{ts}",
-                                episode_data[ts, agent_idx],
-                                step=ep_idx,
-                            )
+        if self.current_episode == 0:
+            print("⚠️ No episodes to log yet.")
+            return
 
-    def print_summary(self):
+        # Get the last episode index
+        last_episode_idx = self.current_episode - 1
+
+        # Log based on the dimensions of the tracked value
+        for ts in range(self.timesteps):
+            
+            # Iterate over all tracked values
+            for name, value in self.tracked_values.items():
+                dimensions = value["dimensions"]
+                episode_data = value["data"][last_episode_idx]  # Data for the last episode
+                
+                if len(dimensions) == 2:  # 2D data (e.g., timesteps x agents)
+                    for agent_idx in range(episode_data.shape[1]):
+                        logger.log_scalar(
+                            f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}",
+                            episode_data[ts, agent_idx],
+                        )
+                elif len(dimensions) == 3:  # 3D data (e.g., timesteps x agents x assets)
+                    for agent_idx in range(episode_data.shape[1]):
+                        for asset_idx in range(episode_data.shape[2]):
+                            logger.log_scalar(
+                                f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/asset_{asset_idx}",
+                                episode_data[ts, agent_idx, asset_idx],
+                            )
+                elif len(dimensions) == 1:  # 1D data (e.g., timesteps)
+                    logger.log_scalar(
+                        f"{self.tensorboard_prefix}_{name}",
+                        episode_data[ts],
+                    )
+
+                logger.next_step()  # Increment the logger step
+
+    def print_summary(self, run_type=None, episode=None):
         """
-        Prints a summary of the tracked values, including their dimensions and aggregated statistics.
+        Prints a summary of the tracked values for the last episode.
+
+        Parameters:
+            run_type (str): Optional run type (e.g., "TRAIN" or "VAL").
+            episode (int): Optional episode index to summarize. Defaults to the last episode.
         """
-        print("📊 Tracker Summary:")
-        for name, value in self.tracked_values.items():
-            dimensions = value["dimensions"]
-            description = value["description"]
-            print(f"  - {name}: {description}")
-            print(f"    Dimensions: {dimensions}")
-            print(f"    Episodes Tracked: {len(value['data'])}")
-            if value["data"]:
-                data = np.concatenate(value["data"], axis=0)
-                print(f"    Mean: {np.mean(data):.4f}, Std: {np.std(data):.4f}")
+        if self.current_episode == 0:
+            print("⚠️ No episodes to summarize yet.")
+            return
+
+        if run_type is None:
+            run_type = self.tensorboard_prefix
+
+        if episode is None:
+            episode = self.current_episode - 1
+
+        # Ensure the episode exists
+        self._ensure_episode_exists(episode)
+
+        # Retrieve data for the episode
+        steps = self.current_timestep
+        rewards = self.get_episode_data("rewards", episode_idx=episode)
+        actor_balances = self.get_episode_data("actor_balance", episode_idx=episode)
+        env_balance = self.get_episode_data("balance", episode_idx=episode)
+        asset_holdings = self.get_episode_data("asset_holdings", episode_idx=episode)
+
+        # Calculate total rewards
+        total_reward = np.sum(rewards, axis=0)
+
+        # Print episode summary
+        print(f"📈[{run_type}] Episode {episode + 1:>3} | Steps: {steps}")
+        if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
+            agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
+        else:  # Single-agent reward
+            agent_rewards_str = f"Agent 0: {total_reward:.4f}"
+        print(f"  Rewards: {agent_rewards_str}")
+        print(f"  Portfolio Value: {env_balance[-1][0]:.4f}")
+        print(f"  Total Reward: {np.sum(total_reward):.4f}")
+        print(f"  Asset Holdings: {asset_holdings[steps - 1]}")
+        print(f"  Agent Balances: {actor_balances[steps - 1]}")
 
     def reset(self):
         """
@@ -150,37 +196,57 @@ class Tracker:
         self.current_episode = 0
         self.current_timestep = 0
 
-    def save(self, filepath):
+    def save(self, run_path):
         """
         Saves the tracker data to a file.
 
         Parameters:
-            filepath (str): Path to the file where the tracker data will be saved.
+            run_path (str): Path to save the data.
         """
-        data = {
+        # Prepare the data to save
+        save_data = {
             "timesteps": self.timesteps,
             "tensorboard_prefix": self.tensorboard_prefix,
-            "tracked_values": self.tracked_values,
             "current_episode": self.current_episode,
             "current_timestep": self.current_timestep,
         }
-        with open(filepath, "wb") as f:
-            pickle.dump(data, f)
-        print(f"✅ Tracker data saved to {filepath}")
 
-    def load(self, filepath):
+        # Add all tracked values to the save data
+        for name, value in self.tracked_values.items():
+            save_data[name] = np.array(value["data"])
+
+        # Save as a .npz file
+        save_path = os.path.join(run_path, "tracker_data.npz")
+        np.savez(save_path, **save_data)
+        print(f"✅ Tracker data saved to {save_path}.")
+
+    @staticmethod
+    def load(filepath):
         """
         Loads tracker data from a file.
 
         Parameters:
             filepath (str): Path to the file from which the tracker data will be loaded.
-        """
-        with open(filepath, "rb") as f:
-            data = pickle.load(f)
 
-        self.timesteps = data["timesteps"]
-        self.tensorboard_prefix = data["tensorboard_prefix"]
-        self.tracked_values = data["tracked_values"]
-        self.current_episode = data["current_episode"]
-        self.current_timestep = data["current_timestep"]
-        print(f"✅ Tracker data loaded from {filepath}")
+        Returns:
+            Tracker: A Tracker instance with the loaded data.
+        """
+        data = np.load(filepath, allow_pickle=True)
+
+        # Create a new Tracker instance
+        tracker = Tracker(timesteps=data["timesteps"].item(), tensorboard_prefix=data["tensorboard_prefix"].item())
+        tracker.current_episode = data["current_episode"].item()
+        tracker.current_timestep = data["current_timestep"].item()
+
+        # Load tracked values
+        for name in data.files:
+            if name not in ["timesteps", "tensorboard_prefix", "current_episode", "current_timestep"]:
+                tracker.tracked_values[name] = {
+                    "data": list(data[name]),
+                    "shape": data[name][0].shape[1:],  # Infer shape from the first episode
+                    "description": "",
+                    "dimensions": [],
+                }
+
+        print(f"✅ Tracker data loaded from {filepath}.")
+        return tracker
