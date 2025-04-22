@@ -5,7 +5,7 @@ from utils.tensorboard.safari import focus_tensorboard_tab
 from data.downloader import get_data
 from agents.create_agent import create_agent
 from utils.tensorboard.safari import refresh_current_safari_window
-from train.run_agent2 import run_agent2  # Import the updated run_agent2 function
+from train.run_agent import run_agent  # Import the updated run_agent2 function
 from data.dataset import TimeBasedDataset
 from torch.utils.data import DataLoader
 
@@ -78,7 +78,7 @@ def process_config(config_path):
     )
 
     # Run training
-    run_agent2(
+    run_agent(
         env=train_env,
         agent=train_agent_instance,
         config=config,
@@ -118,7 +118,7 @@ def process_config(config_path):
     val_agent_instance = train_agent_instance
 
     # Run evaluation
-    run_agent2(
+    run_agent(
         env=val_env, 
         agent=val_agent_instance, 
         config=config, 

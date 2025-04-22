@@ -2,7 +2,7 @@
 # Wichtige TODOs
 # DONE: Asset Tracker für beliebige anzahl an Episoden implementieren.
 # DONE: Implementiere einen generallen Tracker.
-# TODO: Überprüfe den Dataloader.
+# DONE: Überprüfe den Dataloader.
 
 
 ##################################################

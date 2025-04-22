@@ -54,7 +54,10 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
         date_range = pd.date_range(start=start, end=end, freq="D")  # Generate a complete date range
         data = data.reindex(date_range)  # Reindex to ensure all dates are present
         data = data.ffill().bfill() # Fill any remaining missing values
-        #data = data.fillna(0)  # Fill missing values with 0 (or use .ffill().bfill() if preferred)
+        
+
+
+
 
         # Plot closing prices for each ticker
         # data.plot(y="Close", title=f"{ticker} Closing Prices", figsize=(10, 5))
@@ -64,6 +67,10 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
 
     # Combine all ticker data into a single DataFrame
     combined_data = pd.concat(all_data, axis=1)
+
+    # It seems that sometimes we get two times the same date/ duplicate columns
+    # Remove duplicate columns
+    combined_data = combined_data.loc[:, ~combined_data.columns.duplicated()]
 
     # Debugging: Check the structure of the combined data
     if verbosity > 0:

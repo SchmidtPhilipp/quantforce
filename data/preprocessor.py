@@ -63,20 +63,10 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
     tickers = sorted(set(t for t, field in data.columns if field == "Close"))
 
     for ticker in tickers:
-        close = data[(ticker, "Close")].squeeze()
-        high = data[(ticker, "High")].squeeze()
-        low = data[(ticker, "Low")].squeeze()
-        volume = data[(ticker, "Volume")].squeeze()
-
-        # Ensure that close, high, low, and volume are Series
-        if not isinstance(close, Series):
-            close = pd.Series(close.values, index=data.index, name="Close")
-        if not isinstance(high, Series):
-            high = pd.Series(high.values, index=data.index, name="High")
-        if not isinstance(low, Series):
-            low = pd.Series(low.values, index=data.index, name="Low")
-        if not isinstance(volume, Series):
-            volume = pd.Series(volume.values, index=data.index, name="Volume")
+        close = data[(ticker, "Close")]
+        high = data[(ticker, "High")]
+        low = data[(ticker, "Low")]
+        volume = data[(ticker, "Volume")]
 
         # Compute indicators as before
         if "sma" in selected_indicators:

@@ -46,10 +46,11 @@ class Config:
             "trade_cost_percent": 0.00,
             "trade_cost_fixed": 0.0,
             "enable_tensorboard": True,
-            "tau": 0.01, # Target network update rate
-            "gamma": 0.99, # Discount factor
-            "batch_size": 64, # Replay buffer size
-            "time_window_size": 365, # Time window size for the dataset
+            "tau": 0.01,  # Target network update rate
+            "gamma": 0.99,  # Discount factor
+            "batch_size": 64,  # Replay buffer size
+            "time_window_size": 365,  # Time window size for the dataset
+            "tickers": ["AAPL", "GOOGL", "MSFT"],  # Default tickers
         }
 
         print("-" * 50)
@@ -60,6 +61,12 @@ class Config:
                 self.data[key] = default_value
             else:
                 print(f'{key} set to "{self.data[key]}".')
+
+        # Ensure tickers are unique
+        if "tickers" in self.data:
+            self.data["tickers"] = list(set(self.data["tickers"]))
+            print(f"Tickers after removing duplicates: {self.data['tickers']}")
+
         print("-" * 50)
 
     def _validate_config(self):
