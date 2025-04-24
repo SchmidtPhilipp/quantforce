@@ -3,10 +3,7 @@ import os
 import numpy as np
 from train.logger import Logger
 from utils.metrics import Metrics
-from train.scheduler.epsilon_scheduler import EpsilonScheduler, PeriodicEpsilonScheduler
-from utils.tracker.assettracker import AssetTracker
-import psutil
-import GPUtil
+from train.scheduler.epsilon_scheduler import PeriodicEpsilonScheduler
 from utils.tracker.tracker import Tracker
 
 
@@ -36,7 +33,6 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
     logger = Logger(run_name=f"{mode}_" + (run_name or "default"))
     metrics = Metrics()
     eval_metrics = Metrics()
-
     # Initialize Tracker for training or validation
     tracker = Tracker(timesteps=env.get_timesteps(), tensorboard_prefix=f"{mode}")
     tracker.register_value("rewards", (env.n_agents,), "Rewards per agent", ["timesteps", "agents"])
@@ -81,8 +77,12 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
             use_tqdm=use_tqdm
         )
 
+                
+        # Append metrics for this episode
+        metrics.append(tracker.get_episode_data("balance", ep))
+
         # Evaluate the agent at specified intervals if in TRAIN mode and eval_env is provided
-        if mode == "TRAIN" and eval_env and ep % eval_interval == 0:
+        if mode == "TRAIN" and eval_env and (ep+1) % eval_interval == 0:
             eval_reward = episode(
                 env=eval_env,
                 agent=agent,
@@ -94,14 +94,14 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
                 use_tqdm=use_tqdm
             )
 
-            metrics.append(eval_tracker.get_episode_data("balance", ep))
-            metrics.print_report()
+            eval_metrics.append(eval_tracker.get_episode_data("balance", ep))
+            eval_metrics.print_report()
             print("-" * 50)
-            metrics.reset()
+            eval_metrics.reset()
 
             # Update the best agent based on evaluation reward
-            if eval_reward > best_reward:
-                best_reward = eval_reward
+            if np.array(eval_reward).sum() > best_reward:
+                best_reward = np.array(eval_reward).sum()
                 best_episode = ep
                 best_agent = agent
                 episodes_no_improvement = 0
@@ -109,8 +109,8 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
                 episodes_no_improvement += 1
         elif mode == "TRAIN" and eval_env is None:
             # Fallback: Update the best agent based on training reward if no eval_env is provided
-            if train_reward > best_reward:
-                best_reward = train_reward
+            if np.array(train_reward).sum() > best_reward:
+                best_reward = np.array(train_reward).sum()
                 best_episode = ep
                 best_agent = agent
                 episodes_no_improvement = 0
@@ -122,8 +122,7 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
             print(f"Early stopping at episode {ep} due to no improvement.")
             break
 
-        # Append metrics for this episode
-        metrics.append(tracker.get_episode_data("balance", ep))
+
 
 
 
@@ -171,7 +170,7 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
     Returns:
         float: Total reward for the episode.
     """
-    state = env.reset()  # Use validation flag to specify mode
+    state = env.reset().to(env.device)  # Use validation flag to specify mode
     total_reward = 0
     episode_done = False
     progress_bar = tqdm(total=env.get_timesteps(), desc=f"{mode} Episode {ep+1}", unit="step", ncols=80) if use_tqdm else None
@@ -183,14 +182,15 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
         action = agent.act(state, epsilon=epsilon)
 
         next_state, reward, episode_done, _ = env.step(action)
+        reward = reward.to(env.device)
 
         # Record actions, asset holdings, balances, environment balance, and resource usage
         tracker.record_step(
-            rewards=reward,
+            rewards=reward.cpu().numpy(),
             actor_balance=env.actor_balance,
-            actions=action,
+            actions=action.cpu().numpy(),
             asset_holdings=env.actor_asset_holdings,
-            balance=np.array([env.balance])
+            balance=np.array([env.balance.cpu().numpy()]),
         )
 
         if train:
@@ -214,6 +214,9 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
     if train:
         epsilon_scheduler.step()
         logger.log_scalar(f"TRAIN_epsilon/epsilon", epsilon_scheduler.epsilon, step=ep)
+
+    # Log final balance
+    logger.log_scalar(f"{mode}_final_balance/final_balance", env.balance.cpu().numpy(), step=ep)
     
     tracker.print_summary(run_type=mode, episode=ep)
 

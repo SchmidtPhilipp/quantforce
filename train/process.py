@@ -2,8 +2,7 @@ from utils.config.config import Config
 from envs.portfolio_agent_generator import create_portfolio_env
 from utils.tensorboard.start_tensorboard import start_tensorboard
 from utils.tensorboard.safari import focus_tensorboard_tab
-from data.downloader import get_data
-from agents.create_agent import create_agent
+import torch
 from utils.tensorboard.safari import refresh_current_safari_window
 from train.run_agent import run_agent  # Import the updated run_agent2 function
 from data.dataset import TimeBasedDataset
@@ -23,6 +22,16 @@ def process_config(config_path):
         start_tensorboard(mode="safari", port=6005)
         focus_tensorboard_tab()
         refresh_current_safari_window()
+
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+
+    device = "cpu"
+    print(f"Using device: {device}")
 
     ##################################
     # Training setup
@@ -44,7 +53,8 @@ def process_config(config_path):
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],
         trade_cost_percent=config["trade_cost_percent"],
-        trade_cost_fixed=config["trade_cost_fixed"]
+        trade_cost_fixed=config["trade_cost_fixed"],
+        device=device
     )
 
     # Create an Agent
@@ -74,7 +84,8 @@ def process_config(config_path):
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],
         trade_cost_percent=config["trade_cost_percent"],
-        trade_cost_fixed=config["trade_cost_fixed"]
+        trade_cost_fixed=config["trade_cost_fixed"], 
+        device=device
     )
 
     # Run training
@@ -111,7 +122,8 @@ def process_config(config_path):
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],
         trade_cost_percent=config["trade_cost_percent"],
-        trade_cost_fixed=config["trade_cost_fixed"]
+        trade_cost_fixed=config["trade_cost_fixed"], 
+        device=device
     )
 
     # Use the same agent for evaluation

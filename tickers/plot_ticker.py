@@ -2,7 +2,7 @@ import json
 import random
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
-
+import time
 import sys
 import os
 
@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from data.downloader import download_data
 from data.dataset import TimeBasedDataset  # Import the new dataset class
+
 
 def load_tickers_from_file(file_path):
     """
@@ -31,76 +32,94 @@ def load_tickers_from_file(file_path):
         print(f"Error loading tickers from file: {e}")
         return []
 
-def plot_ticker_data(dataloader, n, start_date, end_date):
+
+def plot_ticker_data_live(dataloader, n, start_date, end_date, interval=2):
     """
-    Plots the historical data for the given tickers in the same figure.
+    Continuously plots the latest data for the given tickers in a loop.
+
+    Parameters:
+        dataloader (DataLoader): DataLoader containing the ticker data.
+        n (int): Number of tickers to plot.
+        start_date (str): Start date for the data.
+        end_date (str): End date for the data.
+        interval (int): Time in seconds to wait between updates.
     """
-    plt.figure(figsize=(12, 8))
+    plt.ion()  # Turn on interactive mode for live plotting
+    fig, ax = plt.subplots(figsize=(12, 4))
 
     for batch_idx, batch in enumerate(dataloader):
-        print(f"Batch {batch_idx} shape: {batch.shape}")  # Debugging
-        if batch_idx >= n:  # Limit to `n` tickers
-            break
+        # Clear the previous plot
+        ax.clear()
+        # iterate over the tickers
+        for i in range(dataloader.dataset.tickers.__len__()):
+            if batch_idx >= n:  # Limit to `n` tickers
+                break
 
-        # Extract ticker data
-        ticker_data = batch.squeeze(0).numpy()  # Convert to NumPy array
-        if ticker_data.size == 0:
-            print(f"Empty data for batch {batch_idx}")
-            continue
+            # Extract ticker data
+            ticker_data = batch.squeeze(0).numpy()  # Convert to NumPy array
+            if ticker_data.size == 0:
+                print(f"Empty data for batch {batch_idx}")
+                continue
 
-        dates = dataloader.dataset.dates[-len(ticker_data):]  # Get corresponding dates
-        ticker = dataloader.dataset.tickers[batch_idx]  # Get ticker name
+            # Ensure dates are available
+            if hasattr(dataloader.dataset, "data"):
+                dates = dataloader.dataset.data.index[-len(ticker_data):]
+            else:
+                raise ValueError("Dataset does not provide dates for plotting.")
 
-        # Plot the closing price
-        plt.plot(dates, ticker_data[:, 3], label=f"{ticker} Closing Price")  # Assuming column 3 is 'Close'
+            # Ensure tickers are available
+            if hasattr(dataloader.dataset, "tickers"):
+                ticker = dataloader.dataset.tickers[i]
+            else:
+                raise ValueError("Dataset does not provide tickers for plotting.")
 
-    plt.title(f"Closing Prices of {n} Random Tickers from {start_date} to {end_date}")
-    plt.xlabel("Date")
-    plt.ylabel("Price (USD)")
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.grid()
-    plt.tight_layout()
+
+
+            # Plot the closing price
+            closing_prices = ticker_data[:, int(i*(batch.shape[-1]/dataloader.dataset.tickers.__len__()))]  # Assuming column 3 is 'Close'
+
+            ax.plot(dates, closing_prices, label=f"{ticker} Closing Price", color="blue")
+
+
+
+        #ax.set_title(f"Live Closing Prices of {ticker} from {start_date} to {end_date}")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Price (USD)")
+        ax.grid()
+
+        # Pause to simulate live updates
+        plt.pause(interval)
+
+    plt.ioff()  # Turn off interactive mode
     plt.show()
 
+
 def main():
-    # Path to the JSON file containing valid tickers
-    file_path = "tickers/valid_tickers.json"
 
     # Number of tickers to plot
     n = 5
 
     # Define the timeframe
-    start_date = "2021-01-01"
+    start_date = "2000-01-01"
     end_date = "2023-01-01"
 
-    # Load tickers from the file
-    tickers = load_tickers_from_file(file_path)
-    if not tickers:
-        print("No tickers found in the file.")
-        return
 
-    # Extract only the ticker symbols
-    ticker_symbols = [ticker["ticker"] for ticker in tickers if "ticker" in ticker]
-
-    # Select n random tickers
-    random_tickers = random.sample(ticker_symbols, min(n, len(ticker_symbols)))
-
-
-    random_tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]  # For testing purposes
-    print(f"Selected random tickers: {random_tickers}")
+    # For testing purposes, override random selection
+    tickers = ["AAPL"]
 
     # Create the dataset and dataloader
     dataset = TimeBasedDataset(
-        tickers=random_tickers,
-        timesteps=1,  # Number of timesteps to load
+        tickers=tickers,
+        window_size=100,  # Number of timesteps to load
         start_date=start_date,
         end_date=end_date,
         interval="1d"
     )
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    # Plot the downloaded data
-    plot_ticker_data(dataloader, n, start_date, end_date)
+    # Plot the downloaded data live
+    plot_ticker_data_live(dataloader, n, start_date, end_date, interval=1)
+
 
 if __name__ == "__main__":
     main()

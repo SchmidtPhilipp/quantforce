@@ -250,3 +250,63 @@ class Tracker:
 
         print(f"✅ Tracker data loaded from {filepath}.")
         return tracker
+
+    def log_statistics(self, logger):
+        """
+        Logs the statistics of all tracked values (e.g., actions, balances, rewards, asset holdings).
+
+        Parameters:
+            logger (Logger): Logger instance for logging.
+        """
+        if self.current_episode == 0:
+            print("⚠️ No episodes to log statistics for yet.")
+            return
+
+        # Iterate over timesteps
+        for timestep in range(self.timesteps):
+            # Iterate over all tracked values
+            for name, value in self.tracked_values.items():
+                dimensions = value["dimensions"]
+                data = value["data"]
+
+                # Collect data for all episodes at the current timestep
+                timestep_data = np.array([ep[timestep] for ep in data if timestep < len(ep)])
+
+                if len(dimensions) == 2:  # 2D data (e.g., timesteps x agents)
+                    for agent_idx in range(timestep_data.shape[1]):
+                        logger.log_scalar(
+                            f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/mean",
+                            np.mean(timestep_data[:, agent_idx]),
+                            step=timestep
+                        )
+                        logger.log_scalar(
+                            f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/std",
+                            np.std(timestep_data[:, agent_idx]),
+                            step=timestep
+                        )
+
+                elif len(dimensions) == 3:  # 3D data (e.g., timesteps x agents x assets)
+                    for agent_idx in range(timestep_data.shape[1]):
+                        for asset_idx in range(timestep_data.shape[2]):
+                            logger.log_scalar(
+                                f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/asset_{asset_idx}/mean",
+                                np.mean(timestep_data[:, agent_idx, asset_idx]),
+                                step=timestep
+                            )
+                            logger.log_scalar(
+                                f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/asset_{asset_idx}/std",
+                                np.std(timestep_data[:, agent_idx, asset_idx]),
+                                step=timestep
+                            )
+
+                elif len(dimensions) == 1:  # 1D data (e.g., timesteps)
+                    logger.log_scalar(
+                        f"{self.tensorboard_prefix}_{name}/mean",
+                        np.mean(timestep_data),
+                        step=timestep
+                    )
+                    logger.log_scalar(
+                        f"{self.tensorboard_prefix}_{name}/std",
+                        np.std(timestep_data),
+                        step=timestep
+                    )

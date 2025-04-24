@@ -6,7 +6,7 @@ import random
 from agents.model_builder import ModelBuilder
 
 class DQNAgent(BaseAgent):
-    def __init__(self, obs_dim, act_dim, actor_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000):
+    def __init__(self, obs_dim, act_dim, actor_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000, device="cpu"):
         super().__init__()
 
         # Use the provided network architecture or a default one
@@ -18,9 +18,10 @@ class DQNAgent(BaseAgent):
         ]
         actor_config = actor_config or default_architecture
 
+        self.device = device
         # Use ModelBuilder to create the models
-        self.model = ModelBuilder(actor_config).build()
-        self.target_model = ModelBuilder(actor_config).build()
+        self.model = ModelBuilder(actor_config).build().to(self.device)
+        self.target_model = ModelBuilder(actor_config).build().to(self.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.gamma = gamma
@@ -30,24 +31,19 @@ class DQNAgent(BaseAgent):
 
         self.buffer_max_size = buffer_max_size
 
-    def act(self, state: torch.Tensor, epsilon: float = 0.0) -> int:
+    def act(self, state: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
         """
         Selects an action based on the current state and epsilon-greedy policy.
-        Args:
-            state (np.ndarray): The current state of the environment.
-            epsilon (float): Probability of selecting a random action.
-        Returns:
-            action (int): The selected action.
         """
+        state = state.to(self.device)  # Move state to MPS
         with torch.no_grad():
             logits = self.model(state)
 
             if random.random() < epsilon:
-                logits = torch.rand(logits.shape)
+                logits = torch.rand(logits.shape, device=self.device)
 
             probs = torch.softmax(logits, dim=1)
-
-            return probs / probs.sum()
+            return probs / probs.sum(dim=1, keepdim=True)
 
     def store(self, transition):
         self.memory.append(transition)
@@ -58,19 +54,31 @@ class DQNAgent(BaseAgent):
         if len(self.memory) < self.batch_size:
             return
 
+        # Sample a batch from memory
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states = zip(*batch)
 
-        states = torch.FloatTensor(np.array(states))
-        rewards = torch.FloatTensor(np.array(rewards))
-        next_states = torch.FloatTensor(np.array(next_states))
+        # Ensure states, actions, rewards, and next_states are tensors
+        if isinstance(states[0], torch.Tensor):
+            states = torch.stack(states).to(self.device)
+            actions = torch.stack(actions).to(self.device)
+            rewards = torch.stack(rewards).to(self.device)
+            next_states = torch.stack(next_states).to(self.device)
+        else:
+            states = torch.FloatTensor(np.array(states)).to(self.device)
+            actions = torch.LongTensor(np.array(actions)).to(self.device)
+            rewards = torch.FloatTensor(np.array(rewards)).to(self.device)
+            next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
 
+        # Compute predictions and targets
         pred = self.model(states)
         with torch.no_grad():
             target = rewards + self.gamma * self.target_model(next_states).max(dim=1).values
 
+        # Compute loss
         loss = self.loss_fn(pred.max(dim=1).values, target)
 
+        # Backpropagation
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()

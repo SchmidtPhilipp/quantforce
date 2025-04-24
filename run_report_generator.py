@@ -8,7 +8,7 @@ from utils.report.report_generator import ReportGenerator
 
 # Beispiel für die Verwendung des ReportGenerators
 if __name__ == "__main__":
-    runs_folder = "runs_04_17_first_success"
+    runs_folder = "good_runs/runs_04_17_first_success"
     report_generator = ReportGenerator(runs_folder)
     
     # Investigations laden
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     
     # Plots erstellen und LaTeX-Code generieren
     report_generator.plot_stockprice_asset_comparison()
-    report_generator.plot_price_action_comparison()
+    #report_generator.plot_price_action_comparison()
     
     # LaTeX-Dokument erstellen und kompilieren
     report_generator.generate_latex_document(compile_pdf=True)

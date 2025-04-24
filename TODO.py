@@ -3,7 +3,11 @@
 # DONE: Asset Tracker für beliebige anzahl an Episoden implementieren.
 # DONE: Implementiere einen generallen Tracker.
 # DONE: Überprüfe den Dataloader.
-
+# TODO: Visualize torch gradients
+# TODO: optimize the code for MPS
+# TODO: Add final balance to tensorboard
+# TODO: Improve the computation in general. 
+# TODO: Achsenbeschriftung im Tracker mitgeben.
 
 ##################################################
 # Dataloader
@@ -92,9 +96,6 @@
 # TODO: Ensemble Agenten
 # TODO: Ensemble Agenten mit TIPP
 # TODO: Ensemble Agenten mit CPPI
-
-
-
 
 
 ###########################################################
