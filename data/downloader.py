@@ -29,6 +29,7 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
     all_data = []
 
     for ticker in tickers:
+        ticker = ticker.replace("/", "_")  # Replace '/' with '_' for file naming
         # Generate cache file path for each ticker
         cache_file = os.path.join(cache_dir, f"{ticker}_{start}_{end}_{interval}.csv")
 
@@ -40,7 +41,7 @@ def download_data(tickers, start, end, interval="1d", progress=False, cache_dir=
         else:
             # Download data for the ticker
             warnings.filterwarnings("ignore", category=ResourceWarning)
-            data = yf.download(ticker, start=start, end=end, interval=interval, progress=progress)
+            data = yf.download(ticker.replace("_", "/"), start=start, end=end, interval=interval, progress=progress)
 
             # Fill missing values forward and backward to ensure continuity
             data = data.ffill().bfill()

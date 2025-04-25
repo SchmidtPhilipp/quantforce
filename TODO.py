@@ -5,9 +5,13 @@
 # DONE: Überprüfe den Dataloader.
 # TODO: Visualize torch gradients
 # TODO: optimize the code for MPS
-# TODO: Add final balance to tensorboard
-# TODO: Improve the computation in general. 
 # TODO: Achsenbeschriftung im Tracker mitgeben.
+
+# TODO: Überprüfe die Daten auf Aktiensplits. 
+# TODO: Überleg dir ein System um die Ergebnisse zu vergleichen bzw zu labeln. 
+
+# TODO: holdings nennen wir handelsstrategien
+# TODO; Ein-Periodenmodell um Umschichtungen zu vermeiden.
 
 ##################################################
 # Dataloader
@@ -31,7 +35,7 @@
 # TODO: Option implementieren für Agenten welche nicht nur den aktuellen State 
 # sondern auch die Historie betrachten
 # TODO: Im paper werden auch aktionen und cash als observations hinzugefügt.
-# TODO: Welche Reward funktion? log reward? oder nur stepreward? 
+
 
 ####################################################
 # Agenten
