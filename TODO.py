@@ -10,7 +10,7 @@
 # TODO: Überprüfe die Daten auf Aktiensplits. 
 # TODO: Überleg dir ein System um die Ergebnisse zu vergleichen bzw zu labeln. 
 
-# TODO: holdings nennen wir handelsstrategien
+# DONE: holdings nennen wir handelsstrategien bzw portfolio
 # TODO; Ein-Periodenmodell um Umschichtungen zu vermeiden.
 
 ##################################################

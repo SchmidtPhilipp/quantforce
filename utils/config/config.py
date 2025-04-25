@@ -51,6 +51,7 @@ class Config:
             "batch_size": 64,  # Replay buffer size
             "time_window_size": 365,  # Time window size for the dataset
             "tickers": ["AAPL", "GOOGL", "MSFT"],  # Default tickers
+            "device": "cpu",  # Default device
         }
 
         print("-" * 50)

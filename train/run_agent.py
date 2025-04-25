@@ -33,13 +33,46 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
     logger = Logger(run_name=f"{mode}_" + (run_name or "default"))
     metrics = Metrics()
     eval_metrics = Metrics()
+
     # Initialize Tracker for training or validation
     tracker = Tracker(timesteps=env.get_timesteps(), tensorboard_prefix=f"{mode}")
-    tracker.register_value("rewards", (env.n_agents,), "Rewards per agent", ["timesteps", "agents"])
-    tracker.register_value("actions", (env.n_agents, env.n_assets + 1), "Actions per agent", ["timesteps", "agents", "assets"])
-    tracker.register_value("asset_holdings", (env.n_agents, env.n_assets), "Asset holdings per agent", ["timesteps", "agents", "assets"])
-    tracker.register_value("balance", (1,), "Environment balance", ["timesteps"])
-    tracker.register_value("actor_balance", (env.n_agents,), "Actor balances", ["timesteps", "agents"])
+
+    # Register tracked values with custom axis labels
+    tracker.register_value(
+        "rewards",
+        shape=(env.n_agents,),
+        description="Rewards per agent",
+        dimensions=["timesteps", "agents"],
+        labels=[range(env.n_agents)]  # Agents labeled by their indices
+    )
+    tracker.register_value(
+        "actions",
+        shape=(env.n_agents, env.n_assets + 1),
+        description="Actions per agent",
+        dimensions=["timesteps", "agents", "assets"],
+        labels=[range(env.n_agents), env.asset_labels + ["cash"]]  # Asset labels + cash
+    )
+    tracker.register_value(
+        "asset_holdings",
+        shape=(env.n_agents, env.n_assets),
+        description="Asset holdings per agent",
+        dimensions=["timesteps", "agents", "assets"],
+        labels=[range(env.n_agents), env.asset_labels]  # Asset labels
+    )
+    tracker.register_value(
+        "balance",
+        shape=(1,),
+        description="Environment balance",
+        dimensions=["timesteps"],
+        labels=[["balance"]]  # Single label for balance
+    )
+    tracker.register_value(
+        "actor_balance",
+        shape=(env.n_agents,),
+        description="Actor balances",
+        dimensions=["timesteps", "agents"],
+        labels=[range(env.n_agents)]  # Agents labeled by their indices
+    )
 
     # Initialize evaluation tracker and logger if in TRAIN mode and eval_env is provided
     eval_tracker = None
@@ -47,11 +80,43 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
     if mode == "TRAIN" and eval_env:
         eval_logger = Logger(run_name="EVAL_" + run_name)
         eval_tracker = Tracker(timesteps=eval_env.get_timesteps(), tensorboard_prefix="EVAL")
-        eval_tracker.register_value("rewards", (eval_env.n_agents,), "Rewards per agent", ["timesteps", "agents"])
-        eval_tracker.register_value("actions", (eval_env.n_agents, eval_env.n_assets + 1), "Actions per agent", ["timesteps", "agents", "assets"])
-        eval_tracker.register_value("asset_holdings", (eval_env.n_agents, eval_env.n_assets), "Asset holdings per agent", ["timesteps", "agents", "assets"])
-        eval_tracker.register_value("balance", (1,), "Environment balance", ["timesteps"])
-        eval_tracker.register_value("actor_balance", (eval_env.n_agents,), "Actor balances", ["timesteps", "agents"])
+
+        # Register tracked values for evaluation with custom axis labels
+        eval_tracker.register_value(
+            "rewards",
+            shape=(eval_env.n_agents,),
+            description="Rewards per agent",
+            dimensions=["timesteps", "agents"],
+            labels=[range(eval_env.n_agents)]  # Agents labeled by their indices
+        )
+        eval_tracker.register_value(
+            "actions",
+            shape=(eval_env.n_agents, eval_env.n_assets + 1),
+            description="Actions per agent",
+            dimensions=["timesteps", "agents", "assets"],
+            labels=[range(eval_env.n_agents), eval_env.asset_labels + ["cash"]]  # Asset labels + cash
+        )
+        eval_tracker.register_value(
+            "asset_holdings",
+            shape=(eval_env.n_agents, eval_env.n_assets),
+            description="Asset holdings per agent",
+            dimensions=["timesteps", "agents", "assets"],
+            labels=[range(eval_env.n_agents), eval_env.asset_labels]  # Asset labels
+        )
+        eval_tracker.register_value(
+            "balance",
+            shape=(1,),
+            description="Environment balance",
+            dimensions=["timesteps"],
+            labels=[["balance"]]  # Single label for balance
+        )
+        eval_tracker.register_value(
+            "actor_balance",
+            shape=(eval_env.n_agents,),
+            description="Actor balances",
+            dimensions=["timesteps", "agents"],
+            labels=[range(eval_env.n_agents)]  # Agents labeled by their indices
+        )
 
     # Use a sin²-based periodic epsilon scheduler if none is provided
     if mode == "TRAIN" and epsilon_scheduler is None:
@@ -186,16 +251,16 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
 
         # Record actions, asset holdings, balances, environment balance, and resource usage
         tracker.record_step(
-            rewards=reward.cpu().numpy(),
-            actor_balance=env.actor_balance,
-            actions=action.cpu().numpy(),
-            asset_holdings=env.actor_asset_holdings,
-            balance=np.array([env.balance.cpu().numpy()]),
+            rewards=reward,
+            actor_balance=env.portfolio_value,
+            actions=action,
+            asset_holdings=env.portfolio_matrix,
+            balance=env.get_portfolio_value().unsqueeze(0),
         )
 
         if train:
             agent.store((state, action, reward, next_state))
-            agent.train()
+            #agent.train()
 
         state = next_state
         total_reward += reward
@@ -216,7 +281,7 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
         logger.log_scalar(f"TRAIN_epsilon/epsilon", epsilon_scheduler.epsilon, step=ep)
 
     # Log final balance
-    logger.log_scalar(f"{mode}_final_balance/final_balance", env.balance.cpu().numpy(), step=ep)
+    logger.log_scalar(f"{mode}_final_balance/final_balance", env.get_portfolio_value().cpu().numpy(), step=ep)
     
     tracker.print_summary(run_type=mode, episode=ep)
 

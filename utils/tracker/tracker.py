@@ -1,18 +1,21 @@
-import numpy as np
+import torch
 import os
 import pickle  # For saving and loading data
 
+
 class Tracker:
-    def __init__(self, timesteps, tensorboard_prefix="tracker"):
+    def __init__(self, timesteps, tensorboard_prefix="tracker", device="cpu"):
         """
         Generalized tracker for storing and logging values.
 
         Parameters:
             timesteps (int): Maximum number of timesteps per episode.
             tensorboard_prefix (str): Prefix for TensorBoard logging.
+            device (str): Device to use for storing tensors ("cpu" or "cuda").
         """
         self.timesteps = timesteps
         self.tensorboard_prefix = tensorboard_prefix
+        self.device = device
 
         # Dictionary to store registered values
         self.tracked_values = {}
@@ -21,7 +24,7 @@ class Tracker:
         self.current_episode = 0
         self.current_timestep = 0
 
-    def register_value(self, name, shape, description="", dimensions=None):
+    def register_value(self, name, shape, description="", dimensions=None, labels=None):
         """
         Registers a value to be tracked.
 
@@ -30,16 +33,45 @@ class Tracker:
             shape (tuple): Shape of the value (excluding timesteps and episodes).
             description (str): Optional description of the value.
             dimensions (list): Description of each dimension (e.g., ["timesteps", "agents", "assets"]).
+            labels (list): List of labels for each dimension (e.g., [["AAPL", "MSFT"], range(n_agents)]).
+                           If None, defaults to `range()` for each dimension.
         """
         if name in self.tracked_values:
             raise ValueError(f"Value '{name}' is already registered.")
+
+        # Default labels to range() if not provided
+        if labels is None:
+            labels = [range(dim) for dim in shape]
+
+        if len(labels) != len(shape):
+            raise ValueError(f"Number of labels ({len(labels)}) must match the number of dimensions in shape ({len(shape)}).")
+
+        # Validate that each label matches the corresponding dimension size
+        for i, (label, dim_size) in enumerate(zip(labels, shape)):
+            if len(label) != dim_size:
+                raise ValueError(f"Label size for dimension {i} ({len(label)}) does not match shape size ({dim_size}).")
 
         self.tracked_values[name] = {
             "data": [],
             "shape": shape,
             "description": description,
             "dimensions": dimensions or [],
+            "labels": labels,
         }
+
+    def get_labels(self, name):
+        """
+        Retrieves the labels for a specific tracked value.
+
+        Parameters:
+            name (str): Name of the tracked value.
+
+        Returns:
+            list: Labels for each dimension of the tracked value.
+        """
+        if name not in self.tracked_values:
+            raise ValueError(f"Value '{name}' is not registered.")
+        return self.tracked_values[name]["labels"]
 
     def _ensure_episode_exists(self, episode_idx):
         """
@@ -50,7 +82,9 @@ class Tracker:
         """
         for value in self.tracked_values.values():
             while len(value["data"]) <= episode_idx:
-                value["data"].append(np.zeros((self.timesteps, *value["shape"])))
+                value["data"].append(
+                    torch.zeros((self.timesteps, *value["shape"]), device=self.device)
+                )
 
     def record_step(self, **kwargs):
         """
@@ -71,7 +105,7 @@ class Tracker:
             expected_shape = self.tracked_values[name]["shape"]
             if value.shape != expected_shape:
                 raise ValueError(f"Shape mismatch for '{name}'. Expected {expected_shape}, got {value.shape}.")
-            self.tracked_values[name]["data"][ep][ts] = value
+            self.tracked_values[name]["data"][ep][ts] = value.to(self.device)
 
         # Increment timestep
         self.current_timestep += 1
@@ -92,7 +126,7 @@ class Tracker:
             episode_idx (int): Index of the episode. Defaults to the current episode.
 
         Returns:
-            np.ndarray: The requested data for the specified episode.
+            torch.Tensor: The requested data for the specified episode.
         """
         if name not in self.tracked_values:
             raise ValueError(f"Value '{name}' is not registered.")
@@ -173,17 +207,17 @@ class Tracker:
         asset_holdings = self.get_episode_data("asset_holdings", episode_idx=episode)
 
         # Calculate total rewards
-        total_reward = np.sum(rewards, axis=0)
+        total_reward = torch.sum(rewards, axis=0)
 
         # Print episode summary
         print(f"📈[{run_type}] Episode {episode + 1:>3} | Steps: {steps}")
-        if isinstance(total_reward, (list, np.ndarray)):  # Multi-agent rewards
+        if isinstance(total_reward, (list, torch.Tensor)):  # Multi-agent rewards
             agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
         else:  # Single-agent reward
             agent_rewards_str = f"Agent 0: {total_reward:.4f}"
         print(f"  Rewards: {agent_rewards_str}")
         print(f"  Portfolio Value: {env_balance[-1][0]:.4f}")
-        print(f"  Total Reward: {np.sum(total_reward):.4f}")
+        print(f"  Total Reward: {torch.sum(total_reward):.4f}")
         print(f"  Asset Holdings: {asset_holdings[steps - 1]}")
         print(f"  Agent Balances: {actor_balances[steps - 1]}")
 
@@ -213,39 +247,47 @@ class Tracker:
 
         # Add all tracked values to the save data
         for name, value in self.tracked_values.items():
-            save_data[name] = np.array(value["data"])
+            save_data[name] = {
+                "data": [v.cpu() for v in value["data"]],  # Move tensors to CPU for saving
+                "shape": value["shape"],
+                "description": value["description"],
+                "dimensions": value["dimensions"],
+                "labels": value["labels"],
+            }
 
-        # Save as a .npz file
-        save_path = os.path.join(run_path, "tracker_data.npz")
-        np.savez(save_path, **save_data)
+        # Save as a .pt file (Torch format)
+        save_path = os.path.join(run_path, "tracker_data.pt")
+        torch.save(save_data, save_path)
         print(f"✅ Tracker data saved to {save_path}.")
 
     @staticmethod
-    def load(filepath):
+    def load(filepath, device="cpu"):
         """
         Loads tracker data from a file.
 
         Parameters:
             filepath (str): Path to the file from which the tracker data will be loaded.
+            device (str): Device to load the data onto ("cpu" or "cuda").
 
         Returns:
             Tracker: A Tracker instance with the loaded data.
         """
-        data = np.load(filepath, allow_pickle=True)
+        data = torch.load(filepath, map_location=device)
 
         # Create a new Tracker instance
-        tracker = Tracker(timesteps=data["timesteps"].item(), tensorboard_prefix=data["tensorboard_prefix"].item())
-        tracker.current_episode = data["current_episode"].item()
-        tracker.current_timestep = data["current_timestep"].item()
+        tracker = Tracker(timesteps=data["timesteps"], tensorboard_prefix=data["tensorboard_prefix"], device=device)
+        tracker.current_episode = data["current_episode"]
+        tracker.current_timestep = data["current_timestep"]
 
         # Load tracked values
-        for name in data.files:
+        for name, value in data.items():
             if name not in ["timesteps", "tensorboard_prefix", "current_episode", "current_timestep"]:
                 tracker.tracked_values[name] = {
-                    "data": list(data[name]),
-                    "shape": data[name][0].shape[1:],  # Infer shape from the first episode
-                    "description": "",
-                    "dimensions": [],
+                    "data": [v.to(device) for v in value["data"]],
+                    "shape": value["shape"],
+                    "description": value["description"],
+                    "dimensions": value["dimensions"],
+                    "labels": value["labels"],
                 }
 
         print(f"✅ Tracker data loaded from {filepath}.")
@@ -270,18 +312,18 @@ class Tracker:
                 data = value["data"]
 
                 # Collect data for all episodes at the current timestep
-                timestep_data = np.array([ep[timestep] for ep in data if timestep < len(ep)])
+                timestep_data = torch.stack([ep[timestep] for ep in data if timestep < len(ep)])
 
                 if len(dimensions) == 2:  # 2D data (e.g., timesteps x agents)
                     for agent_idx in range(timestep_data.shape[1]):
                         logger.log_scalar(
                             f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/mean",
-                            np.mean(timestep_data[:, agent_idx]),
+                            torch.mean(timestep_data[:, agent_idx]),
                             step=timestep
                         )
                         logger.log_scalar(
                             f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/std",
-                            np.std(timestep_data[:, agent_idx]),
+                            torch.std(timestep_data[:, agent_idx]),
                             step=timestep
                         )
 
@@ -290,23 +332,23 @@ class Tracker:
                         for asset_idx in range(timestep_data.shape[2]):
                             logger.log_scalar(
                                 f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/asset_{asset_idx}/mean",
-                                np.mean(timestep_data[:, agent_idx, asset_idx]),
+                                torch.mean(timestep_data[:, agent_idx, asset_idx]),
                                 step=timestep
                             )
                             logger.log_scalar(
                                 f"{self.tensorboard_prefix}_{name}/agent_{agent_idx}/asset_{asset_idx}/std",
-                                np.std(timestep_data[:, agent_idx, asset_idx]),
+                                torch.std(timestep_data[:, agent_idx, asset_idx]),
                                 step=timestep
                             )
 
                 elif len(dimensions) == 1:  # 1D data (e.g., timesteps)
                     logger.log_scalar(
                         f"{self.tensorboard_prefix}_{name}/mean",
-                        np.mean(timestep_data),
+                        torch.mean(timestep_data),
                         step=timestep
                     )
                     logger.log_scalar(
                         f"{self.tensorboard_prefix}_{name}/std",
-                        np.std(timestep_data),
+                        torch.std(timestep_data),
                         step=timestep
                     )

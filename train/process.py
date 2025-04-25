@@ -30,7 +30,12 @@ def process_config(config_path):
     else:
         device = torch.device("cpu")
 
-    device = "cpu"
+    if device == config["device"]:
+        print("Device matches the configuration.")
+    else:
+        print(f"Warning: Device in config ({config['device']}) does not match the detected device ({device}).")
+        device = config["device"]
+    
     print(f"Using device: {device}")
 
     ##################################
