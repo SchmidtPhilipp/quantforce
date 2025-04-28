@@ -1,6 +1,10 @@
 import json
 import os
 import inspect
+
+import random
+import time
+
 from datetime import datetime
 from train.scheduler.epsilon_scheduler import LinearEpsilonScheduler
 from train.scheduler.epsilon_scheduler import InverseSigmoidEpsilonScheduler
@@ -99,10 +103,8 @@ class Config:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         # Generate a random name using the `names` library
-        import names
-        import random
 
-        name = names.get_first_name()
+        name = generate_random_name()
 
         # Combine the config name and timestamp to create the run name
         return f"{config_name}_{timestamp}_{name}"
@@ -204,3 +206,38 @@ class Config:
 
         # Instantiate the agent with the provided parameters
         return agent_class(obs_dim=obs_dim, act_dim=act_dim, **agent_params)
+
+
+
+def generate_random_name():
+    """
+    Generates a random name using a custom list of names with additional randomness
+    without affecting the global random seed.
+    
+    Returns:
+        str: A randomly generated name.
+    """
+    # Create a local random generator
+    local_random = random.Random()
+    
+    # Add extra randomness using the current time in milliseconds
+    extra_seed = int(time.time() * 1000) % 1000
+    local_random.seed(extra_seed)
+    
+    # Extended list of names
+    names_list = [
+        "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Hank", "Ivy", "Jack",
+        "Karen", "Leo", "Mona", "Nina", "Oscar", "Paul", "Quinn", "Rita", "Steve", "Tina",
+        "Uma", "Victor", "Wendy", "Xander", "Yara", "Zane", "Aaron", "Bella", "Carter", "Daisy",
+        "Elliot", "Fiona", "George", "Holly", "Isla", "James", "Kylie", "Liam", "Mila", "Nathan",
+        "Olivia", "Parker", "Queenie", "Ryan", "Sophia", "Thomas", "Ursula", "Violet", "Will", "Xenia",
+        "Yvonne", "Zachary", "Abigail", "Benjamin", "Charlotte", "Daniel", "Elena", "Frederick", "Gabriella",
+        "Henry", "Isabella", "Jacob", "Katherine", "Lucas", "Madeline", "Noah", "Oliver", "Penelope", "Quincy",
+        "Rebecca", "Samuel", "Theodore", "Ulysses", "Vanessa", "William", "Xavier", "Yasmine", "Zoe", "Adrian",
+        "Bianca", "Caleb", "Delilah", "Ethan", "Faith", "Gavin", "Harper", "Ian", "Jasmine", "Kyle", "Luna",
+        "Mason", "Natalie", "Owen", "Phoebe", "Quinn", "Riley", "Sebastian", "Talia", "Uriel", "Vivian", "Wyatt",
+        "Ximena", "Yosef", "Zara"
+    ]
+    
+    # Select a random name from the list
+    return local_random.choice(names_list)
