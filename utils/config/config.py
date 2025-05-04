@@ -11,11 +11,11 @@ from train.scheduler.epsilon_scheduler import InverseSigmoidEpsilonScheduler
 from train.scheduler.epsilon_scheduler import ExponentialEpsilonScheduler
 from train.scheduler.epsilon_scheduler import PeriodicEpsilonScheduler
 
-from agents.dqn_agent import DQNAgent  # Add other agents as needed
-from agents.maddpg_agent import MADDPGAgent  # Add other agents as needed
-from agents.model_builder import ModelBuilder
 from agents.base_agent import BaseAgent
-from agents.up_agent import UniversalPortfolioAgent
+
+from agents import ModelBuilder, DQNAgent, MADDPGAgent, SACAgent, UniversalPortfolioAgent
+
+import agents
 
 class Config:
     VALID_KEYS = {
@@ -122,14 +122,16 @@ class Config:
         Dynamically loads and initializes the epsilon scheduler from the config.
 
         Returns:
-            object: An instance of the specified scheduler class.
+            object or None: An instance of the specified scheduler class, or None if no scheduler is specified.
         """
         exploration_config = self.data.get("EXPLORATION_CONFIGS", {})
         scheduler_class_name = exploration_config.get("scheduler_class")
         scheduler_params = exploration_config.get("params", {})
 
+        # Wenn kein Scheduler angegeben ist, einfach None zurückgeben
         if not scheduler_class_name:
-            raise ValueError("Scheduler class name is not specified in the config.")
+            print("ℹ️ No scheduler specified in the config. Skipping scheduler initialization.")
+            return None
 
         # Dynamically import the scheduler class (assuming it's in the `train.scheduler.epsilon_scheduler` module)
         try:
@@ -203,6 +205,9 @@ class Config:
                         layer["params"]["in_features"] = obs_dim * n_agents + act_dim * n_agents
                     if "out_features" in layer["params"] and layer["params"]["out_features"] == "obs_dim":
                         layer["params"]["out_features"] = 1
+                    if "in_features" in layer["params"] and layer["params"]["in_features"] == "obs_dim + act_dim":
+                        layer["params"]["in_features"] = obs_dim + act_dim
+                        
 
         # Instantiate the agent with the provided parameters
         return agent_class(obs_dim=obs_dim, act_dim=act_dim, **agent_params)

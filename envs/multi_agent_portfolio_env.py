@@ -103,8 +103,10 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         self.current_step += 1
         done = self.current_step >= len(self.data)
+        
 
         if done:
+            done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
             rewards = torch.zeros(self.n_agents, device=self.device)
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
             return obs, rewards, done, {}
@@ -114,6 +116,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             dtype=torch.float32,
             device=self.device
         )
+        done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
 
         # 1. Use the current portfolio value
         portfolio_value_t = self.portfolio_value

@@ -6,13 +6,30 @@ import numpy as np
 import torch
 
 def set_seed(seed):
+    """
+    Sets the seed for all relevant random number generators to ensure reproducibility.
+    
+    Parameters:
+        seed (int): The seed value to set.
+    """
+    # Python's built-in random module
     random.seed(seed)
+    
+    # NumPy random generator
     np.random.seed(seed)
+    
+    # PyTorch random generator
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+    
+    # Ensure deterministic behavior in PyTorch (e.g., for GPU operations)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
-        
+    print(f"Seed set to: {seed}")
+
+
 # Set a fixed seed for reproducibility
 set_seed(42)
 

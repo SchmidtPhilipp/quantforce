@@ -16,7 +16,7 @@
 ####################################################################
 
 # TODO: Which stock assortment to use? 
-# - Desmettre: Ein möglichst Balanciertes Assortment aus Aktien durch verschiedene Sektoren und Ländern. 
+# - Desmettre: Ein möglichst Balanciertes Assortment aus Aktien durch verschiedene Sektoren und Ländern. Etwa 100-500 Stk.
 
 # TODO: Welche Reward funktion? log reward? oder nur stepreward? 
 # - Desmettre: absolute Rendite/absolute return sollte fürs erste passen. 
@@ -32,3 +32,26 @@
 # TODO: Actions sind in der Finanzmathematik eigentlich als portfoliovector bekannt. 
 
 
+
+####################################################################
+# TODO: Hypothesen: 
+# Die Größe des Buffers verhält sich wie eine Informationskapazität welche die Informationen der Agenten speichert. 
+# Um zu lernen samplen wir aus dem Buffer. 
+# Das bedeutet, dass man den Buffer als parallel kapazität sehen kann. 
+# Eine kleinere Kapzität bedeutet das der Agent über die Trainingsinformationen instabiler lernt.
+# Also das der finale Portfoliowert mehr Schwanken wird. Der Grund dafür ist das gute Informationen sparse sind. 
+# Man sollte also einen Buffer nehmen der darauf achtet das der eine bestimmte Rewardverteilung aufrecht erhält.
+
+
+
+# TODO: Sampling könnte sich wie ein Wi
+
+
+#                    Sampling
+#                    ______
+# ------------------|______|-----------------
+#     |             
+#    ---  Buffer
+#    ---
+#     |
+# -------------------------------------------

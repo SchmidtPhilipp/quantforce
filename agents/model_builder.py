@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.nn.init as init
 
 class ModelBuilder:
     """
@@ -33,4 +34,26 @@ class ModelBuilder:
             if 'activation' in layer_config:
                 layers.append(getattr(nn, layer_config['activation'])())
 
-        return nn.Sequential(*layers)
+        model = nn.Sequential(*layers)
+        self._initialize_weights(model)
+        return model
+
+    def _initialize_weights(self, model):
+        """
+        Initializes the weights of the model using a specific initialization strategy.
+
+        Parameters:
+            model (nn.Module): The PyTorch model whose weights will be initialized.
+        """
+        for layer in model:
+            if isinstance(layer, nn.Linear):
+                init.kaiming_uniform_(layer.weight, nonlinearity='relu')
+                if layer.bias is not None:
+                    init.constant_(layer.bias, 0)
+            elif isinstance(layer, nn.Conv2d):
+                init.kaiming_uniform_(layer.weight, nonlinearity='relu')
+                if layer.bias is not None:
+                    init.constant_(layer.bias, 0)
+            elif isinstance(layer, nn.BatchNorm1d) or isinstance(layer, nn.BatchNorm2d):
+                init.constant_(layer.weight, 1)
+                init.constant_(layer.bias, 0)

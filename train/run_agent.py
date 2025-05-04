@@ -164,7 +164,7 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
         action = agent.act(state, epsilon=epsilon)
 
         # Modify the action according to the risk management strategy
-        action = risk_limiting_strategy(action, env.last_actions, env.n_agents)
+        #action = risk_limiting_strategy(action, env.last_actions, env.n_agents)
         
         next_state, reward, episode_done, _ = env.step(action)
         reward = reward.to(env.device)

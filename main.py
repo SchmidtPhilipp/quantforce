@@ -12,7 +12,7 @@ def main():
     if args.config:
         config_path = args.config
     else:
-        config_path = "configs/default/snp_500_test.json"
+        config_path = "configs/pending/sac_my10_w1_epsLinear_buffer1M.json"
         print(f"No configuration file provided. Using default configuration: {config_path}")
 
 

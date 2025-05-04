@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 import random
 from agents.model_builder import ModelBuilder
-from train.replay_buffer import ReplayBuffer
+from agents.buffers.replay_buffer import ReplayBuffer
 
 class DQNAgent(BaseAgent):
     def __init__(self, obs_dim, act_dim, actor_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000, device="cpu"):
