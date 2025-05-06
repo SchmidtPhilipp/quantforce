@@ -203,10 +203,11 @@ class Config:
                 if "params" in layer:
                     if "in_features" in layer["params"] and layer["params"]["in_features"] == "obs_dim * n_agents + act_dim * n_agents":
                         layer["params"]["in_features"] = obs_dim * n_agents + act_dim * n_agents
+                    elif "in_features" in layer["params"] and layer["params"]["in_features"] == "obs_dim + act_dim":
+                        layer["params"]["in_features"] = obs_dim + act_dim
                     if "out_features" in layer["params"] and layer["params"]["out_features"] == "obs_dim":
                         layer["params"]["out_features"] = 1
-                    if "in_features" in layer["params"] and layer["params"]["in_features"] == "obs_dim + act_dim":
-                        layer["params"]["in_features"] = obs_dim + act_dim
+                        
                         
 
         # Instantiate the agent with the provided parameters

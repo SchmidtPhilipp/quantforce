@@ -20,6 +20,9 @@ class SACAgent(BaseAgent):
         self.total_steps = 0  # Zählt die Gesamtanzahl der Schritte
         self.ent_coef = ent_coef
 
+        # Zielentropie basierend auf der Aktionsdimension
+        self.target_entropy = -torch.prod(torch.tensor(act_dim, dtype=torch.float32)).item()
+
         # Replay Buffer
         self.memory = ReplayBuffer(capacity=buffer_max_size)
 
@@ -43,7 +46,10 @@ class SACAgent(BaseAgent):
         if isinstance(ent_coef, str) and ent_coef.startswith("auto"):
             # Automatische Anpassung des Entropie-Koeffizienten
             init_value = float(ent_coef.split("_")[1]) if "_" in ent_coef else 1.0
-            self.log_alpha = torch.tensor(torch.log(torch.tensor(init_value, device=self.device)), requires_grad=True, device=self.device)
+            self.log_alpha = torch.tensor(
+                np.log(init_value), requires_grad=True, device=self.device
+            )
+            self.log_alpha = nn.Parameter(self.log_alpha)  # Als trainierbarer Parameter definieren
             self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr)
         else:
             # Fester Entropie-Koeffizient
@@ -60,7 +66,9 @@ class SACAgent(BaseAgent):
             action = self.actor(state)
             if not deterministic:
                 action += torch.randn_like(action) * self.alpha  # Add noise for exploration
-        return action
+
+        probs = torch.softmax(action, dim=1)
+        return probs / probs.sum(dim=1, keepdim=True)
 
     def store(self, transition):
         """
@@ -80,23 +88,27 @@ class SACAgent(BaseAgent):
         # Sample a batch from the replay buffer
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
 
-        # Convert to tensors
-        states = torch.stack(states).to(self.device)  # (batch_size, state_dim)
-        actions = torch.stack(actions).to(self.device)  # (batch_size, action_dim)
-        rewards = torch.stack(rewards).to(self.device).unsqueeze(-1)  # (batch_size, 1)
-        next_states = torch.stack(next_states).to(self.device)  # (batch_size, state_dim)
-        dones = torch.stack(dones).to(self.device).unsqueeze(-1)  # (batch_size, 1)
+        # Convert to tensors and ensure the agent dimension is preserved
+        states = torch.stack(states).to(self.device)  # (batch_size, n_agents, state_dim)
+        actions = torch.stack(actions).to(self.device)  # (batch_size, n_agents, action_dim)
+        rewards = torch.stack(rewards).to(self.device)  # (batch_size, n_agents)
+        dones = torch.stack(dones).to(self.device)  # (batch_size, n_agents)
+        next_states = torch.stack(next_states).to(self.device)  # (batch_size, n_agents, state_dim)
 
         # Update Critic Networks
         with torch.no_grad():
-            next_actions = self.actor(next_states)  # (batch_size, action_dim)
-            next_q1 = self.target_critic_1(torch.cat([next_states, next_actions], dim=-1))  # (batch_size, 1)
-            next_q2 = self.target_critic_2(torch.cat([next_states, next_actions], dim=-1))  # (batch_size, 1)
-            next_q = torch.min(next_q1, next_q2) - self.alpha * next_actions.log()
-            target_q = rewards + (1 - dones) * self.gamma * next_q  # (batch_size, 1)
+            next_actions = self.actor(next_states)  # (batch_size, n_agents, action_dim)
+            next_q1 = self.target_critic_1(torch.cat([next_states, next_actions], dim=-1))  # (batch_size, n_agents, 1)
+            next_q2 = self.target_critic_2(torch.cat([next_states, next_actions], dim=-1))  # (batch_size, n_agents, 1)
+            next_q = torch.min(next_q1, next_q2)  # (batch_size, n_agents, 1)
+            target_q = rewards.unsqueeze(-1) + (1 - dones) * self.gamma * next_q  # (batch_size, n_agents, 1)
 
-        current_q1 = self.critic_1(torch.cat([states, actions], dim=-1))  # (batch_size, 1)
-        current_q2 = self.critic_2(torch.cat([states, actions], dim=-1))  # (batch_size, 1)
+        # Berechnung der aktuellen Q-Werte
+        critic_input = torch.cat([states, actions], dim=-1)  # (batch_size, n_agents, state_dim + action_dim)
+        current_q1 = self.critic_1(critic_input)  # (batch_size, n_agents, 1)
+        current_q2 = self.critic_2(critic_input)  # (batch_size, n_agents, 1)
+
+        # Berechnung der Verluste
         critic_1_loss = self.critic_loss_fn(current_q1, target_q)
         critic_2_loss = self.critic_loss_fn(current_q2, target_q)
 
@@ -109,7 +121,7 @@ class SACAgent(BaseAgent):
         self.critic_2_optimizer.step()
 
         # Update Actor Network
-        actions_pred = self.actor(states)  # (batch_size, action_dim)
+        actions_pred = self.actor(states)  # (batch_size, n_agents, action_dim)
         actor_loss = (self.alpha * actions_pred.log() - self.critic_1(torch.cat([states, actions_pred], dim=-1))).mean()
 
         self.actor_optimizer.zero_grad()
@@ -120,7 +132,7 @@ class SACAgent(BaseAgent):
         if self.log_alpha is not None:
             with torch.no_grad():
                 actions_pred = self.actor(states)
-                entropy_loss = -(self.log_alpha * (actions_pred.log() + self.target_entropy).detach()).mean()
+            entropy_loss = -(self.log_alpha * (actions_pred.log() + self.target_entropy)).mean()
 
             self.alpha_optimizer.zero_grad()
             entropy_loss.backward()

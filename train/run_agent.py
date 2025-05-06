@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch
 import os
 import numpy as np
 from train.logger import Logger
@@ -84,8 +85,8 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
             if env.device == "mps":
                 eval_reward = eval_reward.cpu().numpy()
             # Update the best agent based on evaluation reward
-            if eval_reward > best_reward:
-                best_reward = eval_reward
+            if np.array(eval_reward).sum() > best_reward:
+                best_reward = np.array(train_reward).sum()
                 best_episode = ep
                 best_agent = agent
                 episodes_no_improvement = 0
@@ -154,11 +155,11 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
     """
     state = env.reset().to(env.device)  # Use validation flag to specify mode
     total_reward = 0
-    episode_done = False
+    episode_done = torch.full((agent.n_agents, 1), float(False), dtype=torch.float32)
     progress_bar = tqdm(total=env.get_timesteps(), desc=f"{mode} Episode {ep+1}", unit="step", ncols=80) if use_tqdm else None
     train = mode == "TRAIN"
     step = 0
-    while not episode_done:
+    while not torch.all(episode_done):
         # Use epsilon-greedy policy for exploration during training
         epsilon = epsilon_scheduler.epsilon if train and epsilon_scheduler else 0.0
         action = agent.act(state, epsilon=epsilon)

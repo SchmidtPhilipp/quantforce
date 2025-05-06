@@ -106,12 +106,7 @@ class MADDPGAgent:
         Returns:
             list: Updated network architecture configuration.
         """
-        for layer in config:
-            if "params" in layer:
-                if "in_features" in layer["params"]:
-                    layer["params"]["in_features"] = eval(layer["params"]["in_features"])
-                if "out_features" in layer["params"]:
-                    layer["params"]["out_features"] = eval(layer["params"]["out_features"])
+
         return config
 
     def act(self, states: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
@@ -170,7 +165,7 @@ class MADDPGAgent:
 
         # Sample a batch of transitions from the replay memory
         batch = random.sample(self.memory, self.batch_size)
-        states, actions, rewards, next_states = zip(*batch)
+        states, actions, rewards, next_states, _ = zip(*batch)
 
         states = torch.FloatTensor(np.array(states))
         actions = torch.FloatTensor(np.array(actions))

@@ -2,6 +2,15 @@
 # Questions to be answered
 ##################################################################
 
+# TODO: Sollten wir indikatoren als features verwenden?
+
+
+
+
+
+
+
+
 
 
 
