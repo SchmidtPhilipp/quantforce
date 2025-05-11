@@ -1,5 +1,5 @@
 import yfinance as yf
-from generate_random_data import generate_random_data
+from .generate_random_data import generate_random_data
 
 def download_data(start, end, ticker, interval="1d", downloader="simulate", verbosity=0):
     """

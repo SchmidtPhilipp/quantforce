@@ -7,7 +7,6 @@ import random
 from agents.model_builder import ModelBuilder
 from utils.loss_functions.loss_functions import weighted_mse_correlation_loss
 from utils.correlation import compute_correlation
-from agents.buffers.replay_buffer import ReplayBuffer  # Import ReplayBuffer
 
 class MADDPGAgent:
     """
@@ -25,7 +24,7 @@ class MADDPGAgent:
                  verbosity=0, 
                  batch_size=32,
                  loss_function=None,
-                 buffer_max_size=100000,  # Maximum buffer size
+                 buffer_max_size=100000,
                  lambda_=1.0):
         """
         Initialize the MADDPG agent.
@@ -47,6 +46,7 @@ class MADDPGAgent:
         self.tau = tau
         self.verbosity = verbosity
         self.lambda_ = lambda_ # Custom weighting factor for the loss function
+        self.buffer_max_size = buffer_max_size
 
         # Use the provided loss function or default to MSELoss
         self.loss_function = loss_function or nn.MSELoss()
@@ -84,8 +84,8 @@ class MADDPGAgent:
         self.actor_optimizers = [optim.Adam(actor.parameters(), lr=lr) for actor in self.actors]
         self.critic_optimizers = [optim.Adam(critic.parameters(), lr=lr) for critic in self.critics]
 
-        # Initialize replay memory using ReplayBuffer
-        self.memory = ReplayBuffer(capacity=buffer_max_size)
+        # Initialize replay memory
+        self.memory = []
 
         # Initialize target networks with the same weights as the original networks
         for i in range(n_agents):
@@ -134,13 +134,10 @@ class MADDPGAgent:
                 # Generate random logits for exploration
                 logits = torch.rand(logits.shape)
 
-            # Normalize the action using Softmax
-            action = torch.softmax(logits, dim=0)
-
-            actions.append(action)
+            actions.append(logits)
 
             if self.verbosity > 0:
-                print(f"Agent {i} action (normalized): {action}")
+                print(f"Agent {i} action (normalized): {logits}")
 
         # Stack actions into a single tensor (shape: [n_agents, act_dim])
         return torch.stack(actions)
@@ -150,9 +147,11 @@ class MADDPGAgent:
         Store a transition in the replay memory.
 
         Parameters:
-            transition (tuple): A tuple containing (states, actions, rewards, next_states, dones).
+            transition (tuple): A tuple containing (states, actions, rewards, next_states).
         """
-        self.memory.store(transition)  # Use ReplayBuffer's store method
+        self.memory.append(transition)
+        if len(self.memory) > self.buffer_max_size:
+            self.memory.pop(0)
         if self.verbosity > 0:
             print(f"Stored transition. Memory size: {len(self.memory)}")
 
@@ -164,48 +163,51 @@ class MADDPGAgent:
             return
 
         # Sample a batch of transitions from the replay memory
-        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+        batch = random.sample(self.memory, self.batch_size)
+        states, actions, rewards, next_states, dones = zip(*batch)
 
-        # Convert sampled data to tensors
         states = torch.FloatTensor(np.array(states))
         actions = torch.FloatTensor(np.array(actions))
         rewards = torch.FloatTensor(np.array(rewards))
         next_states = torch.FloatTensor(np.array(next_states))
 
+        with torch.no_grad():
+            # Get the actions for the next states from the target actors
+            next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)]
+
+            # Normalize each agent's actions
+            next_actions = [F.softmax(action, dim=-1) for action in next_actions]
+
+            # Concatenate normalized actions -> Important removes the list
+            next_actions = torch.cat(next_actions, dim=-1)
+
+            # Concatenate next_states and next_actions
+            next_inputs = torch.cat([next_states.view(self.batch_size, -1), next_actions], dim=-1)
+
         for i in range(self.n_agents):
             # Update critic
+
             with torch.no_grad():
-                # Get the actions for the next states from the target actors
-                next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)]
-                
-                # Normalize each agent's actions
-                next_actions = [F.softmax(action, dim=1) for action in next_actions]
-                
-                # Concatenate normalized actions
-                next_actions = torch.cat(next_actions, dim=1)
-
-                # Concatenate next_states and next_actions
-                next_inputs = torch.cat([next_states.view(self.batch_size, -1), next_actions], dim=-1)
-
                 # Compute the target Q value
                 target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_inputs).squeeze()
 
-            # Concatenate states and actions for the current Q value
+
+            # Concatenate states and actions for the current Q value 
+            # We view here to flatten the tensor because every critic sees the whole state-action space of all agents
             current_inputs = torch.cat([states.view(self.batch_size, -1), actions.view(self.batch_size, -1)], dim=-1)
 
             # Compute the current Q value
             current_q = self.critics[i](current_inputs).squeeze()
 
             # Compute the correlation penalty
-            correlation_penality = 0.0
-            for j in range(self.n_agents):
-                if j != i:
-                    correlation_penality += compute_correlation(actions[:, i], actions[:, j])
-
-            correlation_penality = correlation_penality
+            with torch.no_grad():
+                correlation_penality = 0.0
+                for j in range(self.n_agents):
+                    if j != i:
+                        correlation_penality += compute_correlation(actions[:, i], actions[:, j])
 
             # Compute the critic loss using the custom loss function
-            critic_loss = self.lambda_*self.loss_function(current_q, target_q) + (1-self.lambda_)*correlation_penality
+            critic_loss = self.lambda_*self.loss_function(current_q, target_q) #+ (1-self.lambda_)*correlation_penality
 
             # Optimize the critic
             self.critic_optimizers[i].zero_grad()

@@ -1,9 +1,9 @@
 from datetime import timedelta
 import os
 import pandas as pd
-from cache import load_cache, save_cache, update_cache
-from download_data import download_data
-from wait import wait
+from data.utils.cache import load_cache, save_cache, update_cache
+from data.utils.download_data import download_data
+from data.utils.wait import wait
 
 def load_data(
     tickers, start, end, interval="1d", progress=False, cache_dir="data/cache", verbosity=0, downloader="yfinance"
@@ -114,7 +114,7 @@ def test():
     data = load_data(tickers, start, end, verbosity=1, cache_dir=cache_dir, downloader=downloader)
     print(data.head())
     plt.figure()
-    data["Close"]["AAPL"].plot(title="AAPL Close Price")   
+    data["AAPL"]["Close"].plot(title="AAPL Close Price")   
     # save the plot
     plt.savefig(cache_dir + "/" + "AAPL_Close_Price.png")
     
@@ -122,7 +122,7 @@ def test():
     start = "2019-01-01"
     data = load_data(tickers, start, end, verbosity=1, cache_dir=cache_dir, downloader=downloader)
     print(data.head())
-    data["Close"]["AAPL"].plot(title="AAPL Close Price Extended")
+    data["AAPL"]["Close"].plot(title="AAPL Close Price Extended")
     # save the plot
     plt.savefig(cache_dir + "/" + "AAPL_Close_Price_Extended.png")
 
@@ -131,7 +131,7 @@ def test():
     data = load_data(tickers, start, end, verbosity=1, cache_dir=cache_dir, downloader=downloader)
     print(data.head())
     plt.figure()
-    data["Close"]["AAPL"].plot(title="AAPL Close Price Extended")
+    data["AAPL"]["Close"].plot(title="AAPL Close Price Extended")
     # save the plot
     plt.savefig(cache_dir + "/" + "AAPL_Close_Price_Extended_End.png")
 
@@ -143,8 +143,8 @@ def test():
     data = load_data(tickers, start, end, verbosity=1, cache_dir=cache_dir, downloader=downloader)
     print(data.head())
     plt.figure()
-    data["Close"]["AAPL"].plot(title="AAPL Close Price Extended with GOOGL")
-    data["Close"]["GOOGL"].plot(title="AAPL Close Price Extended with GOOGL")
+    data["AAPL"]["Close"].plot(title="AAPL Close Price Extended with GOOGL")
+    data["GOOGL"]["Close"].plot(title="AAPL Close Price Extended with GOOGL")
     # save the plot
     plt.savefig(cache_dir + "/" + "AAPL_Close_Price_Extended_with_GOOGL.png")
 
@@ -160,6 +160,8 @@ if __name__ == "__main__":
     tickers = NASDAQ100 + DOWJONES + SNP_500
     tickers = list(set(tickers))  # Remove duplicates
 
-    data = load_data(tickers, start, end, verbosity=1)
+    tickers = ["CRM", "AAPL"]
+
+    data = load_data(tickers, start, end, verbosity=0)
     print(data.head())
-    data["Close"]["AAPL"].plot(title="AAPL Close Price")
+    data["AAPL"]["Close"].plot(title="AAPL Close Price")
