@@ -8,6 +8,8 @@ good_runs_04_17_first_success/
 other_runs/
 cache/
 data_cache/
+data/cache/
+data/test_data/
 
 
 # Python-Cache-Ordner überall im Projekt ignorieren

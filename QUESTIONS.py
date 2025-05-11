@@ -4,12 +4,15 @@
 
 # TODO: Sollten wir indikatoren als features verwenden?
 
+# TODO: Vergleich vorbereiten für mit und ohne Kosten. 
 
 
 
 
 
+# TODO: Test the Dataloader extensively.
 
+# TODO: Optimize logging
 
 
 
@@ -52,15 +55,3 @@
 # Man sollte also einen Buffer nehmen der darauf achtet das der eine bestimmte Rewardverteilung aufrecht erhält.
 
 
-
-# TODO: Sampling könnte sich wie ein Wi
-
-
-#                    Sampling
-#                    ______
-# ------------------|______|-----------------
-#     |             
-#    ---  Buffer
-#    ---
-#     |
-# -------------------------------------------

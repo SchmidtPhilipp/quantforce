@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from .downloader import get_data
+from .get_data import get_data
 
 class TimeBasedDataset(Dataset):
     """

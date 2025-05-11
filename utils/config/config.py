@@ -79,6 +79,21 @@ class Config:
             else:
                 print(f'{key} set to "{self.data[key]}".')
 
+
+        if self.data["tickers"] == "NASDAQ100":
+            from data.tickers import NASDAQ100
+            self.data["tickers"] = NASDAQ100
+            print(f"Tickers set to NASDAQ100: {self.data['tickers']}")
+        elif self.data["tickers"] == "SNP500":
+            from data.tickers import SNP_500
+            self.data["tickers"] = SNP_500
+            print(f"Tickers set to S&P 500: {self.data['tickers']}")
+        elif self.data["tickers"] == "DOWJONES":
+            from data.tickers import DOWJONES
+            self.data["tickers"] = DOWJONES
+            print(f"Tickers set to Dow Jones: {self.data['tickers']}")
+
+
         # Ensure tickers are unique
         if "tickers" in self.data:
             self.data["tickers"] = list(set(self.data["tickers"]))

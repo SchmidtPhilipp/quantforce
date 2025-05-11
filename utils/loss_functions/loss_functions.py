@@ -22,6 +22,9 @@ def weighted_mse_correlation_loss(predicted, target, actions, lambda_=1):
     batch_size, n_agents, action_dim = actions.shape
     correlation_penalties = torch.zeros(batch_size, device=actions.device)
 
+    penalty = torch.zeros(batch_size, device=actions.device)
+    
+
     for b in range(batch_size):
         penalty = 0.0
 

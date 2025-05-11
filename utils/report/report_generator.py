@@ -6,7 +6,7 @@ from utils.plot import plot_lines_grayscale, plot_dual_axis  # Importiere die Pl
 from utils.report.investigation import Investigation  # Importiere die Investigation-Klasse
 from utils.tracker.assettracker import AssetTracker  # Importiere die AssetTracker-Klasse
 from data.dataset import Dataset  # Importiere die Dataset-Klasse
-from data.downloader import get_data
+from data.get_data import get_data
 import subprocess
 
 class ReportGenerator:

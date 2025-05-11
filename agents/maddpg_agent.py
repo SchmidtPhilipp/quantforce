@@ -7,6 +7,7 @@ import random
 from agents.model_builder import ModelBuilder
 from utils.loss_functions.loss_functions import weighted_mse_correlation_loss
 from utils.correlation import compute_correlation
+from agents.buffers.replay_buffer import ReplayBuffer  # Import ReplayBuffer
 
 class MADDPGAgent:
     """
@@ -24,6 +25,7 @@ class MADDPGAgent:
                  verbosity=0, 
                  batch_size=32,
                  loss_function=None,
+                 buffer_max_size=100000,  # Maximum buffer size
                  lambda_=1.0):
         """
         Initialize the MADDPG agent.
@@ -82,8 +84,8 @@ class MADDPGAgent:
         self.actor_optimizers = [optim.Adam(actor.parameters(), lr=lr) for actor in self.actors]
         self.critic_optimizers = [optim.Adam(critic.parameters(), lr=lr) for critic in self.critics]
 
-        # Initialize replay memory
-        self.memory = []
+        # Initialize replay memory using ReplayBuffer
+        self.memory = ReplayBuffer(capacity=buffer_max_size)
 
         # Initialize target networks with the same weights as the original networks
         for i in range(n_agents):
@@ -148,11 +150,9 @@ class MADDPGAgent:
         Store a transition in the replay memory.
 
         Parameters:
-            transition (tuple): A tuple containing (states, actions, rewards, next_states).
+            transition (tuple): A tuple containing (states, actions, rewards, next_states, dones).
         """
-        self.memory.append(transition)
-        if len(self.memory) > 10000:
-            self.memory.pop(0)
+        self.memory.store(transition)  # Use ReplayBuffer's store method
         if self.verbosity > 0:
             print(f"Stored transition. Memory size: {len(self.memory)}")
 
@@ -164,9 +164,9 @@ class MADDPGAgent:
             return
 
         # Sample a batch of transitions from the replay memory
-        batch = random.sample(self.memory, self.batch_size)
-        states, actions, rewards, next_states, _ = zip(*batch)
+        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
 
+        # Convert sampled data to tensors
         states = torch.FloatTensor(np.array(states))
         actions = torch.FloatTensor(np.array(actions))
         rewards = torch.FloatTensor(np.array(rewards))
