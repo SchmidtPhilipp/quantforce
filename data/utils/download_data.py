@@ -20,6 +20,6 @@ def download_data(start, end, ticker, interval="1d", downloader="simulate", verb
     elif downloader == "yfinance":
         from curl_cffi import requests
         session = requests.Session(impersonate="chrome")
-        return yf.download(ticker, start=start, end=end, interval=interval, progress=bool(verbosity), auto_adjust=True, session=session)
+        return yf.download(ticker, start=start, end=end, interval=interval, progress=bool(verbosity), auto_adjust=True)#, session=session)
     else:
         raise ValueError("Downloader not supported.")

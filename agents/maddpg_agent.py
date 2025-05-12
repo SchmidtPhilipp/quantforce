@@ -7,7 +7,6 @@ import random
 from agents.model_builder import ModelBuilder
 from utils.loss_functions.loss_functions import weighted_mse_correlation_loss
 from utils.correlation import compute_correlation
-from agents.buffers.replay_buffer import PrioritizedReplayBuffer
 
 class MADDPGAgent:
     """
@@ -86,7 +85,7 @@ class MADDPGAgent:
         self.critic_optimizers = [optim.Adam(critic.parameters(), lr=lr) for critic in self.critics]
 
         # Initialize replay memory
-        self.memory = PrioritizedReplayBuffer(capacity=buffer_max_size)
+        self.memory = []
 
         # Initialize target networks with the same weights as the original networks
         for i in range(n_agents):
@@ -150,9 +149,11 @@ class MADDPGAgent:
         Parameters:
             transition (tuple): A tuple containing (states, actions, rewards, next_states).
         """
-        self.memory.store(transition)
+        self.memory.append(transition)
+        if len(self.memory) > self.buffer_max_size:
+            self.memory.pop(0)
         if self.verbosity > 0:
-            print(f"Stored transition in memory: {transition}")
+            print(f"Stored transition. Memory size: {len(self.memory)}")
 
     def train(self):
         """

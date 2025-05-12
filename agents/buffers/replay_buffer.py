@@ -71,9 +71,9 @@ class PrioritizedReplayBuffer:
         indices = np.random.choice(len(self.buffer), batch_size, p=probabilities, replace=False)
 
         # Extract sampled transitions
-        sampled_transitions = [self.buffer[idx] for idx in indices]
-        states, actions, rewards, next_states, dones = zip(*sampled_transitions)
-
+        batch = [self.buffer[idx] for idx in indices]
+        
+        states, actions, rewards, next_states, dones = zip(*batch)
         return states, actions, rewards, next_states, dones
 
     def __len__(self):

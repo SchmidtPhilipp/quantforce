@@ -4,6 +4,7 @@ import pandas as pd
 from data.utils.cache import load_cache, save_cache, update_cache
 from data.utils.download_data import download_data
 from data.utils.wait import wait
+from data.utils.clean_data import clean_data, drop_columns
 
 def load_data(
     tickers, start, end, interval="1d", progress=False, cache_dir="data/cache", verbosity=0, downloader="yfinance"
@@ -77,6 +78,7 @@ def load_data(
             cached_data = new_data
 
         # Save updated cache
+        cached_data = clean_data(cached_data, start, end)  # Clean the data
         save_cache(cached_data, cache_file, verbosity)  # Save only the single ticker's data
         all_data.append(cached_data)
 
@@ -160,8 +162,8 @@ if __name__ == "__main__":
     tickers = NASDAQ100 + DOWJONES + SNP_500
     tickers = list(set(tickers))  # Remove duplicates
 
-    tickers = ["CRM", "AAPL"]
+    #tickers = ["CRM", "AAPL"]
 
-    data = load_data(tickers, start, end, verbosity=0)
+    data = load_data(tickers, start, end, verbosity=1)
     print(data.head())
     data["AAPL"]["Close"].plot(title="AAPL Close Price")

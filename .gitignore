@@ -10,6 +10,7 @@ cache/
 data_cache/
 data/cache/
 data/test_data/
+data/cache_bak
 
 
 # Python-Cache-Ordner überall im Projekt ignorieren
