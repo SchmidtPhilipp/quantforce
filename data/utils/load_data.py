@@ -76,10 +76,19 @@ def load_data(
             wait(10) 
 
             cached_data = new_data
+            # Save the new data to cache
 
-        # Save updated cache
-        cached_data = clean_data(cached_data, start, end)  # Clean the data
+        # Clean and keep the size        
+        import datetime
+        tmin = min(cached_data.index.min(),pd.Timestamp(start))
+        tmax = max(cached_data.index.max(), pd.Timestamp(end))
+        cached_data = clean_data(cached_data, tmin, tmax)  # Clean the data
         save_cache(cached_data, cache_file, verbosity)  # Save only the single ticker's data
+
+        # Clean and cut to size
+        cached_data = clean_data(cached_data, start, end)  # Clean the data
+
+        
         all_data.append(cached_data)
 
     # Combine all ticker data into a single MultiIndex DataFrame
@@ -161,9 +170,36 @@ if __name__ == "__main__":
     from data.tickers import NASDAQ100, DOWJONES, SNP_500
     tickers = NASDAQ100 + DOWJONES + SNP_500
     tickers = list(set(tickers))  # Remove duplicates
-
-    #tickers = ["CRM", "AAPL"]
-
+    tickers.sort()
+    
     data = load_data(tickers, start, end, verbosity=1)
+
+    # tickers consisting only of nan
+    tickers = data.columns.levels[0]
+    empty_tickers = []
+    for ticker in tickers:
+        if data[ticker].isnull().all().all():
+            print(f"Ticker {ticker} consists only of NaN values.")
+            empty_tickers.append(ticker)
+
+
+    Nasda1q = list(set(NASDAQ100) - set(empty_tickers))
+    DowJones1q = list(set(DOWJONES) - set(empty_tickers))
+    Snp500q = list(set(SNP_500) - set(empty_tickers))
+
+    file = {"NASDAQ100": Nasda1q,
+            "DOWJONES": DowJones1q,
+            "SNP_500": Snp500q}
+
+    # save as json
+    import json
+    # create the files
+    os.makedirs("data/tickers", exist_ok=True)
+    with open("data/tickers/tickers.json", "w") as f:
+        json.dump(file, f)
+
+
+
+
     print(data.head())
     data["AAPL"]["Close"].plot(title="AAPL Close Price")

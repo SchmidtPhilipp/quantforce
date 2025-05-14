@@ -68,6 +68,7 @@ class Config:
             "time_window_size": 1,  # Time window size for the dataset
             "tickers": ["AAPL", "GOOGL", "MSFT"],  # Default tickers
             "device": "cpu",  # Default device
+            "reward_function": None,
         }
 
         print("-" * 50)

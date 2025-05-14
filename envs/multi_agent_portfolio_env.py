@@ -17,7 +17,7 @@ class MultiAgentPortfolioEnv(gym.Env):
         trade_cost_fixed (float): Fixed trading cost per transaction.
         device (str): Device to use for computations ("cpu" or "cuda").
     """
-    def __init__(self, data, initial_balance=1_000, verbosity=0, n_agents=2, trade_cost_percent=0.0, trade_cost_fixed=0.0, device="cpu"):
+    def __init__(self, data, initial_balance=1_000, verbosity=0, n_agents=2, trade_cost_percent=0.0, trade_cost_fixed=0.0, device="cpu", reward_function=None):
         self.data = data
         self.data_iterator = iter(self.data)
         self.device = device
@@ -28,6 +28,7 @@ class MultiAgentPortfolioEnv(gym.Env):
         self.current_step = 0
         self.verbosity = verbosity
         self.n_agents = n_agents
+        self.reward_function = reward_function
 
         self.trade_cost_percent = trade_cost_percent
         self.trade_cost_fixed = trade_cost_fixed
@@ -155,7 +156,15 @@ class MultiAgentPortfolioEnv(gym.Env):
         self.portfolio_value = portfolio_value_t1
 
         # 10. Calculate rewards
-        rewards = portfolio_value_t1 - portfolio_value_t
+        if self.reward_function == "step_return":
+            rewards = portfolio_value_t1/(portfolio_value_t + 1e-10) - 1
+        elif self.reward_function == "log_return":
+            rewards = portfolio_value_t1 / (portfolio_value_t + 1e-10)
+            if rewards < 0:
+                raise ValueError("Negative reward detected. log_return is not defined for negative values. You may remove the costs of the transaction.")
+            rewards = torch.log(rewards)
+        else:
+            rewards = portfolio_value_t1 - portfolio_value_t
 
         # Get the next observation
         obs = self._get_observation()

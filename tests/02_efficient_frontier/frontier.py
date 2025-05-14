@@ -10,9 +10,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"
 from data.get_data import get_data
 from data.tickers import getNasdaq100
 import tqdm 
+from utils.plot import plot_lines_grayscale
+
 
 # set seeds for reproducibility
-np.random.seed(42)
+#np.random.seed(42)
 
 
 def calculate_portfolio_metrics(returns, weights):
@@ -111,53 +113,87 @@ def generate_random_weights(n_assets, n_portfolios):
 
 
 def main():
-    from data.tickers import DOWJONES, NASDAQ100
-    tickers = NASDAQ100
+    from data.tickers import DOWJONES, NASDAQ100, SNP_500
 
+    tickers = [
+    "JNJ",  # Johnson & Johnson (Health, USA)
+    "NVS",  # Novartis (Health, Switzerland)
+    "LMT",  # Lockheed Martin (Defense, USA)
+    "BA",   # Boeing (Defense, USA)
+    "AAPL", # Apple (Technology, USA)
+    "SAP",  # SAP (Technology, Germany)
+    "XOM",  # Exxon Mobil (Energy, USA)
+    "BP",   # BP (Energy, UK)
+    "HSBC", # HSBC (Finance, UK)
+    "DB",   # Deutsche Bank (Finance, Germany)
+    ]
+    tickers = ["AAPL", "JNJ", "XOM"]
+    tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
     # Fetch historical data
     start_date = "2024-01-01"
-    end_date = "2025-01-01"
+    end_date = "2024-12-31"
     data = get_data(tickers, start_date, end_date, indicators=("Close",))
 
-    # calculate the returns referenced to the first date
-    returns = data["Close"].diff().cumsum().dropna()
+    # Remove the second entry of the Multiindex
+    data.columns = data.columns.droplevel(1)
+
+    # Berechnung der Renditen der Wertpapiere R(T) = (S(T) - S(0)) / S(0)
+    returns = (data.iloc[:] - data.iloc[0]) / data.iloc[0]
 
 
-
-
-
-    # Generate deterministic portfolios
-    n_portfolios = 5000  # Number of portfolios
+    # Plot the historic returns of 5 Assets
+    
+    plot_lines_grayscale(returns[tickers], xlabel="Date", ylabel="Return", filename="historic_returns_5_assets", y_limits=(-0.5, 1), 
+                         figsize=(8, 2.5), max_xticks=12, save_dir="tests/02_efficient_frontier", linewidth=1)
+    
     n_assets = len(tickers)
-    #weights_list = generate_deterministic_weights(n_assets, n_portfolios)
-    weights_list = generate_random_weights(n_assets, n_portfolios)
+    prices = np.array(data)
+    T = len(prices)  # Anzahl der Zeitpunkte
+
+    # Schritt 1: Log-Renditen berechnen
+    returns = np.log(prices[1:] / prices[:-1])
+
+
+    T = len(returns)  # Anzahl der Zeitpunkte
+
+
+    # Schritt 2: Erwartete Renditen und Kovarianzmatrix
+    mean_returns = np.mean(returns, axis=0)
+    cov_matrix = np.cov(returns, rowvar=False)
+
+    # Schritt 3: Monte Carlo Simulation
+    n_portfolios = 5_000
 
     portfolio_returns = []
     portfolio_risks = []
     sharpe_ratios = []
 
-    for weights in tqdm.tqdm(weights_list, desc="Calculating Portfolio Metrics", unit="portfolio"):
-        ret, risk = calculate_portfolio_metrics(returns, weights)
-        portfolio_returns.append(ret)
-        portfolio_risks.append(risk)
-        sharpe_ratios.append(ret / risk if risk > 0 else 0)
+    for i in range(n_portfolios):
+        weights = np.random.random(n_assets)
+        weights /= np.sum(weights)
 
-    # Calculate the efficient frontier
-    #efficient_risks, efficient_returns = calculate_efficient_frontier(returns)
+        portfolio_return = np.dot(weights, mean_returns)*T
+        portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))*np.sqrt(T)
+        sharpe_ratio = portfolio_return / portfolio_vol
+
+        portfolio_returns.append(portfolio_return)
+        portfolio_risks.append(portfolio_vol)
+        sharpe_ratios.append(sharpe_ratio)
+        
 
     # Visualize the results
     plt.figure(figsize=(10, 6))
-    plt.scatter(portfolio_risks, portfolio_returns, c=sharpe_ratios, cmap="viridis", marker="o", alpha=0.5, label="Deterministic Portfolios")
-    
-    
-    #plt.plot(efficient_risks, efficient_returns, color="red", linewidth=2, label="Efficient Frontier")
-    plt.colorbar(label="Portfolio Return")
+    plt.scatter(portfolio_risks, portfolio_returns, c=sharpe_ratios, cmap="Greys", marker="o", s=10, alpha=0.5)
+
+    plt.colorbar(label="Sharpe Ratio")
     plt.xlabel("Risk (Standard Deviation)")
     plt.ylabel("Return")
-    plt.title("Efficient Frontier and Deterministic Portfolios")
-    plt.legend()
+    #plt.legend()
     plt.grid(True)
-    plt.show()
+    #plt.show()
+    plt.xlim(min(portfolio_risks), max(portfolio_risks))
+    plt.ylim(min(portfolio_returns), max(portfolio_returns))
+
     plt.savefig("efficient_frontier.png")
 
 

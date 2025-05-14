@@ -1,5 +1,7 @@
 import torch.nn as nn
 import torch.nn.init as init
+import torch
+from agents.Networks.networks import ClipLayer
 
 class ModelBuilder:
     """
@@ -28,7 +30,28 @@ class ModelBuilder:
             # Add the layer
             layer_type = layer_config['type']
             layer_params = layer_config['params']
-            layers.append(getattr(nn, layer_type)(**layer_params))
+
+            if layer_type == 'clip':
+                layers.append(ClipLayer(**layer_params))
+            elif layer_type == 'softmax':
+                layers.append(torch.nn.Softmax(**layer_params, dim=-1))
+            elif layer_type == 'dropout':
+                layers.append(nn.Dropout(**layer_params))
+            elif layer_type == 'batchnorm':
+                layers.append(nn.BatchNorm1d(**layer_params))
+            elif layer_type == 'batchnorm2d':
+                layers.append(nn.BatchNorm2d(**layer_params))
+            elif layer_type == 'layernorm':
+                layers.append(nn.LayerNorm(**layer_params))
+            elif layer_type == 'conv2d':
+                layers.append(nn.Conv2d(**layer_params))
+            elif layer_type == 'conv1d':
+                layers.append(nn.Conv1d(**layer_params))
+            elif layer_type == 'tanh':
+                layers.append(nn.Tanh(**layer_params))
+            
+            else:
+                layers.append(getattr(nn, layer_type)(**layer_params))
 
             # Add the activation function if specified
             if 'activation' in layer_config:

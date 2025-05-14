@@ -6,7 +6,7 @@ import numpy as np
 import random
 from agents.model_builder import ModelBuilder
 from utils.loss_functions.loss_functions import weighted_mse_correlation_loss
-from utils.correlation import compute_correlation
+from utils.correlation import compute_correlation, per_sample_correlation_penalty
 
 class MADDPGAgent:
     """
@@ -68,6 +68,11 @@ class MADDPGAgent:
         actor_config = actor_config or default_actor_config
         critic_config = critic_config or default_critic_config
 
+        # We need to append a cliping and a softmax layer to the actor config
+        # This is done to ensure that the actions are in the range [0, 1]
+        #actor_config.append({"type": "clip", "params": {"min": -10, "max": 10}})
+        #actor_config.append({"type": "softmax", "params": {}})
+
         # Dynamically replace placeholders in the network architecture
         actor_config = self._replace_placeholders(actor_config, obs_dim, act_dim, n_agents)
         critic_config = self._replace_placeholders(critic_config, obs_dim, act_dim, n_agents)
@@ -125,15 +130,16 @@ class MADDPGAgent:
         actions = []
 
         for i, actor in enumerate(self.actors):
-            state = states[i].unsqueeze(0)  # Add batch dimension (shape: [1, obs_dim])
+            state = states[i] # Add batch dimension (shape: [1, obs_dim])
 
             with torch.no_grad():
-                logits = actor(state).squeeze(0)  # Remove batch dimension (shape: [act_dim])
+                logits = actor(state)  # Remove batch dimension (shape: [act_dim])
 
-            if random.random() < epsilon:
-                # Generate random logits for exploration
-                logits = torch.rand(logits.shape)
+            # add simple epsilon decaing noise
+            act_dim = logits.shape[0]
+            action = logits + torch.FloatTensor(act_dim).normal_(-epsilon, epsilon)
 
+            logits = F.softmax(logits, dim=-1)  # Normalize the logits to [0, 1]
             actions.append(logits)
 
             if self.verbosity > 0:
@@ -207,7 +213,7 @@ class MADDPGAgent:
                         correlation_penality += compute_correlation(actions[:, i], actions[:, j])
 
             # Compute the critic loss using the custom loss function
-            critic_loss = self.lambda_*self.loss_function(current_q, target_q) #+ (1-self.lambda_)*correlation_penality
+            critic_loss = self.lambda_*self.loss_function(current_q, target_q) #+ (1-self.lambda_)*per_sample_correlation_penalty(actions, i)
 
             # Optimize the critic
             self.critic_optimizers[i].zero_grad()
@@ -293,3 +299,5 @@ class MADDPGAgent:
 
         if self.verbosity > 0:
             print(f"MADDPG agent loaded from {load_path}")
+
+

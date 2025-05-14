@@ -4,6 +4,7 @@ configs/
 runs/
 temp/
 good_runs/ 
+dead_runs/
 good_runs_04_17_first_success/
 other_runs/
 cache/
@@ -20,4 +21,7 @@ data/cache_bak
 .DS_Store
 
 
-
+# Bestimmte Dateien ausschließen
+*.pgf
+*.pdf
+*.png

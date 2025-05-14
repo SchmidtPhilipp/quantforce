@@ -3,6 +3,13 @@
 ##################################################################
 
 # TODO: Sollten wir indikatoren als features verwenden?
+# - Wenn ja welche?
+
+
+# TODO: Wie sind die Renditen der Wertpapiere genau definiert? 
+
+
+
 
 # TODO: Vergleich vorbereiten für mit und ohne Kosten. 
 
@@ -10,9 +17,6 @@
 
 
 
-# TODO: Test the Dataloader extensively.
-
-# TODO: Optimize logging
 
 
 

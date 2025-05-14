@@ -52,12 +52,15 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
     valid_indicators = {"sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"}
     selected_indicators = set(indicators).intersection(valid_indicators)
 
-    if not selected_indicators:
+    # Check for indicators with specific window sizes (e.g., "sma50", "ema20", "adx14", "bb20", "atr14")
+    windowed_indicators = [ind for ind in indicators if any(ind.startswith(prefix) and ind[len(prefix):].isdigit() 
+                                                            for prefix in ["sma", "ema", "adx", "bb", "atr"])]
+
+    if not selected_indicators and not windowed_indicators:
         if verbosity > 0:
             print("No valid indicators found in the provided list. Returning the original data.")
         return data
 
-    data = data.copy()
     enriched = {}
 
     tickers = sorted(set(t for t, field in data.columns if field == "Close"))
@@ -68,7 +71,7 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
         low = data[(ticker, "Low")]
         volume = data[(ticker, "Volume")]
 
-        # Compute indicators as before
+        # Compute standard indicators
         if "sma" in selected_indicators:
             enriched[(ticker, "sma")] = compute_sma(close)
 
@@ -92,6 +95,24 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
 
         if "obv" in selected_indicators:
             enriched[(ticker, "obv")] = compute_obv(close, volume)
+
+        # Compute indicators with specific window sizes
+        for indicator in windowed_indicators:
+            if indicator.startswith("sma"):
+                window = int(indicator[3:])  # Extract the window size
+                enriched[(ticker, f"sma{window}")] = compute_sma(close, window=window)
+            elif indicator.startswith("ema"):
+                window = int(indicator[3:])
+                enriched[(ticker, f"ema{window}")] = compute_ema(close, window=window)
+            elif indicator.startswith("adx"):
+                window = int(indicator[3:])
+                enriched[(ticker, f"adx{window}")] = compute_adx(high, low, close, window=window)
+            elif indicator.startswith("bb"):
+                window = int(indicator[2:])
+                enriched[(ticker, f"bb_upper{window}"), enriched[(ticker, f"bb_lower{window}")]] = compute_bollinger_bands(close, window=window)
+            elif indicator.startswith("atr"):
+                window = int(indicator[3:])
+                enriched[(ticker, f"atr{window}")] = compute_atr(high, low, close, window=window)
 
     if not enriched:
         print("No indicators were computed. Returning the original data.")

@@ -54,6 +54,7 @@ def process_config(config_path):
         n_agents=config["n_agents"],
         trade_cost_percent=config["trade_cost_percent"],
         trade_cost_fixed=config["trade_cost_fixed"],
+        reward_function=config["reward_function"],
         device=device
     )
 
@@ -85,7 +86,8 @@ def process_config(config_path):
         n_agents=config["n_agents"],
         trade_cost_percent=config["trade_cost_percent"],
         trade_cost_fixed=config["trade_cost_fixed"], 
-        device=device
+        device=device,
+        reward_function=config["reward_function"]
     )
 
     # Run training
@@ -123,6 +125,7 @@ def process_config(config_path):
         n_agents=config["n_agents"],
         trade_cost_percent=config["trade_cost_percent"],
         trade_cost_fixed=config["trade_cost_fixed"], 
+        reward_function=config["reward_function"],
         device=device
     )
 
