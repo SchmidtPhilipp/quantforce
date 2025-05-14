@@ -6,6 +6,8 @@ import random
 from agents.model_builder import ModelBuilder
 from agents.buffers.replay_buffer import ReplayBuffer
 
+
+# Attention this is Soft-DQN
 class DQNAgent(BaseAgent):
     def __init__(self, obs_dim, act_dim, actor_config=None, lr=1e-3, gamma=0.99, batch_size=32, buffer_max_size=100000, device="cpu"):
         super().__init__()
@@ -34,17 +36,21 @@ class DQNAgent(BaseAgent):
 
     def act(self, state: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
         """
-        Selects an action based on the current state and epsilon-greedy policy.
+        Gibt eine Wahrscheinlichkeitsverteilung (Länge = act_dim, Summe = 1)
         """
-        state = state.to(self.device)  # Move state to MPS
+        state = state.to(self.device).unsqueeze(0)  # [1, obs_dim]
+
         with torch.no_grad():
-            logits = self.model(state)
+            logits = self.model(state)  # [1, act_dim]
 
             if random.random() < epsilon:
-                logits = torch.rand(logits.shape, device=self.device)
+                # Uniforme Zufallsverteilung
+                probs = torch.rand_like(logits)
+                probs = probs / probs.sum(dim=1, keepdim=True)
+            else:
+                probs = torch.softmax(logits, dim=1)  # Softmax Q → Verteilung
 
-            probs = torch.softmax(logits, dim=1)
-            return probs / probs.sum(dim=1, keepdim=True)
+        return probs.squeeze(0)  # [act_dim]
 
     def store(self, transition):
         self.memory.store(transition)
