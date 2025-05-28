@@ -20,7 +20,7 @@ class DQNAgent(BaseAgent):
             {"type": "Linear", "params": {"in_features": 64, "out_features": act_dim}}
         ]
         actor_config = actor_config or default_architecture
-
+        self.n_agents = 1
         self.device = device
         # Use ModelBuilder to create the models
         self.model = ModelBuilder(actor_config).build().to(self.device)
@@ -38,7 +38,7 @@ class DQNAgent(BaseAgent):
         """
         Gibt eine Wahrscheinlichkeitsverteilung (Länge = act_dim, Summe = 1)
         """
-        state = state.to(self.device).unsqueeze(0)  # [1, obs_dim]
+        state = state.to(self.device)#.unsqueeze(0)  # [1, obs_dim]
 
         with torch.no_grad():
             logits = self.model(state)  # [1, act_dim]
@@ -50,7 +50,7 @@ class DQNAgent(BaseAgent):
             else:
                 probs = torch.softmax(logits, dim=1)  # Softmax Q → Verteilung
 
-        return probs.squeeze(0)  # [act_dim]
+        return probs#.squeeze(0)  # [act_dim]
 
     def store(self, transition):
         self.memory.store(transition)

@@ -127,8 +127,9 @@ def main():
     "HSBC", # HSBC (Finance, UK)
     "DB",   # Deutsche Bank (Finance, Germany)
     ]
+
     tickers = ["AAPL", "JNJ", "XOM"]
-    tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+
     # Fetch historical data
     start_date = "2024-01-01"
     end_date = "2024-12-31"
@@ -137,32 +138,20 @@ def main():
     # Remove the second entry of the Multiindex
     data.columns = data.columns.droplevel(1)
 
-    # Berechnung der Renditen der Wertpapiere R(T) = (S(T) - S(0)) / S(0)
-    returns = (data.iloc[:] - data.iloc[0]) / data.iloc[0]
-
-
-    # Plot the historic returns of 5 Assets
-    
-    plot_lines_grayscale(returns[tickers], xlabel="Date", ylabel="Return", filename="historic_returns_5_assets", y_limits=(-0.5, 1), 
-                         figsize=(8, 2.5), max_xticks=12, save_dir="tests/02_efficient_frontier", linewidth=1)
-    
     n_assets = len(tickers)
     prices = np.array(data)
     T = len(prices)  # Anzahl der Zeitpunkte
 
     # Schritt 1: Log-Renditen berechnen
     returns = np.log(prices[1:] / prices[:-1])
-
-
     T = len(returns)  # Anzahl der Zeitpunkte
-
 
     # Schritt 2: Erwartete Renditen und Kovarianzmatrix
     mean_returns = np.mean(returns, axis=0)
     cov_matrix = np.cov(returns, rowvar=False)
 
     # Schritt 3: Monte Carlo Simulation
-    n_portfolios = 5_000
+    n_portfolios = 10_000
 
     portfolio_returns = []
     portfolio_risks = []
@@ -182,19 +171,24 @@ def main():
         
 
     # Visualize the results
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 4))
     plt.scatter(portfolio_risks, portfolio_returns, c=sharpe_ratios, cmap="Greys", marker="o", s=10, alpha=0.5)
-
     plt.colorbar(label="Sharpe Ratio")
+    max_sharpe_idx = np.argmax(sharpe_ratios)
+    max_sharpe_return = portfolio_returns[max_sharpe_idx]
+    plt.scatter(portfolio_risks[max_sharpe_idx], portfolio_returns[max_sharpe_idx], color="red", marker="*", s=200, label="Max Sharpe Ratio")
+    
     plt.xlabel("Risk (Standard Deviation)")
     plt.ylabel("Return")
-    #plt.legend()
+    plt.legend()
     plt.grid(True)
     #plt.show()
-    plt.xlim(min(portfolio_risks), max(portfolio_risks))
-    plt.ylim(min(portfolio_returns), max(portfolio_returns))
+    #plt.xlim(min(portfolio_risks), max(portfolio_risks))
+    #plt.ylim(min(portfolio_returns), max(portfolio_returns))
 
-    plt.savefig("efficient_frontier.png")
+    plt.ylim(-0.1, 0.3)
+
+    plt.savefig("tests/02_efficient_frontier/efficient_frontier.png")
 
 
 if __name__ == "__main__":

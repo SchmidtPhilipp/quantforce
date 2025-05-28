@@ -9,8 +9,6 @@
 # TODO: Wie sind die Renditen der Wertpapiere genau definiert? 
 
 
-
-
 # TODO: Vergleich vorbereiten für mit und ohne Kosten. 
 
 

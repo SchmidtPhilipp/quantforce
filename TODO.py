@@ -4,10 +4,10 @@
 # DONE: Implementiere einen generallen Tracker.
 # DONE: Überprüfe den Dataloader.
 # TODO: Visualize torch gradients
-# TODO: optimize the code for MPS
+# DONE: optimize the code for MPS
 # TODO: Achsenbeschriftung im Tracker mitgeben.
 
-# TODO: Überprüfe die Daten auf Aktiensplits. 
+# DONE: Überprüfe die Daten auf Aktiensplits. 
 # TODO: Überleg dir ein System um die Ergebnisse zu vergleichen bzw zu labeln. 
 
 # DONE: holdings nennen wir handelsstrategien bzw portfolio
@@ -18,8 +18,8 @@
 # DONE: Erstellung eines Dataloaders für die Daten
 # DONE: Cashe auf single ticker basis speichern.
 # DONE: TimebasedDataset erstellen.
-# TODO: Alle ticker herausfinden.
-# TODO: Datamanger implementieren. Sollte alle daten laden können. Vorhandene Daten ergänzen können. etc...
+# DONE: Alle ticker herausfinden.
+# DONE: Datamanger implementieren. Sollte alle daten laden können. Vorhandene Daten ergänzen können. etc...
 # TODO: Survival bias umgehen.
 
 ##################################################
@@ -32,9 +32,9 @@
 # DONE: Single Agent Portfolio Environment
 # DONE: Multi Agent Portfolio Environment mit Shared Observation
 # DONE: Multi Agent Portfolio Environment mit Shared Observation und Shared Action
-# TODO: Option implementieren für Agenten welche nicht nur den aktuellen State 
+# DONE: Option implementieren für Agenten welche nicht nur den aktuellen State 
 # sondern auch die Historie betrachten
-# TODO: Im paper werden auch aktionen und cash als observations hinzugefügt.
+# DONE: Im paper werden auch aktionen und cash als observations hinzugefügt.
 
 
 ####################################################
@@ -69,9 +69,9 @@
 # Generelle TODOs
 # DONE: Tensorboard Logging
 # DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
-# TODO: CUDA, MPS, GPU Support
+# DONE: CUDA, MPS, GPU Support
 # DONE: Alles von listen und arrays auf tensors umstellen.
-# TODO: Visualisierung Stock Preis und Anteil in einem Plot damit man 
+# DONE: Visualisierung Stock Preis und Anteil in einem Plot damit man 
 # sieht wann der Agent genau kauft bzw verkauft.
 # TODO: Hyperparameter Tuning
 # TODO: Visualisierungen erstellen.

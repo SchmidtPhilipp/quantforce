@@ -1,16 +1,37 @@
+
+import os
+import sys
+import os
+
+# Include ../../ to access the get_data and tickers modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+
+
 from datetime import datetime
 from data import get_data
 from utils.plot import plot_lines_grayscale, plot_dual_axis
-import os
-
-
 
 def test_plot_all_indicators():
     tickers = ["AAPL"]
     start = "2024-01-01"
     end = "2025-01-01"
 
-    df = get_data(tickers, start, end, indicators=("sma25", "sma50", "sma200", "ema25", "ema50", "ema200", "rsi", "macd", "ema", "bb", "bb_upper", "bb_lower", "Volume"))
+    df = get_data(tickers, start, end, indicators=("sma25", 
+                                                   "sma50", 
+                                                   "sma200", 
+                                                   "ema25", 
+                                                   "ema50", 
+                                                   "ema200", 
+                                                   "rsi", 
+                                                   "macd",
+                                                    "ema", 
+                                                   "bb", 
+                                                   "bb_upper", 
+                                                   "bb_lower", 
+                                                   "Volume", 
+                                                   "adx",
+                                                   "atr",
+                                                   "obv"),)
     folder = os.path.dirname(os.path.abspath(__file__))
     ticker = tickers[0]
     df_single = df.xs(ticker, axis=1, level=0)
@@ -101,6 +122,44 @@ def test_plot_all_indicators():
         linewidth=linewidth,
         figsize=(8, 2.5)
     )
+
+    # Plot 7: ADX
+    adx_df = df_single[["adx"]]
+    plot_lines_grayscale(
+        df=adx_df,
+        ylabel="ADX",
+        #title=f"{ticker} – Average Directional Index",
+        filename="aapl_adx",
+        save_dir=folder,
+        linewidth=linewidth,
+        figsize=(8, 2.5)
+    )
+
+
+    # Plot 8: ATR
+    atr_df = df_single[["atr"]]
+    plot_lines_grayscale(
+        df=atr_df,
+        ylabel="ATR",
+        #title=f"{ticker} – Average True Range",
+        filename="aapl_atr",
+        save_dir=folder,
+        linewidth=linewidth,
+        figsize=(8, 2.5)
+    )
+
+    # Plot 9 OBV
+    obv_df = df_single[["obv"]]
+    plot_lines_grayscale(
+        df=obv_df,
+        ylabel="OBV",
+        #title=f"{ticker} – On-Balance Volume",
+        filename="aapl_obv",
+        save_dir=folder,
+        linewidth=linewidth,
+        figsize=(8, 2.5)
+    )
+
 
     #print("✅ test_plot_all_indicators – All indicator plots saved.")
 
