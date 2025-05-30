@@ -171,13 +171,8 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
         reward = reward.to(env.device)
 
         # Record actions, asset holdings, balances, environment balance, and resource usage
-        tracker.record_step(
-            rewards=reward,
-            actor_balance=env.portfolio_value,
-            actions=action,
-            asset_holdings=env.portfolio_matrix,
-            balance=env.get_portfolio_value().unsqueeze(0),
-        )
+        env.record_data(action=action, reward=reward)
+
 
         if train:
             agent.store((state, action, reward, next_state, episode_done))

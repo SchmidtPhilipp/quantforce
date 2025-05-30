@@ -12,7 +12,7 @@ def main():
     if args.config:
         config_path = args.config
     else:
-        config_path = "configs/default/DQN_DOWJONES_free_w365.json"
+        config_path = "configs/default/MADDPG_minimal.json"
         print(f"No configuration file provided. Using default configuration: {config_path}")
 
 

@@ -101,7 +101,9 @@ class Tracker:
 
         for name, value in kwargs.items():
             if name not in self.tracked_values:
-                raise ValueError(f"Value '{name}' is not registered.")
+                
+                #print(f"⚠️ Value '{name}' is not registered. Skipping.")
+                continue
             expected_shape = self.tracked_values[name]["shape"]
             if value.shape != expected_shape:
                 raise ValueError(f"Shape mismatch for '{name}'. Expected {expected_shape}, got {value.shape}.")
@@ -129,7 +131,7 @@ class Tracker:
             torch.Tensor: The requested data for the specified episode.
         """
         if name not in self.tracked_values:
-            raise ValueError(f"Value '{name}' is not registered.")
+            return
         if episode_idx is None:
             episode_idx = self.current_episode - 1
         self._ensure_episode_exists(episode_idx)
