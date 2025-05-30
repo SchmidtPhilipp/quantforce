@@ -8,6 +8,10 @@ class Agent:
         """
         self.env = env
 
+        self.obs_dim = env.get_observation_space().shape[0]
+        self.act_dim = env.get_action_space().shape[0]
+
+    
     def train(self, episodes=10, use_tqdm=True):
         """
         Trains the agent for a specified number of episodes.
@@ -17,7 +21,7 @@ class Agent:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-    def evaluate(self, eval_env, episodes=10, use_tqdm=True):
+    def evaluate(self, eval_env, episodes=1, use_tqdm=True):
         """
         Evaluates the agent for a specified number of episodes on the environment.
         Parameters:
@@ -47,4 +51,4 @@ class Agent:
         Visualizes the agent's performance or learned policy.
         This method can be overridden by subclasses to provide specific visualizations.
         """
-        raise NotImplementedError("This method should be implemented by subclasses.")
+        return Warning("This method should be implemented by subclasses.")

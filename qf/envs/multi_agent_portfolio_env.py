@@ -116,12 +116,30 @@ class MultiAgentPortfolioEnv(gym.Env):
         # Initialize the logger
         run_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") 
         name = qf.generate_random_name()
-        self.log_dir = log_dir
+        self.log_dir = log_dir + f"/{run_time}_{config_name}_{tensorboard_prefix}_{name}"
         self.logger = Logger(run_name=f"{run_time}_{config_name}_{tensorboard_prefix}_{name}", log_dir=log_dir)
 
         # Initialize Metrics
         self.metrics = qf.Metrics()
         self.balance = []
+
+    def get_observation_space(self):
+        """
+        Returns the observation space of the environment.
+
+        Returns:
+            spaces.Box: The observation space.
+        """
+        return self.observation_space
+
+    def get_action_space(self):
+        """
+        Returns the action space of the environment.
+
+        Returns:
+            spaces.Box: The action space.
+        """
+        return self.action_space
 
     def _get_observation(self):
         """

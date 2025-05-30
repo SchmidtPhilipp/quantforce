@@ -1,26 +1,24 @@
 import numpy as np
 import torch
 
-from qf.train.logger import Logger
 import matplotlib.pyplot as plt
 from pypfopt.plotting import plot_efficient_frontier
 from pypfopt.efficient_frontier import EfficientFrontier
-from pypfopt.risk_models import CovarianceShrinkage
-from pypfopt.expected_returns import mean_historical_return
 
 from scipy.optimize import minimize
 
+import qf as qf
 from qf.agents.agent import Agent
 
-from qf.utils.metrics import Metrics
 
 class TangencyAgent(Agent):
     def __init__(self, env, 
-                method="default", risk_free_rate=0.02, log_returns=True):
+                method="pyportfolioopt", risk_free_rate=0.02, log_returns=False):
         """
         Initializes the Tangency agent with the given environment.
         """
         super().__init__(env=env)
+        self.historical_data = None
         self.method=method
         self.risk_free_rate = risk_free_rate
         self.log_returns = log_returns
@@ -28,16 +26,28 @@ class TangencyAgent(Agent):
         self.cov_matrix = None
         self.weights = None  # torch.Tensor of shape (n_assets + 1,)
 
-    def train(self):
+    def train(self, episodes=0, use_tqdm=True): #episodes and use_tqdm for compatibility with Agent interface
         """
         Trains the agent by calculating the tangency portfolio weights with cash (constrained to [0,1]^{n+1}).
         """
-
         dataset = self.env.get_dataset()
-        historical_data = dataset.get_data()
-        historical_data = historical_data.xs('Close', level=1, axis=1)
+        self.historical_data = dataset.get_data()
+        self.historical_data = self.historical_data.xs('Close', level=1, axis=1)
 
-        self.weights = estimate_tangency_portfolio_weights(historical_data, 
+        import pandas as pd
+
+        # Add cash with the risk-free rate as a constant series
+        #cash_series = pd.Series(np.ones(len(self.historical_data)), index=self.historical_data.index, name="Cash")
+        
+        #for i in range(1,len(cash_series)):
+            # Set the cash value to the risk-free rate
+            #cash_series.iloc[i] = cash_series.iloc[i-1]# * (1 + self.risk_free_rate / 252)
+
+        # Concatenate cash series to historical data
+        #self.historical_data = pd.concat([self.historical_data, cash_series], axis=1)
+
+
+        self.weights, self.expected_returns, self.cov_matrix = estimate_tangency_portfolio_weights(self.historical_data, 
                                                            risk_free_rate=self.risk_free_rate, 
                                                            log_returns=self.log_returns, 
                                                            method=self.method)
@@ -50,28 +60,28 @@ class TangencyAgent(Agent):
             raise ValueError("Agent has not been trained yet. Call `train()` first.")
         return self.weights.unsqueeze(0)
 
-    def evaluate(self, env, episodes=10, use_tqdm=True):
+    def evaluate(self, eval_env, episodes=1, use_tqdm=True):
         """
         Evaluates the static tangency portfolio agent.
         """
 
-        if env is None:
-            env = self.env
+        if eval_env is None:
+            eval_env = self.eval_env
 
         for _ in range(episodes):
 
             done = False
             total_reward = 0
-            state = env.reset().to(env.device)
+            state = eval_env.reset().to(eval_env.device)
 
             while not done:
                 action = self.act(state)
                 #print("Action (weights incl. cash):", action)
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, done, _ = eval_env.step(action)
                 total_reward += reward
                 state = next_state
 
-        env.print_metrics()
+        eval_env.print_metrics()
 
         print(f"Total reward over evaluation: {total_reward}")
         return total_reward
@@ -86,24 +96,13 @@ class TangencyAgent(Agent):
         if self.weights is None:
             raise ValueError("Agent has not been trained yet. Call `train()` first.")
 
-        # Convert historical data to NumPy
-        dataset = self.env.get_dataset()
-        historical_data = dataset.get_data()
-        historical_data = historical_data.xs('Close', level=1, axis=1)
-
-        # Calculate expected returns and covariance matrix using PyPortfolioOpt
-        mu = mean_historical_return(historical_data, log_returns=True)
-        Sigma = CovarianceShrinkage(historical_data).ledoit_wolf()
-
-        # Step 3: Calculate expected returns and covariance matrix
-        mu = expected_returns.mean_historical_return(historical_data)  # Expected returns
-        S = risk_models.sample_cov(historical_data)  # Covariance matrix
+        mu = expected_returns.mean_historical_return(self.historical_data, log_returns=self.log_returns)
+        S = risk_models.sample_cov(self.historical_data, log_returns=self.log_returns)
 
         weight_bounds = (0, 1)
-        # Step 4: Create an efficient frontier object
         ef = EfficientFrontier(mu, S, weight_bounds=weight_bounds)
 
-        # Step 5: Calculate key portfolios
+        # Calculate key portfolios
         # Max Sharpe Ratio Portfolio
         ef_max_sharpe = EfficientFrontier(mu, S, weight_bounds=weight_bounds)
         max_sharpe_weights = ef_max_sharpe.max_sharpe()
@@ -114,16 +113,14 @@ class TangencyAgent(Agent):
         min_vol_weights = ef_min_vol.min_volatility()
         ret_mv, std_mv, _ = ef_min_vol.portfolio_performance()
 
-        # Step 6: Plot Efficient Frontier
-        fig, ax = plt.subplots(figsize=(6, 6))
+        # Plot Efficient Frontier
+        fig, ax = plt.subplots(figsize=(20, 8))
 
-        # Plot individual asset points in grayscale
-        for i, ticker in enumerate(df.columns):
+        # Plot individual asset points
+        for i, ticker in enumerate(self.historical_data.columns):
             asset_return = mu[ticker]
-            asset_vol = np.sqrt(S.loc[ticker, ticker])
+            asset_vol = np.sqrt(S[ticker][ticker])
             ax.scatter(asset_vol, asset_return, marker=".", s=70, color="0.2", label=ticker)
-            ax.annotate(ticker, (asset_vol, asset_return),
-                        textcoords="offset points", xytext=(5, -2.5), ha="left", fontsize=9, color="0.2")
 
         # Plot the efficient frontier
         plot_efficient_frontier(ef, ax=ax, show_assets=False, color="1", linewidth=2)
@@ -134,14 +131,12 @@ class TangencyAgent(Agent):
         mc_vols = []  # List to store portfolio volatilities
         mc_sharpes = []  # List to store Sharpe ratios
 
-        risk_free_rate = 0.0  # Risk-free rate (adjust as needed)
-
         for _ in range(n_portfolios):
             # Generate random weights
-            weights = np.random.dirichlet(np.ones(len(self.env.tickers)), size=1)[0]
+            weights = np.random.dirichlet(np.ones(len(mu)), size=1)[0]
             port_return = np.dot(weights, mu)  # Portfolio return
             port_vol = np.sqrt(np.dot(weights.T, np.dot(S, weights)))  # Portfolio volatility
-            sharpe = (port_return - risk_free_rate) / port_vol if port_vol > 0 else np.nan  # Sharpe ratio
+            sharpe = (port_return - self.risk_free_rate) / port_vol if port_vol > 0 else np.nan  # Sharpe ratio
             mc_returns.append(port_return)
             mc_vols.append(port_vol)
             mc_sharpes.append(sharpe)
@@ -168,20 +163,13 @@ class TangencyAgent(Agent):
 
         # Legend above the plot
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 1.3), ncol=4, frameon=True)
-        #ax.legend(loc="right", bbox_to_anchor=(0.5, 0.5, 0.1, 0.5), frameon=True)
-        # Grid and layout adjustments
+        ax.legend(handles, labels, loc="center right", bbox_to_anchor=(1.15, 0.5))
         plt.grid(True, color="0.85")
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.xlim((0.3, 0.475))  # Adjust x-axis limits
-        plt.ylim((-0.2, 0.6))  # Adjust y-axis limits
-
+        plt.tight_layout(rect=[0, 0, 1, 1])
         # Step 9: Save plot
         plt.savefig(os.path.join(self.env.log_dir, "efficient_frontier.png"), dpi=300, bbox_inches='tight')
-        plt.savefig(os.path.join(self.env.log_dir, "efficient_frontier.pgf"), bbox_inches='tight')
 
-        # Show plot
-        plt.show()
+
 
 
 def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, log_returns=True, method='default'):
@@ -198,13 +186,11 @@ def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, 
         # Convert to NumPy for optimization
         returns_np = returns.numpy()
         mu = np.mean(returns_np, axis=0)
-        Sigma = np.cov(returns_np.T)
-        n = len(mu)
 
-        # Extend mu and Sigma to include cash
-        mu_ext = np.append(mu, risk_free_rate)
-        C = np.zeros((n + 1, n + 1)) # increase size for cash
-        C[:n, :n] = Sigma
+        # insert cash as the last asset
+        mu = np.append(mu, risk_free_rate)
+        C = np.zeros((len(mu), len(mu)))
+        C[:-1, :-1] = np.cov(returns_np.T)
 
         # check if C is positive semi definite
         if np.linalg.det(C) < 0:
@@ -212,15 +198,16 @@ def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, 
         
         # Define Sharpe ratio (to maximize) as a minimization
         def neg_sharpe(w):
-            port_return = np.dot(w, mu_ext)
+            port_return = np.dot(w, mu)
             port_vol = np.sqrt(np.dot(w, np.dot(C, w)))
             if port_vol == 0:
                 return np.inf
             return -port_return / port_vol
 
+        n = len(mu)
         # Initial guess and constraints
-        w0 = np.ones(n + 1) / (n + 1)
-        bounds = [(0, 1)] * (n + 1)
+        w0 = np.ones(n) / (n)
+        bounds = [(0, 1)] * (n)
         constraints = {'type': 'eq', 'fun': lambda w: np.sum(w) - 1}
         
         result = minimize(neg_sharpe, w0, method='SLSQP', bounds=bounds, constraints=constraints)
@@ -228,7 +215,7 @@ def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, 
         if not result.success:
             raise ValueError(f"Optimization failed: {result.message}")
         weights = torch.tensor(result.x, dtype=torch.float32)  # save as torch.Tensor
-        return weights
+        return weights, mu, C
     
     elif method == 'pyportfolioopt':
         from pypfopt.efficient_frontier import EfficientFrontier
@@ -237,17 +224,21 @@ def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, 
 
 
         weight_bounds = (0, 1)
-        df = historical_data
-        mu = expected_returns.mean_historical_return(df)  # Expected returns
-        S = risk_models.sample_cov(df)  # Covariance matrix
+        mu = expected_returns.mean_historical_return(historical_data, log_returns=log_returns)  # Expected returns
+        C= risk_models.sample_cov(historical_data, log_returns=log_returns)
+
+
         # check if covariance matrix is positive semi-definite
-        if not np.all(np.linalg.eigvals(S) >= 0):
+        if not np.all(np.linalg.eigvals(C) >= 0):
             raise ValueError("Covariance matrix is not positive semi-definite. Cannot compute tangency portfolio weights.")
 
-        ef_max_sharpe = EfficientFrontier(mu, S, weight_bounds=weight_bounds)
+        ef_max_sharpe = EfficientFrontier(mu, C, weight_bounds=weight_bounds)
         max_sharpe_weights = ef_max_sharpe.max_sharpe()
         weights = torch.tensor(list(max_sharpe_weights.values()), dtype=torch.float32)
-        return weights
+        # Add cash with the risk-free rate as a constant series
+        weights = torch.cat((weights, torch.tensor([1 - weights.sum()], dtype=torch.float32)))
+
+        return weights, mu, C
 
     else:   
         raise ValueError(f"Unknown method: {method}. Use 'default' or 'pyportfolioopt'.")
@@ -258,23 +249,27 @@ def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, 
 
 
 
+
+
+
+
 if __name__ == "__main__":
-    # Example usage
+    qf.start_tensorboard()
+
+    CONFIG = qf.DEFAULT_TRAIN_ENV_CONFIG
+    CONFIG['tickers'] = qf.DEFAULT_TANGENCY_TICKERS
+    CONFIG['start_date'] = qf.DEFAULT_TANGENCY_TRAIN_START
+    CONFIG['end_date'] = qf.DEFAULT_TANGENCY_TRAIN_END
+
+    env = qf.MultiAgentPortfolioEnv(**CONFIG)
+    agent = qf.TangencyAgent(env)
+    agent.train(episodes=1)
+
+    CONFIG = qf.DEFAULT_EVAL_ENV_CONFIG
+    CONFIG['tickers'] = qf.DEFAULT_TANGENCY_TICKERS
+    eval_env = qf.MultiAgentPortfolioEnv(**qf.DEFAULT_EVAL_ENV_CONFIG)
+    agent.evaluate(eval_env)
+    agent.visualize()
 
 
-    from qf import TimeBasedDataset, MultiAgentPortfolioEnv, start_tensorboard
-    from qf.data import DOWJONES
-
-    start_tensorboard()
-
-    env = MultiAgentPortfolioEnv()
-    agent = TangencyAgent(env)
-    agent.train()
-
-
-
-
-    eval_env = MultiAgentPortfolioEnv()
-    agent.evaluate(env=eval_env)
-
-    #agent.visualize()
+    

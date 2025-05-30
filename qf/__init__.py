@@ -26,7 +26,7 @@ DEFAULT_CACHE_DIR = "../cache"
 DEFAULT_N_AGENTS = 1
 DEFAULT_TRADE_COST_PERCENT = 0.001
 DEFAULT_TRADE_COST_FIXED = 0.0
-DEFAULT_REWARD_FUNCTION = "linear_rate_of_return" # Options: "linear_rate_of_return", "sharpe_ratio"
+DEFAULT_REWARD_FUNCTION = "linear_rate_of_return" # Options: "linear_rate_of_return", "sharpe_ratio", "log_return"
 
 DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG" # eg MADDOG, DQN, MARKOVITZ, Tangency, etc.
 
@@ -90,6 +90,31 @@ DEFAULT_EVAL_ENV_CONFIG = {
     "log_dir": DEFAULT_LOG_DIR,
     "config_name": DEFUALT_CONFIG_NAME
 }
+
+#### DEFAULT AGENT CONFIGS ####
+
+# Tangency Agent configuration
+DEFAULT_TANGENCY_TICKERS =["NVDA", "BLDR", "UBER", "WBD"]  # Example tickers from different sectors
+DEFAULT_TANGENCY_TRAIN_START = "2020-01-01"  # Start date for historical data
+DEFAULT_TANGENCY_TRAIN_END = "2025-01-01"  # End date for historical data
+
+
+# DQN Agent configuration
+DEFAULT_DQN_LR = 1e-3
+DEFAULT_DQN_GAMMA = 0.99
+DEFAULT_DQN_BATCH_SIZE = 32
+DEFAULT_DQN_BUFFER_MAX_SIZE = 100000
+DEFAULT_DQN_AGENT_CONFIG = {
+    "actor_config": None,  # Use default architecture
+    "lr": DEFAULT_DQN_LR,
+    "gamma": DEFAULT_DQN_GAMMA,
+    "batch_size": DEFAULT_DQN_BATCH_SIZE,
+    "buffer_max_size": DEFAULT_DQN_BUFFER_MAX_SIZE,
+    "device": DEFAULT_DEVICE
+}
+
+
+
 
 # Environments
 from qf.envs.portfolio_agent_generator import create_portfolio_env
