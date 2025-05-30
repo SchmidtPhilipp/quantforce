@@ -1,7 +1,4 @@
-from .preprocessor import add_technical_indicators
-from .utils.load_data import load_data  
-from .utils.clean_data import clean_data, drop_columns
-
+from data import load_data, clean_data, drop_columns, add_technical_indicators
 
 def get_data(tickers, start, end, indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"), verbosity=0, cache_dir="data/cache", downloader="yfinance"):
     """

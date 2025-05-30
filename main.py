@@ -1,5 +1,5 @@
 import argparse
-from train.process import process_config
+from quantforce import process_config
 
 
 def main():

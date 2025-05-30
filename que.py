@@ -4,6 +4,7 @@ import shutil
 import random
 import numpy as np
 import torch
+from quantforce import process_config
 
 def set_seed(seed):
     """
@@ -33,7 +34,6 @@ def set_seed(seed):
 # Set a fixed seed for reproducibility
 set_seed(42)
 
-from train.process import process_config
 
 def main():
     # CLI arg: --config_folder configs/pending --processed_folder configs/processed
