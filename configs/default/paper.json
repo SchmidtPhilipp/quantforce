@@ -1,0 +1,38 @@
+{
+    "AGENT_CONFIGS": 0,
+    "agent": "MADDPGAgent",
+    "n_agents": 10,
+    "lr": 0.0001,
+    "gamma": 0.99,
+    "batch_size": 64,
+
+
+    "DATA_CONFIGS": 0,
+    "tickers": [
+        "MSFT", "AAPL", "GOOGL", "AMZN", "TSLA", "NFLX", "META", "NVDA", "INTC", "AMD",
+        "CSCO", "ORCL", "IBM", "QCOM", "TXN", "AVGO", "ADBE", "CRM", "PYPL", "SAP",
+        "NOW", "SHOP", "SNOW", "ZM", "DOCU", "TEAM", "WDAY", "INTU", "TWLO",
+        "PANW", "OKTA", "CRWD", "ZS", "NET", "DDOG", "MDB", "FSLY", "PLTR", "U",
+        "ROKU", "SPOT", "ETSY", "PINS", "SNAP", "BIDU", "BABA", "JD", "TCEHY", "NTES",
+        "V", "MA", "AXP", "DFS", "COF", "BAC", "JPM", "C", "GS", "MS",
+        "WFC", "USB", "PNC", "TFC", "BK", "STT", "SCHW", "BLK", "TROW", "AMTD",
+        "LMT", "BA", "NOC", "RTX", "GD", "HON", "MMM", "GE", "CAT", "DE",
+        "F", "GM", "TSM", "ASML", "ADSK", "ANET", "MU", "LRCX", "KLAC",
+        "MRVL", "SWKS", "NXPI", "ON", "STX", "WDC", "HPQ", "DELL", "XRX", "LOGI"
+    ],
+    "indicators": [],
+    "train_start": "2018-01-01",
+    "train_end": "2020-12-31",
+    "eval_start": "2021-01-01",
+    "eval_end": "2021-12-31",
+
+    "ENV_CONFIGS": 0,
+    "initial_balance": 1000,
+
+    "train_episodes": 100,
+    "eval_episodes": 10,
+
+    "GENERAL_CONFIGS": 0,
+    "enable_tensorboard": false,
+    "verbosity": 0
+}

@@ -1,6 +1,5 @@
 # Projektordner ausschließen
 checkpoints/
-configs/
 runs/
 temp/
 good_runs/ 
