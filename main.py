@@ -1,5 +1,5 @@
 import argparse
-from quantforce import process_config
+from qf import process_config
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
     if args.config:
         config_path = args.config
     else:
-        config_path = "configs/pending/sac_my10_w1_epsLinear_buffer1M.json"
+        config_path = "configs/default/DQN_DOWJONES_free_w365.json"
         print(f"No configuration file provided. Using default configuration: {config_path}")
 
 

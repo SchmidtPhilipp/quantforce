@@ -4,7 +4,7 @@ import shutil
 import random
 import numpy as np
 import torch
-from quantforce import process_config
+from qf import process_config
 
 def set_seed(seed):
     """
