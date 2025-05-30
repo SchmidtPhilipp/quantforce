@@ -34,10 +34,9 @@ def run_agent(env, agent, config, save_path=None, run_name=None, max_episodes=10
     logger = Logger(run_name=f"{mode}_" + (run_name or "default"))
     metrics = Metrics()
     eval_metrics = Metrics()
+    tracker = Tracker(timesteps=env.get_timesteps(), tensorboard_prefix=mode)
 
-    # Initialize Tracker for training or validation
-    tracker = Tracker(timesteps=env.get_timesteps(), tensorboard_prefix=f"{mode}")
-    env.register_tracker(tracker) # registers the values to be tracked
+
 
     # Initialize evaluation tracker and logger if in TRAIN mode and eval_env is provided
     eval_tracker = None
@@ -170,10 +169,6 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
         next_state, reward, episode_done, _ = env.step(action)
         reward = reward.to(env.device)
 
-        # Record actions, asset holdings, balances, environment balance, and resource usage
-        env.record_data(action=action, reward=reward)
-
-
         if train:
             agent.store((state, action, reward, next_state, episode_done))
 
@@ -188,8 +183,7 @@ def episode(env, agent, tracker, logger, epsilon_scheduler, mode, ep, use_tqdm):
         if use_tqdm:
             progress_bar.update(1)
 
-    tracker.end_episode()
-    tracker.log(logger)
+
 
     if use_tqdm:
         progress_bar.close()

@@ -1,9 +1,14 @@
+from datetime import datetime
 from gymnasium import spaces
 import torch
 import gymnasium as gym
 import numpy as np
 
+import qf as qf
+
+from qf.train.logger import Logger
 from qf.utils.tracker.tracker import Tracker
+from qf.data.dataset import TimeBasedDataset
 
 
 class MultiAgentPortfolioEnv(gym.Env):
@@ -19,13 +24,45 @@ class MultiAgentPortfolioEnv(gym.Env):
         trade_cost_fixed (float): Fixed trading cost per transaction.
         device (str): Device to use for computations ("cpu" or "cuda").
     """
-    def __init__(self, data, initial_balance=1_000, verbosity=0, n_agents=2, trade_cost_percent=0.0, trade_cost_fixed=0.0, device="cpu", reward_function=None):
-        self.data = data
-        self.data_iterator = iter(self.data)
+    def __init__(self, 
+                tensorboard_prefix,
+                tickers=qf.DEFAULT_TICKERS, 
+                start_date=qf.DEFAULT_TRAIN_START,
+                end_date=qf.DEFAULT_TRAIN_END,
+                window_size=qf.DEFAULT_WINDOW_SIZE,
+                interval=qf.DEFAULT_INTERVAL,
+                indicators=qf.DEFAULT_INDICATORS,
+                cache_dir=qf.DEFAULT_CACHE_DIR,
+
+                initial_balance=qf.DEFAULT_INITIAL_BALANCE, 
+                n_agents=qf.DEFAULT_N_AGENTS, 
+                trade_cost_percent=qf.DEFAULT_TRADE_COST_PERCENT, 
+                trade_cost_fixed=qf.DEFAULT_TRADE_COST_FIXED, 
+                
+                reward_function=qf.DEFAULT_REWARD_FUNCTION, 
+
+                log_dir=qf.DEFAULT_LOG_DIR,
+                device=qf.DEFAULT_DEVICE,
+                verbosity=qf.VERBOSITY, 
+                config_name=qf.DEFUALT_CONFIG_NAME):
+        
+        super(MultiAgentPortfolioEnv, self).__init__()
+        self.dataset = TimeBasedDataset(tickers=tickers,
+                                        start_date=start_date,
+                                        end_date=end_date,
+                                        window_size=window_size,
+                                        indicators=indicators,
+                                        cache_dir=cache_dir,
+                                        interval=interval)
+        
+        self.dataloader = self.dataset.get_dataloader()
+        self.data_iterator = iter(self.dataloader)
+
         self.device = device
-        self.asset_labels = data.dataset.data.columns.get_level_values(0).unique().to_list() # Unique because we have multiple indicators
-        self.n_assets = len(data.dataset.data.columns.get_level_values(0).unique())
-        self.obs_window_size = data.dataset.window_size
+        self.tickers = tickers
+        self.n_assets = len(self.tickers)
+
+        self.obs_window_size = window_size
         self.initial_balance = initial_balance
         self.current_step = 0
         self.verbosity = verbosity
@@ -57,7 +94,7 @@ class MultiAgentPortfolioEnv(gym.Env):
         self.last_actions[:, -1] = 1  # Set the last entry (cash) to 1
 
         # Observation space: all assets and indicators + actions
-        self.n_external_observables = len(self.data.dataset.data.columns) * self.obs_window_size
+        self.n_external_observables = self.dataset.get_width() * self.obs_window_size
         self.observation_space = spaces.Box(
             low=-float("inf"),
             high=float("inf"),
@@ -71,10 +108,20 @@ class MultiAgentPortfolioEnv(gym.Env):
         if self.verbosity > 0:
             print(f"MultiAgentPortfolioEnv initialized with {self.n_agents} agents.")
 
-        
 
+        # Initialize the tracker
+        self.tracker = Tracker(timesteps=self.get_timesteps(), tensorboard_prefix=f"{tensorboard_prefix}")
+        self.register_tracker()
 
-        self.tracker = None
+        # Initialize the logger
+        run_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") 
+        name = qf.generate_random_name()
+        self.log_dir = log_dir
+        self.logger = Logger(run_name=f"{run_time}_{config_name}_{tensorboard_prefix}_{name}", log_dir=log_dir)
+
+        # Initialize Metrics
+        self.metrics = qf.Metrics()
+        self.balance = []
 
     def _get_observation(self):
         """
@@ -96,7 +143,7 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         return obs
 
-    def step(self, actions):
+    def step(self, raw_actions):
         """
         Executes a step in the environment.
 
@@ -109,35 +156,34 @@ class MultiAgentPortfolioEnv(gym.Env):
             done (bool): Whether the episode is finished.
             info (dict): Additional information.
         """
-        actions = torch.clamp(actions.to(self.device), 0, 1)  # Ensure actions are in [0, 1]
+        actions = torch.clamp(raw_actions.to(self.device), 0, 1)  # Ensure actions are in [0, 1]
         actions = actions / actions.sum(dim=1, keepdim=True)  # Normalize actions
 
         self.last_actions = actions  # Save actions for the next observation
 
         # Get prices for the current and next steps
         old_prices = torch.tensor(
-            self.data.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
+            self.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
             dtype=torch.float32,
             device=self.device
         )
 
         self.current_step += 1
-        done = self.current_step >= len(self.data)
-        
+        done = self.current_step >= len(self.dataloader)
 
         if done:
             done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
             rewards = torch.zeros(self.n_agents, device=self.device)
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
+            self._end_episode()
             return obs, rewards, done, {}
-
+    
         new_prices = torch.tensor(
-            self.data.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
+            self.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
             dtype=torch.float32,
             device=self.device
         )
-        done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
-
+        
         # 1. Use the current portfolio value
         current_portfolio_value_t = self.current_portfolio_value
 
@@ -174,12 +220,8 @@ class MultiAgentPortfolioEnv(gym.Env):
         # Update the portfolio value property
         self.current_portfolio_value = current_portfolio_value_t1
 
-        # End the episode if the portfolio value is zero or negative
-        if torch.any(current_portfolio_value_t1 <= 0):
-            print("Portfolio value is zero or negative. Ending episode.")   
-            done = torch.full((self.n_agents, 1), float(True), dtype=torch.float32, device=self.device)
-            current_portfolio_value_t1[current_portfolio_value_t1 <= 0] = 0  # Set negative values to zero
-
+        # Keep track of the total balance
+        self.balance.append(torch.sum(self.current_portfolio_value))
 
         # 10. Calculate rewards
         if self.reward_function == "linear_rate_of_return":
@@ -222,8 +264,26 @@ class MultiAgentPortfolioEnv(gym.Env):
         else:
             raise ValueError(f"Unknown reward function: {self.reward_function}. Supported functions are 'linear_rate_of_return', 'log_return', and 'absolute_return'.")
 
+
+
+        done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
+
+        # End the episode if the portfolio value is zero or negative
+        if torch.any(current_portfolio_value_t1 <= 0):
+            print("Portfolio value is zero or negative. Ending episode.")   
+            done = torch.full((self.n_agents, 1), float(True), dtype=torch.float32, device=self.device)
+            current_portfolio_value_t1[current_portfolio_value_t1 <= 0] = 0  # Set negative values to zero
+
+
+        self.record_data(action=raw_actions, reward=rewards)
+        
+        if done.any():
+            self._end_episode()
+
         # Get the next observation
-        obs = self._get_observation()
+        if not done:
+            obs = self._get_observation()
+            
         return obs, rewards, done, {}
 
     def reset(self):
@@ -231,7 +291,7 @@ class MultiAgentPortfolioEnv(gym.Env):
         Resets the environment and returns the first observation.
         """
         self.current_step = 0
-        self.data_iterator = iter(self.data)
+        self.data_iterator = iter(self.dataloader)
         self.current_cash_vector = torch.full((self.n_agents,), self.initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
         self.current_portfolio_matrix = torch.zeros((self.n_agents, self.n_assets), dtype=torch.float32, device=self.device)
         self.current_portfolio_value = torch.full((self.n_agents,), self.initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
@@ -241,6 +301,15 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         obs = self._get_observation()
         return obs
+    
+    def _end_episode(self):
+        self.metrics.append(self.balance)
+        self.tracker.end_episode()
+        self.tracker.log(self.logger)
+
+    def print_metrics(self):
+        self.metrics.print_report()
+        
 
     def get_cash(self):
         """
@@ -276,9 +345,18 @@ class MultiAgentPortfolioEnv(gym.Env):
         """
         Returns the number of timesteps in the environment.
         """
-        return len(self.data)
+        return len(self.dataloader)
     
-    def register_tracker(self, tracker=None):
+    def get_dataset(self):
+        """
+        Returns the dataset used in the environment.
+        
+        Returns:
+            data (TimeBasedDataset): The dataset containing historical data.
+        """
+        return self.dataset
+    
+    def register_tracker(self):
         """
         Registers a tracker for logging and monitoring.
 
@@ -286,19 +364,11 @@ class MultiAgentPortfolioEnv(gym.Env):
             tracker (object): Tracker object for logging.
         """
 
-        if self.tracker!=None:
-            return
-
-        if tracker is None:
-            tracker = Tracker(timesteps=self.get_timesteps(), tensorboard_prefix=f"")
-
-        self.tracker= tracker
-
         # Register tracked values with custom axis labels
-        tracker.register_value("rewards", shape=(self.n_agents,), description="Rewards per agent", dimensions=["timesteps", "agents"], labels=[range(self.n_agents)])
-        tracker.register_value("actions",shape=(self.n_agents, self.n_assets + 1),description="Actions per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.asset_labels + ["cash"]])
-        #tracker.register_value("asset_holdings",shape=(self.n_agents, self.n_assets),description="Asset holdings per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.asset_labels])
-        tracker.register_value("balance", shape=(1,), description="Environment balance", dimensions=["timesteps"], labels=[["balance"]])
+        self.tracker.register_value("rewards", shape=(self.n_agents,), description="Rewards per agent", dimensions=["timesteps", "agents"], labels=[range(self.n_agents)])
+        self.tracker.register_value("actions",shape=(self.n_agents, self.n_assets + 1),description="Actions per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.tickers + ["cash"]])
+        #tracker.register_value("asset_holdings",shape=(self.n_agents, self.n_assets),description="Asset holdings per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.tickers])
+        self.tracker.register_value("balance", shape=(1,), description="Environment balance", dimensions=["timesteps"], labels=[["balance"]])
         #tracker.register_value("actor_balance",shape=(self.n_agents,),description="Actor balances",dimensions=["timesteps", "agents"],labels=[range(self.n_agents)])
 
     def record_data(self, action=None, reward=None):
@@ -323,3 +393,6 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         # Record the values
         self.tracker.record_step(**values)
+
+
+

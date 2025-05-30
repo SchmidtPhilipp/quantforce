@@ -45,12 +45,9 @@ def process_config(config_path):
         config["time_window_size"], 
         indicators=config["indicators"]
     )
-    
-    # Wrap with DataLoader
-    train_dataloader = DataLoader(train_dataset, shuffle=False)  # Shuffle should never be true for time series data
 
     train_env = create_portfolio_env(
-        data=train_dataloader,
+        dataset=train_dataset,
         initial_balance=config["initial_balance"],
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],
@@ -78,11 +75,9 @@ def process_config(config_path):
         config["time_window_size"], 
         indicators=config["indicators"]
     )
-    # Wrap with DataLoader
-    eval_dataloader = DataLoader(eval_dataset, shuffle=False)  # Shuffle should never be true for time series data
 
     eval_env = create_portfolio_env(
-        data=eval_dataloader,
+        dataset=eval_dataset,
         initial_balance=config["initial_balance"],
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],
@@ -118,10 +113,8 @@ def process_config(config_path):
         indicators=config["indicators"]
     )
 
-    val_dataloader = DataLoader(val_dataset, shuffle=False)  # Shuffle should never be true for time series data
-
     val_env = create_portfolio_env(
-        data=val_dataloader,
+        data=val_dataset,
         initial_balance=config["initial_balance"],
         verbosity=config["verbosity"],
         n_agents=config["n_agents"],

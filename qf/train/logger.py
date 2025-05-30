@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+DEFAULT_LOG_DIR = "runs"
+
 class Logger:
     def __init__(self, run_name=None, log_dir="runs"):
         run_name = run_name or "default"

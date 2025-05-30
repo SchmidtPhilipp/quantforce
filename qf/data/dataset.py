@@ -60,4 +60,29 @@ class TimeBasedDataset(Dataset):
             raise IndexError("Index out of range")
         return self.data_tensor[idx:idx + self.window_size]
     
+    def get_width(self):
+        """
+        Returns the width of the dataset, which is the number of features (tickers).
+        """
+        return len(self.data.columns)
+    
 
+    def get_data(self):
+        """
+        Returns the raw data as a pandas DataFrame.
+        """
+        return self.data
+    
+
+    def get_dataloader(self):
+        """
+        Returns a DataLoader for the dataset.
+
+        Parameters:
+            batch_size (int): Number of samples per batch.
+            shuffle (bool): Whether to shuffle the data at every epoch.
+
+        Returns:
+            torch.utils.data.DataLoader: DataLoader for the dataset.
+        """
+        return torch.utils.data.DataLoader(self, shuffle=False)

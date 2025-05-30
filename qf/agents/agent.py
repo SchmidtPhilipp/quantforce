@@ -1,0 +1,50 @@
+class Agent:
+    def __init__(self, env):
+        """
+        Initializes the agent with the given environment.
+        Parameters:
+
+            env: The environment in which the agent will operate.
+        """
+        self.env = env
+
+    def train(self, episodes=10, use_tqdm=True):
+        """
+        Trains the agent for a specified number of episodes.
+        Parameters:
+            episodes (int): Number of episodes to train the agent.
+            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+    
+    def evaluate(self, eval_env, episodes=10, use_tqdm=True):
+        """
+        Evaluates the agent for a specified number of episodes on the environment.
+        Parameters:
+            episodes (int): Number of episodes to evaluate the agent.
+            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+    
+    def save(self, path):
+        """
+        Saves the agent's state to a file.
+        Parameters:
+            path (str): Path to save the agent's state.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+    
+    def load(self, path):
+        """
+        Loads the agent's state from a file.
+        Parameters:
+            path (str): Path to load the agent's state from.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+    
+    def visualize(self):
+        """
+        Visualizes the agent's performance or learned policy.
+        This method can be overridden by subclasses to provide specific visualizations.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
