@@ -12,40 +12,39 @@ from qf.agents.agent import Agent
 
 
 class TangencyAgent(Agent):
-    def __init__(self, env, 
-                method="pyportfolioopt", risk_free_rate=0.02, log_returns=False):
+    def __init__(self, env, config=None):
         """
         Initializes the Tangency agent with the given environment.
         """
         super().__init__(env=env)
+
+        default_config = {
+            "method": "default",  # Method to estimate tangency portfolio weights
+            "risk_free_rate": qf.DEFAULT_TANGENCY_RISK_FREE_RATE,  # Risk-free rate for the tangency portfolio
+            "log_returns": True  # Whether to use log returns for calculations
+        }
+
+        # Merge default config with provided config
+        self.config = {**default_config, **(config or {})}
+
         self.historical_data = None
-        self.method=method
-        self.risk_free_rate = risk_free_rate
-        self.log_returns = log_returns
+        self.method=self.config["method"]
+        self.risk_free_rate = self.config["risk_free_rate"]
+        self.log_returns = self.config["log_returns"]
         self.expected_returns = None
         self.cov_matrix = None
         self.weights = None  # torch.Tensor of shape (n_assets + 1,)
 
-    def train(self, episodes=0, use_tqdm=True): #episodes and use_tqdm for compatibility with Agent interface
+    def set_env_mode(self):
+        return "sb3"
+
+    def train(self, episodes=0, total_timesteps=0, use_tqdm=True): #episodes and use_tqdm for compatibility with Agent interface
         """
         Trains the agent by calculating the tangency portfolio weights with cash (constrained to [0,1]^{n+1}).
         """
         dataset = self.env.get_dataset()
         self.historical_data = dataset.get_data()
         self.historical_data = self.historical_data.xs('Close', level=1, axis=1)
-
-        import pandas as pd
-
-        # Add cash with the risk-free rate as a constant series
-        #cash_series = pd.Series(np.ones(len(self.historical_data)), index=self.historical_data.index, name="Cash")
-        
-        #for i in range(1,len(cash_series)):
-            # Set the cash value to the risk-free rate
-            #cash_series.iloc[i] = cash_series.iloc[i-1]# * (1 + self.risk_free_rate / 252)
-
-        # Concatenate cash series to historical data
-        #self.historical_data = pd.concat([self.historical_data, cash_series], axis=1)
-
 
         self.weights, self.expected_returns, self.cov_matrix = estimate_tangency_portfolio_weights(self.historical_data, 
                                                            risk_free_rate=self.risk_free_rate, 
@@ -64,6 +63,7 @@ class TangencyAgent(Agent):
         """
         Evaluates the static tangency portfolio agent.
         """
+        eval_env.set_environment_mode(self.set_env_mode())
 
         if eval_env is None:
             eval_env = self.eval_env
@@ -72,12 +72,11 @@ class TangencyAgent(Agent):
 
             done = False
             total_reward = 0
-            state = eval_env.reset().to(eval_env.device)
+            state = eval_env.reset()#.to(eval_env.device)
 
             while not done:
                 action = self.act(state)
-                #print("Action (weights incl. cash):", action)
-                next_state, reward, done, _ = eval_env.step(action)
+                next_state, reward, done, _, _ = eval_env.step(action)
                 total_reward += reward
                 state = next_state
 
@@ -169,8 +168,40 @@ class TangencyAgent(Agent):
         # Step 9: Save plot
         plt.savefig(os.path.join(self.env.log_dir, "efficient_frontier.png"), dpi=300, bbox_inches='tight')
 
+    def save(self, path):
+        """
+        Saves the Tangency agent's model to a file.
+        Parameters:
+            path (str): Path to save the model.
+        """
+        name = self.__class__.__name__
+        if not path.endswith('.pt'):
+            path = f"{path}/{name}.pt"
+        else:
+            path = path.replace('.pt', f'_{name}.pt')
 
+        print(f"Saving Tangency agent to {path}")
 
+        # Save the weights, expected returns, covariance matrix, and config
+        torch.save({
+            'weights': self.weights,
+            'expected_returns': self.expected_returns,
+            'cov_matrix': self.cov_matrix,
+            'config': self.config
+        }, path)
+
+    def load(self, path):
+        """
+        Loads the Tangency agent's model from a file.
+        Parameters:
+            path (str): Path to load the model from.
+        """
+        print(f"Loading Tangency agent from {path}")
+        checkpoint = torch.load(path)
+        self.weights = checkpoint['weights']
+        self.expected_returns = checkpoint['expected_returns']
+        self.cov_matrix = checkpoint['cov_matrix']
+        self.config = checkpoint['config']
 
 def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, log_returns=True, method='default'):
 
@@ -244,22 +275,19 @@ def estimate_tangency_portfolio_weights(historical_data, risk_free_rate=0.0001, 
         raise ValueError(f"Unknown method: {method}. Use 'default' or 'pyportfolioopt'.")
 
 
-        
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
     qf.start_tensorboard()
 
+    # Tangency Agent configuration
+    DEFAULT_TANGENCY_TICKERS =["NVDA", "BLDR", "UBER", "WBD"]  # Example tickers from different sectors
+    DEFAULT_TANGENCY_TRAIN_START = "2020-01-01"  # Start date for historical data
+    DEFAULT_TANGENCY_TRAIN_END = "2025-01-01"  # End date for historical data
+
     CONFIG = qf.DEFAULT_TRAIN_ENV_CONFIG
-    CONFIG['tickers'] = qf.DEFAULT_TANGENCY_TICKERS
-    CONFIG['start_date'] = qf.DEFAULT_TANGENCY_TRAIN_START
-    CONFIG['end_date'] = qf.DEFAULT_TANGENCY_TRAIN_END
+    CONFIG['tickers'] = DEFAULT_TANGENCY_TICKERS
+    CONFIG['start_date'] = DEFAULT_TANGENCY_TRAIN_START
+    CONFIG['end_date'] = DEFAULT_TANGENCY_TRAIN_END
 
     env = qf.MultiAgentPortfolioEnv(**CONFIG)
     agent = qf.TangencyAgent(env)

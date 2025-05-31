@@ -6,7 +6,7 @@ import numpy as np
 
 import qf as qf
 
-from qf.train.logger import Logger
+from qf.utils.logger import Logger
 from qf.utils.tracker.tracker import Tracker
 from qf.data.dataset import TimeBasedDataset
 
@@ -26,52 +26,64 @@ class MultiAgentPortfolioEnv(gym.Env):
     """
     def __init__(self, 
                 tensorboard_prefix,
-                tickers=qf.DEFAULT_TICKERS, 
-                start_date=qf.DEFAULT_TRAIN_START,
-                end_date=qf.DEFAULT_TRAIN_END,
-                window_size=qf.DEFAULT_WINDOW_SIZE,
-                interval=qf.DEFAULT_INTERVAL,
-                indicators=qf.DEFAULT_INDICATORS,
-                cache_dir=qf.DEFAULT_CACHE_DIR,
-
-                initial_balance=qf.DEFAULT_INITIAL_BALANCE, 
-                n_agents=qf.DEFAULT_N_AGENTS, 
-                trade_cost_percent=qf.DEFAULT_TRADE_COST_PERCENT, 
-                trade_cost_fixed=qf.DEFAULT_TRADE_COST_FIXED, 
-                
-                reward_function=qf.DEFAULT_REWARD_FUNCTION, 
-
-                log_dir=qf.DEFAULT_LOG_DIR,
-                device=qf.DEFAULT_DEVICE,
-                verbosity=qf.VERBOSITY, 
-                config_name=qf.DEFUALT_CONFIG_NAME):
+                config=None):
         
         super(MultiAgentPortfolioEnv, self).__init__()
-        self.dataset = TimeBasedDataset(tickers=tickers,
-                                        start_date=start_date,
-                                        end_date=end_date,
-                                        window_size=window_size,
-                                        indicators=indicators,
-                                        cache_dir=cache_dir,
-                                        interval=interval)
+
+
+        default_config = {
+            "tickers": qf.DEFAULT_TICKERS, 
+            "start_date": qf.DEFAULT_TRAIN_START,
+            "end_date": qf.DEFAULT_TRAIN_END,
+            "window_size": qf.DEFAULT_WINDOW_SIZE,
+            "interval": qf.DEFAULT_INTERVAL,
+            "indicators": qf.DEFAULT_INDICATORS,
+            "cache_dir": qf.DEFAULT_CACHE_DIR,
+            "initial_balance": qf.DEFAULT_INITIAL_BALANCE,
+            "n_agents": qf.DEFAULT_N_AGENTS,
+            "trade_cost_percent": qf.DEFAULT_TRADE_COST_PERCENT,
+            "trade_cost_fixed": qf.DEFAULT_TRADE_COST_FIXED,
+            "reward_function": qf.DEFAULT_REWARD_FUNCTION,
+            "reward_scaling": qf.DEFAULT_REWARD_SCALING,
+            "device": qf.DEFAULT_DEVICE,
+            "verbosity": qf.VERBOSITY,
+            "log_dir": qf.DEFAULT_LOG_DIR,
+            "config_name": qf.DEFUALT_CONFIG_NAME
+        }
+
+        # If config is provided, update the default config with the provided config
+        self.config = {**default_config, **(config or {})}
+
+
+        self.environment_mode = None
+
+
+        self.dataset = TimeBasedDataset(tickers=self.config["tickers"],
+                                        start_date=self.config["start_date"],
+                                        end_date=self.config["end_date"],
+                                        window_size=self.config["window_size"],
+                                        indicators=self.config["indicators"],
+                                        cache_dir=self.config["cache_dir"],
+                                        interval=self.config["interval"])
         
         self.dataloader = self.dataset.get_dataloader()
         self.data_iterator = iter(self.dataloader)
 
-        self.device = device
-        self.tickers = tickers
+        self.device = self.config["device"]
+        self.tickers = self.config["tickers"]
         self.n_assets = len(self.tickers)
 
-        self.obs_window_size = window_size
-        self.initial_balance = initial_balance
+        self.obs_window_size = self.config["window_size"]
+        self.initial_balance = self.config["initial_balance"]
         self.current_step = 0
-        self.verbosity = verbosity
-        self.n_agents = n_agents
-        self.trade_cost_percent = trade_cost_percent
-        self.trade_cost_fixed = trade_cost_fixed
+        self.verbosity = self.config["verbosity"]
+        self.n_agents = self.config["n_agents"]
+        self.trade_cost_percent = self.config["trade_cost_percent"]
+        self.trade_cost_fixed = self.config["trade_cost_fixed"]
 
         # Reward function can be "linear_rate_of_return", "log_return", or "absolute_return", or "sharpe_ratio_wX" where X is the time horizon the sharpe ratio is calculated over
-        self.reward_function = reward_function
+        self.reward_function = self.config["reward_function"]
+        self.reward_scaling = self.config["reward_scaling"]
         
         # check if the reward function begins with "sharpe_ratio_w"
         if self.reward_function is not None and self.reward_function.startswith("sharpe_ratio_w"):
@@ -84,9 +96,9 @@ class MultiAgentPortfolioEnv(gym.Env):
 
 
         # Initialize actor cash and asset holdings for each agent as Torch Tensors
-        self.current_cash_vector = torch.full((self.n_agents,), initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
+        self.current_cash_vector = torch.full((self.n_agents,), self.initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
         self.current_portfolio_matrix = torch.zeros((self.n_agents, self.n_assets), dtype=torch.float32, device=self.device)
-        self.current_portfolio_value = torch.full((self.n_agents,), initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
+        self.current_portfolio_value = torch.full((self.n_agents,), self.initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
 
 
         # Initialize last actions (all cash initially)
@@ -116,12 +128,25 @@ class MultiAgentPortfolioEnv(gym.Env):
         # Initialize the logger
         run_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") 
         name = qf.generate_random_name()
-        self.log_dir = log_dir + f"/{run_time}_{config_name}_{tensorboard_prefix}_{name}"
-        self.logger = Logger(run_name=f"{run_time}_{config_name}_{tensorboard_prefix}_{name}", log_dir=log_dir)
+        self.config_name = self.config["config_name"]
+        self.log_dir = config["log_dir"]
+        self.save_dir = self.log_dir + f"/{run_time}_{self.config_name}_{tensorboard_prefix}_{name}"
+        self.logger = Logger(run_name=f"{run_time}_{self.config_name}_{tensorboard_prefix}_{name}", log_dir=self.log_dir)
 
         # Initialize Metrics
         self.metrics = qf.Metrics()
         self.balance = []
+
+    def set_environment_mode(self, mode):
+        """
+        Sets the mode of the environment for compatibility with different libraries (e.g., Gym, Stable-Baselines3).
+        Parameters:
+            mode (str): The mode of the environment ("gym" or "sb3").
+        """
+        if mode not in ["gym", "sb3"]:
+            raise ValueError("Invalid environment mode. Supported modes are 'gym' and 'sb3'.")
+
+        self.environment_mode = mode.lower()
 
     def get_observation_space(self):
         """
@@ -174,6 +199,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             done (bool): Whether the episode is finished.
             info (dict): Additional information.
         """
+        raw_actions = self._transform_actions(raw_actions)
         actions = torch.clamp(raw_actions.to(self.device), 0, 1)  # Ensure actions are in [0, 1]
         actions = actions / actions.sum(dim=1, keepdim=True)  # Normalize actions
 
@@ -194,7 +220,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             rewards = torch.zeros(self.n_agents, device=self.device)
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
             self._end_episode()
-            return obs, rewards, done, {}
+            return self._transform_outputs(obs, rewards, done, {})
     
         new_prices = torch.tensor(
             self.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
@@ -257,7 +283,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             # Update the past portfolio val
             adjusted_current_step = self.current_step + self.obs_window_size - 1
             past_price_matrix = torch.tensor(
-                self.data.dataset.data.xs("Close", axis=1, level=1).iloc[(adjusted_current_step - self.sharpe_time_horizon):adjusted_current_step].values,
+                self.dataset.data.xs("Close", axis=1, level=1).iloc[(adjusted_current_step - self.sharpe_time_horizon):adjusted_current_step].values,
                 dtype=torch.float32,
                 device=self.device
             ) # shape: [past_steps, n_assets]
@@ -281,16 +307,18 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         else:
             raise ValueError(f"Unknown reward function: {self.reward_function}. Supported functions are 'linear_rate_of_return', 'log_return', and 'absolute_return'.")
-
-
+        
+        # Scale the rewards
+        rewards = rewards * self.reward_scaling
 
         done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
 
-        # End the episode if the portfolio value is zero or negative
-        if torch.any(current_portfolio_value_t1 <= 0):
-            print("Portfolio value is zero or negative. Ending episode.")   
+        # End the episode if the portfolio value is only a 1000th of the initial balance or less
+        if torch.any(current_portfolio_value_t1 <= self.initial_balance / 1000):
+            print("Episode ended due to portfolio value dropping below 0.1% of initial balance.")
             done = torch.full((self.n_agents, 1), float(True), dtype=torch.float32, device=self.device)
             current_portfolio_value_t1[current_portfolio_value_t1 <= 0] = 0  # Set negative values to zero
+            obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
 
 
         self.record_data(action=raw_actions, reward=rewards)
@@ -301,10 +329,42 @@ class MultiAgentPortfolioEnv(gym.Env):
         # Get the next observation
         if not done:
             obs = self._get_observation()
-            
-        return obs, rewards, done, {}
+        
+        output = self._transform_outputs(obs, rewards, done, {}) 
+        return output
+    
+    def _transform_outputs(self, obs, rewards, done, info):
+        """
+        Transforms the outputs to match the expected format of the environment.
+        """
+        # We need 3 modes of outputs: 
+        # For single agent: (obs, reward, done, info)
+        # For multi-agent: (obs, rewards, terminateds, truncateds, infos)
+        # And there is also the multiagent mode where they want that every output is a dict with agent ids as keys
 
-    def reset(self):
+        terminateds = done
+        truncateds = done
+
+        if self.environment_mode == "gym":
+            # For Gym mode, we return a single observation, reward, done flag, and info dict
+            return obs, rewards, terminateds, truncateds, info
+        
+        elif self.environment_mode == "sb3":
+            # For Stable-Baselines i have to remove the agent dimension
+            obs = obs.squeeze(0).numpy()
+            rewards = rewards.squeeze(0)
+            terminateds = terminateds.squeeze(0)
+            truncateds = truncateds.squeeze(0)
+            info = {k: v.squeeze(0) for k, v in info.items()}
+
+            return obs, rewards, terminateds, truncateds, info
+        
+        else: 
+            raise ValueError("Environment mode not set. Please set the environment mode to 'gym' or 'sb3' before stepping the environment.")
+        
+    
+        
+    def reset(self, *, seed=None, options=None):
         """
         Resets the environment and returns the first observation.
         """
@@ -318,7 +378,33 @@ class MultiAgentPortfolioEnv(gym.Env):
         self.last_actions[:, -1] = 1  # Set the last entry (cash) to 1
 
         obs = self._get_observation()
-        return obs
+
+        if self.environment_mode == "gym":
+            return obs, {}
+        elif self.environment_mode == "sb3":
+            obs = obs.squeeze(0).numpy()
+            return obs, {}
+        else:
+            raise ValueError("Environment mode not set. Please set the environment mode to 'gym' or 'sb3' before resetting the environment.")
+
+    
+    def _transform_actions(self, actions):
+
+        if isinstance(actions, dict):
+            # If actions are in a dictionary format, convert them to a tensor
+            # They are in a shape {"agent_id": action_vector}
+            actions = torch.stack([actions[agent_id] for agent_id in sorted(actions.keys())], dim=0)
+
+        if isinstance(actions, np.ndarray):
+            # If actions are in a numpy array format, convert them to a tensor
+            actions = torch.tensor(actions, dtype=torch.float32, device=self.device)
+
+        # Ensure actions are a 2D tensor with shape [n_agents, n_assets + 1]
+        if len(actions.shape) == 1:
+            actions = actions.unsqueeze(0)
+
+        return actions
+
     
     def _end_episode(self):
         self.metrics.append(self.balance)
@@ -412,5 +498,32 @@ class MultiAgentPortfolioEnv(gym.Env):
         # Record the values
         self.tracker.record_step(**values)
 
+    def save_and_close(self):
+        import os
+        # Close the loggers
+        self.logger.close()
+
+        # Save tracker data
+        self.tracker.save(self.save_dir)
+
+        # Save config data
+        config_path = os.path.join(self.save_dir, "env_config.json")
+        with open(config_path, "w") as f:
+            import json
+            json.dump(self.config, f, indent=4)
+
+        # Save metrics data
+        metrics_path = os.path.join(self.save_dir, "metrics")
+        self.metrics.save(metrics_path)
+
+    def get_save_path(self):
+        """
+        Returns the path where the environment data is saved.
+        
+        Returns:
+            str: Path to the saved environment data.
+        """
+        return self.save_dir
+        
 
 

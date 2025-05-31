@@ -1,11 +1,8 @@
-from torch.utils.tensorboard import SummaryWriter
 import os
-import json
 import numpy as np
-import pandas as pd
-from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
+from qf import DEFAULT_LOG_DIR
 
-DEFAULT_LOG_DIR = "runs"
 
 class Logger:
     def __init__(self, run_name=None, log_dir="runs"):

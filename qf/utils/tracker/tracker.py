@@ -262,7 +262,7 @@ class Tracker:
         # Save as a .pt file (Torch format)
         save_path = os.path.join(run_path, "tracker_data.pt")
         torch.save(save_data, save_path)
-        print(f"✅ Tracker data saved to {save_path}.")
+        #print(f"✅ Tracker data saved to {save_path}.")
 
     @staticmethod
     def load(filepath, device="cpu"):

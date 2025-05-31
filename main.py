@@ -1,28 +1,24 @@
-import argparse
-from qf import process_config
+import qf as qf
 
 
 def main():
-    # CLI arg: --config configs/example_config.json
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, help="Path to the configuration file")
-    args = parser.parse_args()
 
-    # Use the provided config file or fall back to a default config
-    if args.config:
-        config_path = args.config
-    else:
-        config_path = "configs/default/MADDPG_minimal.json"
-        print(f"No configuration file provided. Using default configuration: {config_path}")
+    env = qf.MultiAgentPortfolioEnv(config=qf.DEFAULT_TRAIN_ENV_CONFIG)
 
+    #agent = qf.TangencyAgent(env)
+    agent = qf.DQNAgent(env, **qf.DEFAULT_DQN_AGENT_CONFIG)
+    #agent = qf.SACAgent(env, config=qf.DEFAULT_SAC_AGENT_CONFIG)
+    #agent = qf.TD3Agent(env, config=qf.DEFAULT_TD3_AGENT_CONFIG)
 
-    process_config(config_path)
+    agent.train(total_timesteps=5000, use_tqdm=True)
 
+    eval_env = qf.MultiAgentPortfolioEnv(config=qf.DEFAULT_EVAL_ENV_CONFIG)
+    agent.evaluate(eval_env)
+    agent.visualize()
+
+    eval_env
 
 
 if __name__ == "__main__":
+    qf.start_tensorboard()
     main()
-
-
-
-

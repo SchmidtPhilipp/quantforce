@@ -7,9 +7,16 @@ class Agent:
             env: The environment in which the agent will operate.
         """
         self.env = env
-
+        self.env.set_environment_mode(self.set_env_mode()) 
         self.obs_dim = env.get_observation_space().shape[0]
         self.act_dim = env.get_action_space().shape[0]
+
+    def set_env_mode(self):
+        """
+        Sets the mode of the environment for the agent.
+        # Depending on this implementation the outputs of the environment change. 
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
 
     
     def train(self, episodes=10, use_tqdm=True):
@@ -21,7 +28,7 @@ class Agent:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-    def evaluate(self, eval_env, episodes=1, use_tqdm=True):
+    def evaluate(self, eval_env, total_timesteps=1, use_tqdm=True):
         """
         Evaluates the agent for a specified number of episodes on the environment.
         Parameters:
