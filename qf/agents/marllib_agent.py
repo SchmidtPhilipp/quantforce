@@ -2,7 +2,7 @@ from qf.agents.agent import Agent
 
 
 class MARLLibAgent(Agent):
-    def __init__(self, env, model):
+    def __init__(self, env):
         """
         Initializes the MARLLibAgent with the given environment and configuration.
         Parameters:
@@ -10,7 +10,6 @@ class MARLLibAgent(Agent):
             config (dict): Configuration dictionary for the MARLLib agent.
         """
         super().__init__(env)
-        self.model = model
 
 
     def train(self, total_iterations=100):
