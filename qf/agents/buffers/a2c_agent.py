@@ -1,5 +1,5 @@
 from stable_baselines3 import A2C
-from qf.agents.sb3_agent import SB3Agent
+from qf.agents.sb3_agents.sb3_agent import SB3Agent
 import qf
 
 class A2CAgent(SB3Agent):

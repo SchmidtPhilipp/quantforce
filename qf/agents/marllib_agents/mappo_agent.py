@@ -1,5 +1,5 @@
 import qf
-from qf.agents.marllib_agent import MARLLibAgent
+from qf.agents.marllib_agents.marllib_agent import MARLLibAgent
 from marllib import marl
 
 class MAPPOAgent(MARLLibAgent):

@@ -1,9 +1,6 @@
-import torch
 from stable_baselines3 import SAC
-from qf.agents.agent import Agent
-import numpy as np
 import qf  as qf
-from qf.agents.sb3_agent import SB3Agent
+from qf.agents.sb3_agents.sb3_agent import SB3Agent
 
 class SACAgent(SB3Agent):
     def __init__(self, env, config=None):
@@ -36,7 +33,7 @@ class SACAgent(SB3Agent):
         # Initialize SAC model
         self.model = SAC(
             policy=self.config["policy"],
-            env=env,
+            env=self.env,
             learning_rate=self.config["learning_rate"],
             buffer_size=self.config["buffer_size"],
             batch_size=self.config["batch_size"],

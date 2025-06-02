@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from agents.maddpg_agent import MADDPGAgent
+from qf.agents.tensor_agents.maddpg_agent import MADDPGAgent
 from envs.simple_multi_agent_env import SimpleMultiAgentEnv
 
 class TestMADDPGAgent(unittest.TestCase):

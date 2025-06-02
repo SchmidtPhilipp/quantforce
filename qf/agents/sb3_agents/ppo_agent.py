@@ -1,5 +1,5 @@
 from stable_baselines3 import PPO
-from qf.agents.sb3_agent import SB3Agent
+from qf.agents.sb3_agents.sb3_agent import SB3Agent
 import qf
 
 class PPOAgent(SB3Agent):
@@ -31,7 +31,7 @@ class PPOAgent(SB3Agent):
         # Initialize PPO model
         self.model = PPO(
             policy=self.config["policy"],
-            env=env,
+            env=self.env,
             learning_rate=self.config["learning_rate"],
             n_steps=self.config["n_steps"],
             batch_size=self.config["batch_size"],

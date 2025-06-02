@@ -1,6 +1,12 @@
 # Projektordner ausschließen
 checkpoints/
-runs/
+
+
+# Jeder Ordner, der mit "runs" beginnt, ausschließen
+# und alle Unterordner, die damit beginnen
+runs*/
+
+
 temp/
 good_runs/ 
 dead_runs/

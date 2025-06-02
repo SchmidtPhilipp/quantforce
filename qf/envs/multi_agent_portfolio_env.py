@@ -1,7 +1,7 @@
 from datetime import datetime
+from typing import Tuple
 from gymnasium import spaces
 import torch
-import gymnasium as gym
 import numpy as np
 
 import qf as qf
@@ -9,9 +9,10 @@ import qf as qf
 from qf.utils.logger import Logger
 from qf.utils.tracker.tracker import Tracker
 from qf.data.dataset import TimeBasedDataset
+from qf.envs.tensor_env import TensorEnv
 
 
-class MultiAgentPortfolioEnv(gym.Env):
+class MultiAgentPortfolioEnv(TensorEnv):
     """
     Multi-Agent Portfolio Environment with shared actions and shared or non-shared observations.
 
@@ -28,7 +29,7 @@ class MultiAgentPortfolioEnv(gym.Env):
                 tensorboard_prefix,
                 config=None):
         
-        super(MultiAgentPortfolioEnv, self).__init__()
+        super(MultiAgentPortfolioEnv, self).__init__(device=config.get("device", qf.DEFAULT_DEVICE))
 
 
         default_config = {
@@ -45,7 +46,6 @@ class MultiAgentPortfolioEnv(gym.Env):
             "trade_cost_fixed": qf.DEFAULT_TRADE_COST_FIXED,
             "reward_function": qf.DEFAULT_REWARD_FUNCTION,
             "reward_scaling": qf.DEFAULT_REWARD_SCALING,
-            "device": qf.DEFAULT_DEVICE,
             "verbosity": qf.VERBOSITY,
             "log_dir": qf.DEFAULT_LOG_DIR,
             "config_name": qf.DEFUALT_CONFIG_NAME
@@ -69,7 +69,6 @@ class MultiAgentPortfolioEnv(gym.Env):
         self.dataloader = self.dataset.get_dataloader()
         self.data_iterator = iter(self.dataloader)
 
-        self.device = self.config["device"]
         self.tickers = self.config["tickers"]
         self.n_assets = len(self.tickers)
 
@@ -186,7 +185,7 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         return obs
 
-    def step(self, raw_actions):
+    def  step(self, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
         """
         Executes a step in the environment.
 
@@ -199,8 +198,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             done (bool): Whether the episode is finished.
             info (dict): Additional information.
         """
-        raw_actions = self._transform_actions(raw_actions)
-        actions = torch.clamp(raw_actions.to(self.device), 0, 1)  # Ensure actions are in [0, 1]
+        actions = torch.clamp(actions.to(self.device), 0, 1)  # Ensure actions are in [0, 1]
         actions = actions / actions.sum(dim=1, keepdim=True)  # Normalize actions
 
         self.last_actions = actions  # Save actions for the next observation
@@ -220,7 +218,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             rewards = torch.zeros(self.n_agents, device=self.device)
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
             self._end_episode()
-            return self._transform_outputs(obs, rewards, done, {})
+            return obs, rewards, done, {}
     
         new_prices = torch.tensor(
             self.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
@@ -321,7 +319,7 @@ class MultiAgentPortfolioEnv(gym.Env):
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
 
 
-        self.record_data(action=raw_actions, reward=rewards)
+        self.record_data(action=actions, reward=rewards)
         
         if done.any():
             self._end_episode()
@@ -330,38 +328,8 @@ class MultiAgentPortfolioEnv(gym.Env):
         if not done:
             obs = self._get_observation()
         
-        output = self._transform_outputs(obs, rewards, done, {}) 
+        output = obs, rewards, done, {}
         return output
-    
-    def _transform_outputs(self, obs, rewards, done, info):
-        """
-        Transforms the outputs to match the expected format of the environment.
-        """
-        # We need 3 modes of outputs: 
-        # For single agent: (obs, reward, done, info)
-        # For multi-agent: (obs, rewards, terminateds, truncateds, infos)
-        # And there is also the multiagent mode where they want that every output is a dict with agent ids as keys
-
-        terminateds = done
-        truncateds = done
-
-        if self.environment_mode == "gym":
-            # For Gym mode, we return a single observation, reward, done flag, and info dict
-            return obs, rewards, terminateds, truncateds, info
-        
-        elif self.environment_mode == "sb3":
-            # For Stable-Baselines i have to remove the agent dimension
-            obs = obs.squeeze(0).numpy()
-            rewards = rewards.squeeze(0)
-            terminateds = terminateds.squeeze(0)
-            truncateds = truncateds.squeeze(0)
-            info = {k: v.squeeze(0) for k, v in info.items()}
-
-            return obs, rewards, terminateds, truncateds, info
-        
-        else: 
-            raise ValueError("Environment mode not set. Please set the environment mode to 'gym' or 'sb3' before stepping the environment.")
-        
     
         
     def reset(self, *, seed=None, options=None):
@@ -379,32 +347,8 @@ class MultiAgentPortfolioEnv(gym.Env):
 
         obs = self._get_observation()
 
-        if self.environment_mode == "gym":
-            return obs, {}
-        elif self.environment_mode == "sb3":
-            obs = obs.squeeze(0).numpy()
-            return obs, {}
-        else:
-            raise ValueError("Environment mode not set. Please set the environment mode to 'gym' or 'sb3' before resetting the environment.")
-
+        return obs, {}
     
-    def _transform_actions(self, actions):
-
-        if isinstance(actions, dict):
-            # If actions are in a dictionary format, convert them to a tensor
-            # They are in a shape {"agent_id": action_vector}
-            actions = torch.stack([actions[agent_id] for agent_id in sorted(actions.keys())], dim=0)
-
-        if isinstance(actions, np.ndarray):
-            # If actions are in a numpy array format, convert them to a tensor
-            actions = torch.tensor(actions, dtype=torch.float32, device=self.device)
-
-        # Ensure actions are a 2D tensor with shape [n_agents, n_assets + 1]
-        if len(actions.shape) == 1:
-            actions = actions.unsqueeze(0)
-
-        return actions
-
     
     def _end_episode(self):
         self.metrics.append(self.balance)

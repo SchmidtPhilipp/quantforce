@@ -1,5 +1,6 @@
 from qf.agents.agent import Agent
 import numpy as np
+from qf.envs.sb3_wrapper import SB3Wrapper
 
 class SB3Agent(Agent):
     # Class that inherits from Agent and gives a base implementation 
@@ -11,6 +12,9 @@ class SB3Agent(Agent):
             env: The environment in which the agent will operate.
             config (dict): Configuration dictionary for the SB3 agent.
         """ 
+        if type(env) is not SB3Wrapper:
+            env = SB3Wrapper(env)
+
         super().__init__(env)
 
     def train(self, total_timesteps=100000, use_tqdm=True):
@@ -36,7 +40,8 @@ class SB3Agent(Agent):
         """
         from tqdm import tqdm
 
-        eval_env.set_environment_mode(self.set_env_mode())
+        if type(eval_env) is not SB3Wrapper:
+            eval_env = SB3Wrapper(eval_env)
 
         total_rewards = []
         progress = tqdm(range(episodes), desc=f"Evaluating {self.__class__.__name__}") if use_tqdm else range(episodes)

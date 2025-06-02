@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-from .utils.model_builder import ModelBuilder
+from ..utils.model_builder import ModelBuilder
 from qf.utils.loss_functions.loss_functions import weighted_mse_correlation_loss
 from qf.utils.correlation import compute_correlation
 

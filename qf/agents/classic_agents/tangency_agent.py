@@ -35,9 +35,6 @@ class TangencyAgent(Agent):
         self.cov_matrix = None
         self.weights = None  # torch.Tensor of shape (n_assets + 1,)
 
-    def set_env_mode(self):
-        return "sb3"
-
     def train(self, episodes=0, total_timesteps=0, use_tqdm=True): #episodes and use_tqdm for compatibility with Agent interface
         """
         Trains the agent by calculating the tangency portfolio weights with cash (constrained to [0,1]^{n+1}).
@@ -63,7 +60,6 @@ class TangencyAgent(Agent):
         """
         Evaluates the static tangency portfolio agent.
         """
-        eval_env.set_environment_mode(self.set_env_mode())
 
         if eval_env is None:
             eval_env = self.eval_env
@@ -76,7 +72,7 @@ class TangencyAgent(Agent):
 
             while not done:
                 action = self.act(state)
-                next_state, reward, done, _, _ = eval_env.step(action)
+                next_state, reward, done, _ = eval_env.step(action)
                 total_reward += reward
                 state = next_state
 

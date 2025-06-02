@@ -1,6 +1,6 @@
 from qf.data import DOWJONES, NASDAQ100, SNP500
 
-### DEFAULLTS
+### DEFAULTS
 VERBOSITY = 0
 
 DEFAULT_LOG_DIR = 'runs'
@@ -107,7 +107,14 @@ DEFAULT_EVAL_ENV_CONFIG = {
 ##########################################################################################################
 ##########################################################################################################
 
+# Classic Agent configurations
 
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+# Tangency Agent configurations
 DEFAULT_TANGENCY_LOG_RETURNS = True  # Use log returns for calculations
 DEFAULT_TANGENCY_RISK_FREE_RATE = 0.01  # Example risk-free rate for tangency portfolio calculations
 DEFAULT_TANGENCY_METHOD = "default"  # Optimization method for the tangency portfolio
@@ -117,6 +124,42 @@ DEFAULT_TANGENCYAGENT_CONFIG = {
     "log_returns": DEFAULT_TANGENCY_LOG_RETURNS,  # Use log returns for calculations
 }
 
+DEFAULT_TANGENCY_HYPERPARAMETER_SPACE = {
+    # TODO implement different modes
+    #"risk_free_rate": [0.01, 0.02],  # Example risk-free rates for hyperparameter search
+    #"method": ["default", "alternative_method"],  # Different optimization methods for the tangency portfolio
+}
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+# Classic One Period Markovitz Agent configurations
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = True  # Use log returns for calculations
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET = "Tangency"  # Optimization target: Tangency, MaxExpReturn, MinVariance
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_MODEL = "ledoit"  # Risk model: sample, exp_weighted
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_FREE_RATE = 0.01  # Risk-free rate for Tangency optimization
+
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
+    "target": DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET,  # Optimization target
+    "risk_model": DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_MODEL,  # Risk model
+    "risk_free_rate": DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_FREE_RATE,  # Risk-free rate for Tangency optimization
+    "log_returns": DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS,  # Use log returns for calculations
+}
+
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
+    "target": ["Tangency", "MaxExpReturn", "MinVariance"],
+    "risk_model": ["sample", "exp_weighted", "ledoit_wolf", "oracle_approximating", "semi_covariance", "intraday_covariance"],
+    "risk_free_rate": [0.000001, 0.01, 0.02],
+}
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+# Signle-Agent configurations
 
 ##########################################################################################################
 ##########################################################################################################
@@ -137,6 +180,11 @@ DEFAULT_DQNAGENT_CONFIG = {
     "buffer_max_size": DEFAULT_DQN_BUFFER_MAX_SIZE,
     "device": DEFAULT_DEVICE,
     "epsilon_start": DEFAULT_DQN_EPSILON_START
+}
+
+DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
+    "learning_rate": [1e-3, 1e-4],
+    "epsilon_start": [0.1, 0.4, 1],
 }
 
 ##########################################################################################################
@@ -170,6 +218,13 @@ DEFAULT_SACAGENT_CONFIG = {
     "verbose": DEFAULT_SAC_VERBOSITY  # Verbosity level for logging
 }
 
+DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
+    "learning_rate": [3e-4, 1e-4],
+    "buffer_size": [100000, 500000],
+    "batch_size": [64, 128],
+    "ent_coef": ["auto", "auto_0.1"],
+}
+
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
@@ -199,6 +254,12 @@ DEFAULT_TD3AGENT_CONFIG = {
     "device": DEFAULT_DEVICE,  # Device to run the computations on
     "noise_std": DEFAULT_TD3_NOISE_STD,  # Standard deviation of noise added to actions
     "noise_clip": DEFAULT_TD3_NOISE_CLIP  # Clipping range for noise
+}
+
+DEFAULT_TD3_HYPERPARAMETER_SPACE = {
+    "learning_rate": [3e-4, 1e-4],
+    "noise_std": [0.1, 0.2],
+    "noise_clip": [0.3, 0.5],
 }
 
 ##########################################################################################################
@@ -257,6 +318,12 @@ DEFAULT_PPOAGENT_CONFIG = {
     "verbose": DEFAULT_PPO_VERBOSITY  # Verbosity level for logging
 }
 
+DEFAULT_PPO_HYPERPARAMETER_SPACE = {
+    "learning_rate": [3e-4, 1e-4],
+    "clip_range": [0.1, 0.2],
+    "gae_lambda": [0.9, 0.95],
+}
+
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
@@ -291,9 +358,11 @@ DEFAULT_MADDPGAGENT_CONFIG = {
     "losloss_functions_fn": DEFAULT_MADDPG_LOSS_FN  # Loss function for MADDPG, can be "mse" or "huber"
 }
 
-
-
-
+DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
+    "learning_rate": [1e-3, 1e-4],
+    "lambda_": [0.9, 0.95],
+    "loss_fn": ["mse", "weighted_correlation_loss"],
+}
 
 
 ##########################################################################################################
@@ -315,19 +384,21 @@ from qf.data import load_data
 from qf.data import add_technical_indicators
 from qf.data import get_data
 
-# Agents
-from qf.agents.dqn_agent import DQNAgent
-from qf.agents.tangency_agent import TangencyAgent
+# Custom Agents
+from qf.agents.tensor_agents.dqn_agent import DQNAgent
+
+# Classic Agents
+from qf.agents.classic_agents.classic_one_period_markovitz_agent import ClassicOnePeriodMarkovitzAgent
 
 # Stable Baselines3 Agents
-from qf.agents.sac_agent import SACAgent
-from qf.agents.td3_agent import TD3Agent
-from qf.agents.ddpg_agent import DDPGAgent
-from qf.agents.ppo_agent import PPOAgent
-from qf.agents.a2c_agent import A2CAgent
+from qf.agents.sb3_agents.sac_agent import SACAgent
+from qf.agents.sb3_agents.td3_agent import TD3Agent
+from qf.agents.sb3_agents.ddpg_agent import DDPGAgent
+from qf.agents.sb3_agents.ppo_agent import PPOAgent
+from qf.agents.buffers.a2c_agent import A2CAgent
 
 # Multi-Agent Agents
-from qf.agents.maddpg_agent import MADDPGAgent
+from qf.agents.tensor_agents.maddpg_agent import MADDPGAgent
 
 
 

@@ -56,9 +56,6 @@ class DQNAgent(Agent):
         self.loss_fn = torch.nn.MSELoss()
         self.memory = ReplayBuffer(capacity=self.buffer_max_size)  # Initialize the replay buffer
 
-    def set_env_mode(self):
-        return "gym"
-
     def act(self, state: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
         """
         Gibt eine Wahrscheinlichkeitsverteilung (Länge = act_dim, Summe = 1)
@@ -89,7 +86,7 @@ class DQNAgent(Agent):
         """
         progress = tqdm(range(total_timesteps), desc="Training DQNAgent") if use_tqdm else range(total_timesteps)
 
-        state, _ = self.env.reset()
+        state, info = self.env.reset()
         total_reward = 0
         epsilon = self.epsilon_start  # Initial epsilon for exploration
         timestep = 0
@@ -100,7 +97,7 @@ class DQNAgent(Agent):
 
             # Select action using epsilon-greedy policy
             action = self.act(state, epsilon)
-            next_state, reward, done, _, _ = self.env.step(action)
+            next_state, reward, done, info = self.env.step(action)
 
             # Store transition in replay buffer
             self.memory.store((state, action, reward, next_state, done))
@@ -113,7 +110,7 @@ class DQNAgent(Agent):
 
             # Reset environment if done
             if done:
-                state, _ = self.env.reset()
+                state, info = self.env.reset()
                 total_reward = 0
 
             # Update tqdm progress bar
@@ -162,20 +159,19 @@ class DQNAgent(Agent):
         Returns:
             float: The average reward over the evaluation episodes.
         """
-        eval_env.set_environment_mode(self.set_env_mode())
 
         total_rewards = []
         progress = tqdm(range(episodes), desc="Evaluating DQNAgent", ncols=80) if use_tqdm else range(episodes)
 
         for episode in progress:
-            state, _ = eval_env.reset()
+            state, info = eval_env.reset()
             done = False
             episode_reward = 0
 
             while not done:
                 # Select action using the trained model (no exploration during evaluation)
                 action = self.act(state, epsilon=0.0)
-                next_state, reward, done, _, _ = eval_env.step(action)
+                next_state, reward, done, info = eval_env.step(action)
                 state = next_state
                 episode_reward += reward
 

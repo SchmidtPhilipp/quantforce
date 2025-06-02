@@ -1,5 +1,5 @@
 from stable_baselines3 import DDPG
-from qf.agents.sb3_agent import SB3Agent
+from qf.agents.sb3_agents.sb3_agent import SB3Agent
 import qf
 
 class DDPGAgent(SB3Agent):
@@ -32,7 +32,7 @@ class DDPGAgent(SB3Agent):
         # Initialize DDPG model
         self.model = DDPG(
             policy=self.config["policy"],
-            env=env,
+            env=self.env,
             learning_rate=self.config["learning_rate"],
             buffer_size=self.config["buffer_size"],
             batch_size=self.config["batch_size"],

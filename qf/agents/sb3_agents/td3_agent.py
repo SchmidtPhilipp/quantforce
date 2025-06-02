@@ -1,6 +1,6 @@
 import torch
 from stable_baselines3 import TD3
-from qf.agents.sb3_agent import SB3Agent
+from qf.agents.sb3_agents.sb3_agent import SB3Agent
 import qf as qf
 
 
@@ -33,7 +33,7 @@ class TD3Agent(SB3Agent):
         # Initialize TD3 model
         self.model = TD3(
             policy=self.config["policy"],
-            env=env,
+            env=self.env,
             learning_rate=self.config["learning_rate"],
             buffer_size=self.config["buffer_size"],
             batch_size=self.config["batch_size"],

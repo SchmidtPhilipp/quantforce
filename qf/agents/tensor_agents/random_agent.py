@@ -19,9 +19,6 @@ class RandomAgent(Agent):
             np.ndarray: A random action from the action space.
         """
         return self.env.action_space.sample()
-
-    def set_env_mode(self):
-        return "gym"    
     
     def train(self, total_timesteps=100000, use_tqdm=True):
         """
