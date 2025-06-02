@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from qf.agents.agent import Agent
-from pypfopt.risk_models import sample_cov, exp_cov, ledoit_wolf, oracle_approximating, semi_covariance, intraday_covariance
+from pypfopt.risk_models import risk_matrix
 from pypfopt.efficient_frontier import EfficientFrontier
 
 
@@ -19,7 +19,7 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         default_config = {
             "log_returns": True,  # Whether to use log returns for calculations
             "target": "Tangency",  # Optimization target: Tangency, MaxExpReturn, MinVariance
-            "risk_model": "sample",  # Risk model: sample, exp_weighted, ledoit_wolf, etc.
+            "risk_model": "sample_cov",  # Risk model: sample_cov, semicovariance, exp_cov, etc.
             "risk_free_rate": 0.01,  # Risk-free rate for Tangency optimization
         }
 
@@ -46,20 +46,14 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         else:
             returns = (historical_data[1:] / historical_data[:-1]) - 1
 
-        # Select risk model
-        if self.config["risk_model"] == "sample":
-            cov_matrix = sample_cov(returns)
-        elif self.config["risk_model"] == "exp_weighted":
-            cov_matrix = exp_cov(returns)
-        elif self.config["risk_model"] == "ledoit_wolf":
-            cov_matrix = ledoit_wolf(returns)
-        elif self.config["risk_model"] == "oracle_approximating":
-            cov_matrix = oracle_approximating(returns)
-        elif self.config["risk_model"] == "semi_covariance":
-            cov_matrix = semi_covariance(returns)
-        elif self.config["risk_model"] == "intraday_covariance":
-            cov_matrix = intraday_covariance(returns)
-        else:
+        # Compute covariance matrix using the selected risk model
+        try:
+            cov_matrix = risk_matrix(
+                prices=self.historical_data,
+                method=self.config["risk_model"],
+                returns_data=True  # We are passing returns instead of prices
+            )
+        except ValueError:
             raise ValueError(f"Unsupported risk model: {self.config['risk_model']}")
 
         # Select optimization target
