@@ -9,24 +9,16 @@ from .utils.model_builder import ModelBuilder
 from qf.utils.loss_functions.loss_functions import weighted_mse_correlation_loss
 from qf.utils.correlation import compute_correlation
 
-class MADDPGAgent:
+import qf 
+from qf.agents.agent import Agent
+
+from tqdm import tqdm
+
+class MADDPGAgent(Agent):
     """
     Multi-Agent Deep Deterministic Policy Gradient (MADDPG) agent with support for custom loss functions.
     """
-    def __init__(self, 
-                 obs_dim, 
-                 act_dim, 
-                 n_agents, 
-                 actor_config=None, 
-                 critic_config=None, 
-                 lr=1e-3, 
-                 gamma=0.99, 
-                 tau=0.01,
-                 verbosity=0, 
-                 batch_size=32,
-                 loss_function=None,
-                 buffer_max_size=100000,
-                 lambda_=1.0):
+    def __init__(self, env, config=None):
         """
         Initialize the MADDPG agent.
 
@@ -41,16 +33,45 @@ class MADDPGAgent:
             batch_size (int): Batch size for training.
             loss_function (callable): Custom loss function for training the critic. Defaults to nn.MSELoss.
         """
-        self.batch_size = batch_size
+        super().__init__(env)
+
+        # Extract environment parameters
+        obs_dim = env.get_observation_space().shape[0]
+        act_dim = env.get_action_space().shape[0]
+        n_agents = env.n_agents
+
+        # Default configuration parameters
+        default_config = {
+            "learning_rate": qf.DEFAULT_MADDPG_LR,
+            "gamma": qf.DEFAULT_MADDPG_GAMMA,
+            "tau": qf.DEFAULT_MADDPG_TAU,
+            "verbosity": qf.DEFAULT_MADDPG_VERBOSITY,
+            "batch_size": qf.DEFAULT_MADDPG_BATCH_SIZE,
+            "loss_function": qf.DEFAULT_MADDPG_LOSS_FN,  # Default to None, will use nn.MSELoss if not provided
+            "lambda_": qf.DEFAULT_MADDPG_LAMBDA,  # Custom weighting factor for the loss function
+            "buffer_max_size": qf.DEFAULT_MADDPG_BUFFER_MAX_SIZE
+        }
+
+        self.config = {**default_config, **(config or {})}
+
+        self.batch_size = self.config["batch_size"]
         self.n_agents = n_agents
-        self.gamma = gamma
-        self.tau = tau
-        self.verbosity = verbosity
-        self.lambda_ = lambda_ # Custom weighting factor for the loss function
-        self.buffer_max_size = buffer_max_size
+        self.gamma = self.config["gamma"]
+        self.tau = self.config["tau"]
+        self.verbosity = self.config["verbosity"]
+        self.lambda_ = self.config["lambda_"]
+        self.buffer_max_size = self.config["buffer_max_size"]
+        self.lr = self.config["learning_rate"]
 
         # Use the provided loss function or default to MSELoss
-        self.loss_function = loss_function or nn.MSELoss()
+        self.loss_function = self.config["loss_function"]
+
+        if self.loss_function == "weighted_mse_correlation":
+            self.loss_function = weighted_mse_correlation_loss
+        elif self.loss_function == "mse":
+            self.loss_function = nn.MSELoss()
+        elif not callable(self.loss_function):
+            raise ValueError(f"Unsupported loss function: {self.loss_function}. Must be a callable or 'weighted_mse_correlation' or 'mse'.")
 
         # Dynamically generate the default actor and critic configs based on obs_dim and act_dim
         default_actor_config = [
@@ -66,8 +87,8 @@ class MADDPGAgent:
         ]
 
         # Use the default configs if no custom configs are provided
-        actor_config = actor_config or default_actor_config
-        critic_config = critic_config or default_critic_config
+        actor_config = default_actor_config
+        critic_config = default_critic_config
 
         # We need to append a cliping and a softmax layer to the actor config
         # This is done to ensure that the actions are in the range [0, 1]
@@ -87,8 +108,8 @@ class MADDPGAgent:
         self.target_critics = [ModelBuilder(critic_config).build() for _ in range(n_agents)]
 
         # Optimizers
-        self.actor_optimizers = [optim.Adam(actor.parameters(), lr=lr) for actor in self.actors]
-        self.critic_optimizers = [optim.Adam(critic.parameters(), lr=lr) for critic in self.critics]
+        self.actor_optimizers = [optim.Adam(actor.parameters(), lr=self.lr) for actor in self.actors]
+        self.critic_optimizers = [optim.Adam(critic.parameters(), lr=self.lr) for critic in self.critics]
 
         # Initialize replay memory
         self.memory = []
@@ -100,6 +121,9 @@ class MADDPGAgent:
 
         if self.verbosity > 0:
             print(f"MADDPGAgent initialized with {self.n_agents} agents.")
+
+    def set_env_mode(self):
+        return "gym"
 
     def _replace_placeholders(self, config, obs_dim, act_dim, n_agents):
         """
@@ -143,7 +167,7 @@ class MADDPGAgent:
             logits = F.softmax(logits, dim=-1)  # Normalize the logits to [0, 1]
             actions.append(logits)
 
-            if self.verbosity > 0:
+            if self.verbosity > 1:
                 print(f"Agent {i} action (normalized): {logits}")
 
         # Stack actions into a single tensor (shape: [n_agents, act_dim])
@@ -159,10 +183,53 @@ class MADDPGAgent:
         self.memory.append(transition)
         if len(self.memory) > self.buffer_max_size:
             self.memory.pop(0)
-        if self.verbosity > 0:
+        if self.verbosity > 1:
             print(f"Stored transition. Memory size: {len(self.memory)}")
 
-    def train(self):
+    def train(self, total_timesteps=5000, use_tqdm=True):
+        """
+        Train the MADDPG agent for a specified number of timesteps.
+
+        Parameters:
+            total_timesteps (int): Total number of timesteps to train the agent.
+            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print training summaries.
+        """
+        progress = tqdm(range(total_timesteps), desc="Training MADDPGAgent") if use_tqdm else range(total_timesteps)
+
+        state, _ = self.env.reset()
+        total_reward = 0
+        timestep = 0
+
+        for _ in progress:
+            # Select actions for each agent
+            actions = self.act(state)
+
+            # Step the environment
+            next_state, rewards, done, _, _ = self.env.step(actions)
+
+            # Store transition in replay memory
+            self.store((state, actions, rewards, next_state, done))
+
+            state = next_state
+            total_reward += sum(rewards)
+            timestep += 1
+
+            # Train the agents
+            self._train()
+
+            # Reset environment if done
+            if done:
+                state, _ = self.env.reset()
+                total_reward = 0
+
+            # Update tqdm progress bar
+            if use_tqdm:
+                progress.set_postfix({"Timestep": timestep, "Last Reward": f"{rewards}"})
+            else:
+                print(f"Timestep: {timestep}, Last Reward: {rewards}")
+
+
+    def _train(self):
         """
         Train the agents by sampling a batch of transitions from the replay memory.
         """

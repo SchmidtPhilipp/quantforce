@@ -56,8 +56,6 @@ class DQNAgent(Agent):
         self.loss_fn = torch.nn.MSELoss()
         self.memory = ReplayBuffer(capacity=self.buffer_max_size)  # Initialize the replay buffer
 
-
-
     def set_env_mode(self):
         return "gym"
 
@@ -197,6 +195,10 @@ class DQNAgent(Agent):
         Parameters:
             path (str): Path to save the model.
         """
+        if path.endswith('.pt'):
+            path = path
+        else:
+            path = path + '/DQN_Agent.pt'
         torch.save(self.model.state_dict(), path)
 
     def load(self, path):

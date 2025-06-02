@@ -56,6 +56,7 @@ class SB3Agent(Agent):
             if use_tqdm:
                 progress.set_postfix({"Episode Reward": episode_reward})
 
+        eval_env.print_metrics()
         avg_reward = np.mean(total_rewards)
         print(f"Average reward over {episodes} episodes: {avg_reward}")
         return avg_reward

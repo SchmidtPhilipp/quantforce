@@ -56,7 +56,7 @@ def load_data(
                 if verbosity > 0:
                     print(f"Downloading missing data at the beginning for {ticker}: {download_start} to {download_end}")
                 new_data_start = download_data(download_start, download_end, ticker, interval=interval, downloader=downloader, verbosity=verbosity)
-                wait(10) 
+                #wait(10) 
                 cached_data = update_cache(new_data_start, cached_data)
 
             # Check for missing data at the end
@@ -66,14 +66,14 @@ def load_data(
                 if verbosity > 0:
                     print(f"Downloading missing data at the end for {ticker}: {download_start} to {download_end}")
                 new_data_end = download_data(download_start, download_end, ticker, interval=interval, downloader=downloader, verbosity=verbosity)
-                wait(10) 
+                #wait(10) 
                 cached_data = update_cache(cached_data, new_data_end)
         else:
             # No cached data, download the full range
             if verbosity > 0:
                 print(f"Downloading full data range for {ticker}: {start} to {end}")
             new_data = download_data(start, end, ticker, interval=interval, downloader=downloader, verbosity=verbosity)
-            wait(10) 
+            #wait(10) 
 
             cached_data = new_data
             # Save the new data to cache

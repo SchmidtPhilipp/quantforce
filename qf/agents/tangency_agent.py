@@ -72,7 +72,7 @@ class TangencyAgent(Agent):
 
             done = False
             total_reward = 0
-            state = eval_env.reset()#.to(eval_env.device)
+            state, _ = eval_env.reset()
 
             while not done:
                 action = self.act(state)

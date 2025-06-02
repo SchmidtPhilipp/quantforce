@@ -9,10 +9,10 @@ DEFAULT_INITIAL_BALANCE = 1000000
 
 # Default data configuration
 DEFAULT_TICKERS = DOWJONES
-DEFAULT_TRAIN_START = "2010-01-01"
+DEFAULT_TRAIN_START = "2000-01-01"
 DEFAULT_TRAIN_END = "2020-01-01"
 DEFAULT_EVAL_START = "2020-01-02"
-DEFAULT_EVAL_END = "2021-01-01"
+DEFAULT_EVAL_END = "2025-01-01"
 
 
 # Default parameters for TimeBasedDataset
@@ -29,7 +29,7 @@ DEFAULT_TRADE_COST_FIXED = 0
 DEFAULT_REWARD_FUNCTION = "log_return" # Options: "linear_rate_of_return", "sharpe_ratio", "log_return"
 DEFAULT_REWARD_SCALING = 100  # Scaling factor for the reward function
 
-DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG" # eg MADDOG, DQN, MARKOVITZ, Tangency, etc.
+DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG"
 
 DEFAULT_DEVICE = "cpu"  # Default device for PyTorch
 
@@ -262,6 +262,47 @@ DEFAULT_PPOAGENT_CONFIG = {
 ##########################################################################################################
 ##########################################################################################################
 
+# Default Multi-Agent configurations 
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+# MADDPG Agent configuration
+DEFAULT_MADDPG_LR = 0.001  # Learning rate
+DEFAULT_MADDPG_GAMMA = 0.99  # Discount factor
+DEFAULT_MADDPG_BATCH_SIZE = 64  # Batch size
+DEFAULT_MADDPG_BUFFER_MAX_SIZE = 1000000  # Replay buffer size
+DEFAULT_MADDPG_TAU = 0.005  # Target network update rate
+DEFAULT_MADDPG_VERBOSITY = 0  # Verbosity level for logging
+DEFAULT_MADDPG_LAMBDA = 0.95  # lambda parameter for weighting the loss function. 
+DEFAULT_MADDPG_LOSS_FN = "mse"  # "MSE" or "weighted_correlation_loss"
+
+DEFAULT_MADDPGAGENT_CONFIG = {
+    "learning_rate": DEFAULT_MADDPG_LR,
+    "buffer_max_size": DEFAULT_MADDPG_BUFFER_MAX_SIZE,
+    "batch_size": DEFAULT_MADDPG_BATCH_SIZE,
+    "tau": DEFAULT_MADDPG_TAU,  # Target network update rate
+    "gamma": DEFAULT_MADDPG_GAMMA,
+    "lambda_": DEFAULT_MADDPG_LAMBDA,  # GAE lambda parameter
+    "device": DEFAULT_DEVICE,  # Device to run the computations on
+    "verbose": DEFAULT_MADDPG_VERBOSITY,  # Verbosity level for logging
+    "losloss_functions_fn": DEFAULT_MADDPG_LOSS_FN  # Loss function for MADDPG, can be "mse" or "huber"
+}
+
+
+
+
+
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+
+
 # Hyperparameter search configuration
 from qf.utils.hyperparameter_search import hyperparameter_search
 
@@ -285,13 +326,10 @@ from qf.agents.ddpg_agent import DDPGAgent
 from qf.agents.ppo_agent import PPOAgent
 from qf.agents.a2c_agent import A2CAgent
 
+# Multi-Agent Agents
 from qf.agents.maddpg_agent import MADDPGAgent
 
-# Agents utilities
-from qf.agents import ModelBuilder
 
-# Config processing
-#from qf.utils.config.config import Config
 
 # General utilities
 from qf.utils.tensorboard.start_tensorboard import start_tensorboard
@@ -302,3 +340,5 @@ from qf.utils.helper_functions import generate_random_name
 from qf.utils.metrics import Metrics
 
 
+# Visualization
+from qf.utils.plot import setup_pgf, reset_pgf

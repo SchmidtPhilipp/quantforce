@@ -7,30 +7,29 @@ def main():
 
     # Hyperparameter-Suchräume für verschiedene Agentenklassen
     agent_classes_with_param_grids = {
+        qf.DQNAgent: {
+            "learning_rate": [1e-3, 1e-4],
+            #"gamma": [0.95, 0.99],
+            "epsilon_start": [0.1, 0.4, 1],
+        },
         qf.SACAgent: {
-            #"learning_rate": [1e-5, 1e-4, 1e-3],
+            "learning_rate": [1e-5, 1e-4, 1e-3],
             #"buffer_size": [100000, 500000],
             #"batch_size": [64, 128],
             #"gamma": [0.95, 0.99],
             #"tau": [0.005, 0.01],
         },
         qf.TD3Agent: {
-            #"learning_rate": [1e-4, 1e-3],
+            "learning_rate": [1e-4, 1e-3],
             #"buffer_size": [500000, 1000000],
             #"batch_size": [128, 256],
             #"gamma": [0.9, 0.99],
-            #"noise_std": [0.1, 0.2],
-            #"noise_clip": [0.3, 0.5],
+            "noise_std": [0.1, 0.2],
+            "noise_clip": [0.3, 0.5],
         },
         qf.TangencyAgent: {
         },
-        qf.DQNAgent: {
-            #"learning_rate": [1e-3, 1e-4],
-            #"gamma": [0.95, 0.99],
-            #"batch_size": [32, 64],
-            #"buffer_max_size": [50000, 100000],
-            #"epsilon_start": [0.1, 0.4],
-        },
+
     }
 
     # Führe die Hyperparameter-Suche durch

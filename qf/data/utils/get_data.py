@@ -14,8 +14,7 @@ def get_data(tickers, start, end, indicators=("sma", "rsi", "macd", "ema", "adx"
     # clean the data
     data = clean_data(data, start, end)
 
-    # Remove the Adj Close column if it exists but only if the ticker has the adj close column
-    # This is to avoid dropping the Adj Close column for all tickers
+    # We anyways use adjusted close prices, so we drop the 'Adj Close' column if it exists.
     if "Adj Close" in data.columns.get_level_values(1):
         adj_close_tickers = set(t for t, field in data.columns if field == "Adj Close")
         data = data.drop(columns=[(ticker, "Adj Close") for ticker in adj_close_tickers])

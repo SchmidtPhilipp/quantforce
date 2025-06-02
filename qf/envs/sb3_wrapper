@@ -1,0 +1,17 @@
+
+
+class SB3Wrapper(gym.Env):
+    def __init__(self, tensor_env: TensorEnv):
+        self.tensor_env = tensor_env
+        self.observation_space = tensor_env.get_observation_space()
+        self.action_space = tensor_env.get_action_space()
+
+    def step(self, actions: np.ndarray):
+        tensor_actions = torch.tensor(actions, dtype=torch.float32)
+        obs, rewards, done, info = self.tensor_env.step(tensor_actions)
+        # Entferne die Agentendimension für SB3
+        return obs.squeeze(0).numpy(), rewards.squeeze(0).numpy(), done.squeeze(0).numpy(), info
+
+    def reset(self):
+        obs = self.tensor_env.reset()
+        return obs.squeeze(0).numpy()
