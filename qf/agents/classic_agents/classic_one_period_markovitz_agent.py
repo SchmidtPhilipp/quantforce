@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 from qf.agents.agent import Agent
-from pypfopt.risk_models import risk_matrix
 from pypfopt.efficient_frontier import EfficientFrontier
+from pypfopt import risk_models
+import pandas as pd
 
 
 class ClassicOnePeriodMarkovitzAgent(Agent):
@@ -20,7 +21,7 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
             "log_returns": True,  # Whether to use log returns for calculations
             "target": "Tangency",  # Optimization target: Tangency, MaxExpReturn, MinVariance
             "risk_model": "sample_cov",  # Risk model: sample_cov, semicovariance, exp_cov, etc.
-            "risk_free_rate": 0.01,  # Risk-free rate for Tangency optimization
+            "risk_free_rate": 0.00,  # Risk-free rate for Tangency optimization
         }
 
         # Merge default config with provided config
@@ -37,24 +38,30 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         self.historical_data = dataset.get_data()
         self.historical_data = self.historical_data.xs('Close', level=1, axis=1)
 
-        # Convert historical data to numpy array
-        historical_data = self.historical_data.values
-
-        # Calculate returns
+        # Calculate returns as a pandas DataFrame
         if self.config["log_returns"]:
-            returns = np.log(historical_data[1:] / historical_data[:-1])
+            returns = self.historical_data.pct_change().apply(lambda x: np.log(1 + x))  # Log returns
         else:
-            returns = (historical_data[1:] / historical_data[:-1]) - 1
+            returns = self.historical_data.pct_change()  # Simple returns
+
+        # Drop NaN values caused by pct_change
+        returns = returns.dropna()
 
         # Compute covariance matrix using the selected risk model
         try:
-            cov_matrix = risk_matrix(
-                prices=self.historical_data,
-                method=self.config["risk_model"],
-                returns_data=True  # We are passing returns instead of prices
+            cov_matrix = risk_models.risk_matrix(
+                prices=returns,
+                method=self.config["risk_model"], 
+                returns_data=True, 
+                log_returns=self.config["log_returns"]
             )
         except ValueError:
             raise ValueError(f"Unsupported risk model: {self.config['risk_model']}")
+        
+        # Fix the matrix if it is not positive definite
+        if not np.all(np.linalg.eigvals(cov_matrix) > 0):
+            cov_matrix = risk_models.fix_non_positive_definite(cov_matrix)
+
 
         # Select optimization target
         n_assets = cov_matrix.shape[0]
@@ -63,11 +70,11 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
             ef = EfficientFrontier(mean_returns, cov_matrix)
             weights = ef.max_sharpe(risk_free_rate=self.config["risk_free_rate"])
         elif self.config["target"] == "MaxExpReturn":
-            mean_returns = np.mean(returns, axis=0)
-            weights = np.zeros(n_assets)
-            weights[np.argmax(mean_returns)] = 1.0
+            mean_returns = returns.mean(axis=0)  # Use pandas to calculate mean returns
+            weights = pd.Series(0, index=mean_returns.index)  # Initialize weights as a pandas Series with asset labels
+            weights[mean_returns.idxmax()] = 1.0  # Allocate all weight to the asset with the highest mean return
         elif self.config["target"] == "MinVariance":
-            ef = EfficientFrontier(None, cov_matrix)
+            ef = EfficientFrontier(mean_returns, cov_matrix)
             weights = ef.min_volatility()
         else:
             raise ValueError(f"Unsupported target: {self.config['target']}")
@@ -104,7 +111,6 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         Returns:
             float: Total reward over evaluation.
         """
-        eval_env.set_environment_mode(self.set_env_mode())
 
         if eval_env is None:
             eval_env = self.eval_env
@@ -116,7 +122,7 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
 
             while not done:
                 action = self.act(state)
-                next_state, reward, done, _, _ = eval_env.step(action)
+                next_state, reward, done, _ = eval_env.step(action)
                 total_reward += reward
                 state = next_state
 

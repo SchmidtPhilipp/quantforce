@@ -138,8 +138,8 @@ DEFAULT_TANGENCY_HYPERPARAMETER_SPACE = {
 # Classic One Period Markovitz Agent configurations
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = True  # Use log returns for calculations
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET = "Tangency"  # Optimization target: Tangency, MaxExpReturn, MinVariance
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_MODEL = "ledoit"  # Risk model: sample, exp_weighted
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_FREE_RATE = 0.01  # Risk-free rate for Tangency optimization
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_MODEL = "sample_cov"  # Risk model: sample, exp_weighted
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_FREE_RATE = 0.0  # Risk-free rate for Tangency optimization
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
     "target": DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET,  # Optimization target
@@ -150,8 +150,14 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
     "target": ["Tangency", "MaxExpReturn", "MinVariance"],
-    "risk_model": ["sample", "exp_weighted", "ledoit_wolf", "oracle_approximating", "semi_covariance", "intraday_covariance"],
-    "risk_free_rate": [0.000001, 0.01, 0.02],
+    "risk_model": ["sample_cov", 
+                   "exp_cov", 
+                   "ledoit_wolf", 
+                   "ledoit_wolf_constant_variance", 
+                   "ledoit_wolf_single_factor", 
+                   "ledoit_wolf_constant_correlation",
+                   "oracle_approximating"],
+    "risk_free_rate": [0.0],
 }
 
 ##########################################################################################################
