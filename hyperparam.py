@@ -1,4 +1,5 @@
 import qf as qf
+qf.setDebugMode(True)
 
 def main():
     # Trainings- und Evaluierungsumgebungskonfigurationen
@@ -7,18 +8,21 @@ def main():
 
     # Liste der Agent-Klassen zur Optimierung
     agent_classes = [qf.ClassicOnePeriodMarkovitzAgent] #[qf.DQNAgent, qf.SACAgent, qf.TD3Agent, qf.ClassicOnePeriodMarkovitzAgent]
+    agent_classes = [qf.SACAgent]
     env_class = qf.MultiAgentPortfolioEnv
 
     # Optimierungskonfiguration
     optim_config = {
         "objective": "avg_reward - std_deviation",  # Zielmetrik: Durchschnittliche Belohnung minus Standardabweichung
-        "max_timesteps": 50000,  # Maximale Anzahl an Trainings-Timesteps
+        "max_timesteps": 10,  # Maximale Anzahl an Trainings-Timesteps
         "episodes": 1  # Anzahl der Evaluierungs-Episoden
     }
 
     # Hyperparameter-Optimierung durchführen
     optimizer = qf.HyperparameterOptimizer(agent_classes, env_class, train_env_config, eval_env_config, optim_config)
-    results, study = optimizer.optimize(n_trials=5)  
+
+    # Optuna-Optimierung starten
+    results = optimizer.optimize(n_trials=5)  
 
     # Ergebnisse ausgeben
     print("Beste Agentenklasse:", results["best_agent_class"].__name__)
@@ -27,7 +31,7 @@ def main():
 
     # Visualisierung der Ergebnisse
     print("\nVisualisierung der Optimierungsergebnisse:")
-    optimizer.visualize()
+    optimizer.visualize_results()
 
 
 if __name__ == "__main__":

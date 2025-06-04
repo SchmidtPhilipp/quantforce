@@ -23,7 +23,7 @@ class Agent:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
     
-    def evaluate(self, eval_env=None, episodes=1, use_tqdm=True):
+    def evaluate(self, eval_env=None, episodes=1, use_tqdm=True, print_metrics=True):
         """
         Evaluates the agent for a specified number of episodes on the environment.
         Parameters:
@@ -75,8 +75,8 @@ class Agent:
             np.pad(rewards_dict[episode], (0, max_steps - len(rewards_dict[episode])), mode='constant', constant_values=0)
             for episode in range(episodes)
         ])
-
-        eval_env.print_metrics()
+        if print_metrics:
+            eval_env.print_metrics()
 
         avg_reward = np.mean(rewards_matrix.sum(axis=1))
         std_reward = np.std(rewards_matrix.sum(axis=1))

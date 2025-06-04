@@ -130,7 +130,6 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
 }
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
-    "target": {"type": "categorical", "choices": ["Tangency", "MaxExpReturn", "MinVariance"]},
     "risk_model": {"type": "categorical", "choices": [
         "sample_cov", 
         "exp_cov", 
@@ -140,7 +139,6 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
         "ledoit_wolf_constant_correlation",
         "oracle_approximating"
     ]},
-    "risk_free_rate": {"type": "float", "low": 0.0, "high": 0.01},
     "log_returns": {"type": "categorical", "choices": [True, False]}
 }
 
@@ -377,6 +375,19 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
+
+def setDebugMode(debug_mode: bool):
+    """
+    Sets the debug mode for the QF library.
+    
+    Parameters:
+        debug_mode (bool): If True, enables debug mode with additional logging and checks.
+    """
+    if not debug_mode:
+        return
+    
+    print("Debug mode is enabled.")
+    DEFAULT_TICKERS = ["AAPL", "GOOGL"]
 
 
 # Hyperparameter search configuration

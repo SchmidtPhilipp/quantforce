@@ -1,6 +1,7 @@
 import optuna
 import numpy as np
 import qf
+from optuna.visualization import plot_optimization_history, plot_param_importances
 
 
 class HyperparameterOptimizer:
@@ -19,6 +20,9 @@ class HyperparameterOptimizer:
         self.env_config = env_config
         self.eval_env_config = eval_env_config
         self.optim_config = optim_config or {"objective": "avg_reward"}  # Standard-Zielmetrik: Durchschnittliche Belohnung
+
+        self.best_study = None
+        self.all_studies = None
 
     def _objective(self, trial, agent_class):
         """
@@ -72,34 +76,85 @@ class HyperparameterOptimizer:
 
     def optimize(self, n_trials=50):
         """
-        Führt die Hyperparameter-Optimierung durch.
+        Conducts hyperparameter optimization for all agent classes.
 
         Parameters:
-            n_trials (int): Anzahl der Optimierungsversuche.
+            n_trials (int): Number of optimization trials.
 
         Returns:
-            dict: Beste Agent-Klasse, beste Hyperparameter-Konfiguration und die zugehörige Belohnung.
-            optuna.Study: Die Optuna-Studie mit allen Optimierungsergebnissen.
+            dict: Best agent class, best hyperparameter configuration, and the corresponding reward.
+            optuna.Study: The best Optuna study with the highest reward.
+            list: List of all Optuna studies for all agent classes.
         """
         best_agent_class = None
         best_config = None
         best_reward = float('-inf')
         best_study = None
+        all_studies = []
 
         for agent_class in self.agent_classes:
             study = optuna.create_study(direction="maximize")
             study.optimize(lambda trial: self._objective(trial, agent_class), n_trials=n_trials)
 
-            # Beste Trial abrufen
+            # Append the study to the list of all studies
+            all_studies.append(study)
+
+            # Best trial for the current agent class
             trial = study.best_trial
             print(f"Beste Trial für {agent_class.__name__}:")
             print(f"Wert: {trial.value}")
             print(f"Parameter: {trial.params}")
 
+            # Update the best study if the current study has a higher reward
             if trial.value > best_reward:
                 best_reward = trial.value
                 best_config = trial.params
                 best_agent_class = agent_class
                 best_study = study
 
-        return {"best_agent_class": best_agent_class, "best_config": best_config, "best_reward": best_reward}, best_study
+        self.best_study = best_study
+        self.all_studies = all_studies
+
+        return {"best_agent_class": best_agent_class, "best_config": best_config, "best_reward": best_reward}
+
+    def visualize_results(self, renderer="vscode", save_path=None):
+        """
+        Visualizes the results of the best Optuna study and all studies combined.
+
+        Parameters:
+            best_study (optuna.Study): The best Optuna study containing optimization results.
+            all_studies (list): List of all Optuna studies containing optimization results.
+
+        Returns:
+            None: Displays the plots for optimization history and parameter importance.
+        """
+
+        import plotly.io as pio
+        pio.renderers.default = 'png'
+        import os
+
+
+        if save_path is None:
+            save_path = os.getcwd()
+        
+
+        print("\nVisualizing Best Study Results...")
+        
+        # Plot optimization history for the best study
+        opt_history_fig = plot_optimization_history(self.best_study)
+        opt_history_fig.write_image(os.path.join(save_path, "opt_history_best_study.png"))
+
+        # Plot parameter importance for the best study
+        param_importance_fig = plot_param_importances(self.best_study)
+        param_importance_fig.write_image(os.path.join(save_path, "param_importance_best_study.png"))
+
+        
+        # Combine studies into a single visualization
+        opt_history_fig_all = plot_optimization_history(self.all_studies)
+        opt_history_fig_all.write_image(os.path.join(save_path, "opt_history_all_studies.png"))
+
+
+        #print("Parameter Importance Across All Studies:")
+        param_importance_fig_all = plot_param_importances(self.all_studies)
+        param_importance_fig_all.write_image(os.path.join(save_path, "param_importance_all_studies.png"))
+
