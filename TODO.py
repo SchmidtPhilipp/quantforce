@@ -36,6 +36,8 @@
 # sondern auch die Historie betrachten
 # DONE: Im paper werden auch aktionen und cash als observations hinzugefügt.
 
+# TODO: Balance wird nicht mehr berechnet, daher verbleibt ein eintrag mit 0 .
+
 
 ####################################################
 # Agenten

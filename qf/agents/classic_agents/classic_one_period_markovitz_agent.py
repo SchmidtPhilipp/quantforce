@@ -4,6 +4,7 @@ from qf.agents.agent import Agent
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt import risk_models
 import pandas as pd
+from collections import OrderedDict
 
 
 class ClassicOnePeriodMarkovitzAgent(Agent):
@@ -62,17 +63,17 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         if not np.all(np.linalg.eigvals(cov_matrix) > 0):
             cov_matrix = risk_models.fix_non_positive_definite(cov_matrix)
 
+        mean_returns = returns.mean(axis=0)
 
         # Select optimization target
         n_assets = cov_matrix.shape[0]
         if self.config["target"] == "Tangency":
-            mean_returns = np.mean(returns, axis=0)
             ef = EfficientFrontier(mean_returns, cov_matrix)
             weights = ef.max_sharpe(risk_free_rate=self.config["risk_free_rate"])
         elif self.config["target"] == "MaxExpReturn":
-            mean_returns = returns.mean(axis=0)  # Use pandas to calculate mean returns
             weights = pd.Series(0, index=mean_returns.index)  # Initialize weights as a pandas Series with asset labels
             weights[mean_returns.idxmax()] = 1.0  # Allocate all weight to the asset with the highest mean return
+            weights = OrderedDict(weights.items())
         elif self.config["target"] == "MinVariance":
             ef = EfficientFrontier(mean_returns, cov_matrix)
             weights = ef.min_volatility()
@@ -98,37 +99,6 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         if self.weights is None:
             raise ValueError("Agent has not been trained yet. Call `train()` first.")
         return self.weights.unsqueeze(0)
-
-    def evaluate(self, eval_env, episodes=1, use_tqdm=True):
-        """
-        Evaluates the static portfolio agent.
-
-        Parameters:
-            eval_env: The evaluation environment.
-            episodes (int): Number of episodes to evaluate.
-            use_tqdm (bool): Whether to use tqdm for progress tracking.
-
-        Returns:
-            float: Total reward over evaluation.
-        """
-
-        if eval_env is None:
-            eval_env = self.eval_env
-
-        total_reward = 0
-        for _ in range(episodes):
-            done = False
-            state, _ = eval_env.reset()
-
-            while not done:
-                action = self.act(state)
-                next_state, reward, done, _ = eval_env.step(action)
-                total_reward += reward
-                state = next_state
-
-        eval_env.print_metrics()
-        print(f"Total reward over evaluation: {total_reward}")
-        return total_reward
 
     def save(self, path):
         """

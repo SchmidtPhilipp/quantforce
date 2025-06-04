@@ -28,6 +28,7 @@ DEFAULT_TRADE_COST_PERCENT = 0.0
 DEFAULT_TRADE_COST_FIXED = 0
 DEFAULT_REWARD_FUNCTION = "log_return" # Options: "linear_rate_of_return", "sharpe_ratio", "log_return"
 DEFAULT_REWARD_SCALING = 100  # Scaling factor for the reward function
+DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
 
 DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG"
 
@@ -156,8 +157,10 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
                    "ledoit_wolf_constant_variance", 
                    "ledoit_wolf_single_factor", 
                    "ledoit_wolf_constant_correlation",
-                   "oracle_approximating"],
+                   "oracle_approximating"
+                ],
     "risk_free_rate": [0.0],
+    "log_returns": [True, False],  # Whether to use log returns for calculations
 }
 
 ##########################################################################################################
@@ -165,7 +168,7 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
 ##########################################################################################################
 ##########################################################################################################
 
-# Signle-Agent configurations
+# Single-Agent configurations
 
 ##########################################################################################################
 ##########################################################################################################
@@ -190,7 +193,10 @@ DEFAULT_DQNAGENT_CONFIG = {
 
 DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": [1e-3, 1e-4],
-    "epsilon_start": [0.1, 0.4, 1],
+    "epsilon_start": [0.1, 0.4],
+    "gamma": [0.95, 0.99],
+    "batch_size": [32, 64],
+    "buffer_max_size": [100000, 500000],
 }
 
 ##########################################################################################################
@@ -377,9 +383,9 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 ##########################################################################################################
 
 
-
 # Hyperparameter search configuration
-from qf.utils.hyperparameter_search import hyperparameter_search
+from qf.optim.hyperparameter_search import hyperparameter_search
+from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer 
 
 # Environments
 from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
@@ -405,8 +411,6 @@ from qf.agents.buffers.a2c_agent import A2CAgent
 
 # Multi-Agent Agents
 from qf.agents.tensor_agents.maddpg_agent import MADDPGAgent
-
-
 
 # General utilities
 from qf.utils.tensorboard.start_tensorboard import start_tensorboard

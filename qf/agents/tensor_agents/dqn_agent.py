@@ -149,42 +149,6 @@ class DQNAgent(Agent):
         loss.backward()
         self.optimizer.step()
 
-    def evaluate(self, eval_env, episodes=1, use_tqdm=True):
-        """
-        Evaluates the agent for a specified number of episodes on the environment.
-        Parameters:
-            eval_env: The environment used for evaluation.
-            episodes (int): Number of episodes to evaluate the agent.
-            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
-        Returns:
-            float: The average reward over the evaluation episodes.
-        """
-
-        total_rewards = []
-        progress = tqdm(range(episodes), desc="Evaluating DQNAgent", ncols=80) if use_tqdm else range(episodes)
-
-        for episode in progress:
-            state, info = eval_env.reset()
-            done = False
-            episode_reward = 0
-
-            while not done:
-                # Select action using the trained model (no exploration during evaluation)
-                action = self.act(state, epsilon=0.0)
-                next_state, reward, done, info = eval_env.step(action)
-                state = next_state
-                episode_reward += reward
-
-            total_rewards.append(episode_reward)
-
-            if use_tqdm:
-                progress.set_postfix({"Episode Reward": f"{episode_reward.item():3.2f}"})
-
-        eval_env.print_metrics()
-        avg_reward = np.mean(total_rewards)
-        print(f"Average reward over {episodes} episodes: {avg_reward}")
-        return avg_reward
-
     def save(self, path):
         """
         Saves the agent's model to a file.

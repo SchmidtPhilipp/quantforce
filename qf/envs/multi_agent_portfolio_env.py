@@ -46,6 +46,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
             "trade_cost_fixed": qf.DEFAULT_TRADE_COST_FIXED,
             "reward_function": qf.DEFAULT_REWARD_FUNCTION,
             "reward_scaling": qf.DEFAULT_REWARD_SCALING,
+            "fianl_reward": qf.DEFAULT_FINAL_REWARD,
             "verbosity": qf.VERBOSITY,
             "log_dir": qf.DEFAULT_LOG_DIR,
             "config_name": qf.DEFUALT_CONFIG_NAME
@@ -83,6 +84,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         # Reward function can be "linear_rate_of_return", "log_return", or "absolute_return", or "sharpe_ratio_wX" where X is the time horizon the sharpe ratio is calculated over
         self.reward_function = self.config["reward_function"]
         self.reward_scaling = self.config["reward_scaling"]
+        self.final_reward = self.config["fianl_reward"]
         
         # check if the reward function begins with "sharpe_ratio_w"
         if self.reward_function is not None and self.reward_function.startswith("sharpe_ratio_w"):
@@ -215,7 +217,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
 
         if done:
             done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
-            rewards = torch.zeros(self.n_agents, device=self.device)
+            rewards = torch.ones(self.n_agents, device=self.device)*self.final_reward
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
             self._end_episode()
             return obs, rewards, done, {}

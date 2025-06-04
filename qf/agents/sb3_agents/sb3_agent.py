@@ -27,47 +27,24 @@ class SB3Agent(Agent):
 
         self.model.learn(total_timesteps=total_timesteps, progress_bar=True if use_tqdm else False)
 
-
-    def evaluate(self, eval_env, episodes=1, use_tqdm=True):
+    def act(self, state, deterministic=True):
         """
-        Evaluates the SAC agent for a specified number of episodes on the environment.
+        Returns the action to take in the environment based on the current state.
         Parameters:
-            eval_env: The environment used for evaluation.
-            episodes (int): Number of episodes to evaluate the agent.
-            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
+            state: The current state of the environment.
+            epsilon (float): Epsilon value for exploration (not used in SB3 agents).
         Returns:
-            float: The average reward over the evaluation episodes.
+            action: The action to take in the environment.
         """
-        from tqdm import tqdm
-
+        action, _ = self.model.predict(state, deterministic=deterministic)
+        return action
+    
+    def evaluate(self, eval_env=None, episodes=1, use_tqdm=True):
+        
         if type(eval_env) is not SB3Wrapper:
             eval_env = SB3Wrapper(eval_env)
 
-        total_rewards = []
-        progress = tqdm(range(episodes), desc=f"Evaluating {self.__class__.__name__}") if use_tqdm else range(episodes)
-
-        for episode in progress:
-            obs,_ = eval_env.reset()
-            done = False
-            episode_reward = 0
-
-            while not done:
-                action, _ = self.model.predict(obs, deterministic=True)
-                obs, rewards, done, truncateds, info = eval_env.step(action)
-                episode_reward += rewards
-
-            total_rewards.append(episode_reward)
-
-            if use_tqdm:
-                progress.set_postfix({"Episode Reward": episode_reward})
-
-        eval_env.print_metrics()
-        avg_reward = np.mean(total_rewards)
-        print(f"Average reward over {episodes} episodes: {avg_reward}")
-        return avg_reward
-    
-    def set_env_mode(self):
-        return "sb3"
+        return super().evaluate(eval_env=eval_env, episodes=episodes, use_tqdm=use_tqdm)
     
     def save(self, path):
         """
