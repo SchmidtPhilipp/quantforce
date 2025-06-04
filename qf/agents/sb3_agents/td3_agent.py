@@ -44,3 +44,11 @@ class TD3Agent(SB3Agent):
             verbose=1,
             device=self.config["device"]
         )
+
+    @staticmethod
+    def get_default_config():
+        return qf.DEFAULT_TD3AGENT_CONFIG
+    
+    @staticmethod
+    def get_hyperparameter_space():
+        return qf.DEFAULT_TD3AGENT_HYPERPARAMETER_SPACE

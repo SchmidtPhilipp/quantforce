@@ -2,7 +2,7 @@ import numpy as np
 from qf.agents.agent import Agent
 
 class RandomAgent(Agent):
-    def __init__(self, env):
+    def __init__(self, env, config=None):
         """
         Initializes the RandomAgent with the given environment.
         Parameters:
@@ -76,3 +76,4 @@ class RandomAgent(Agent):
             path (str): Path to load the model from.
         """
         return RandomAgent(env=env)
+

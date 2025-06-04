@@ -1,7 +1,4 @@
-from qf.utils.hyperparameter_optimizer import HyperparameterOptimizer
-import qf
-from optuna.visualization import plot_optimization_history, plot_param_importances
-
+import qf as qf
 
 def main():
     # Trainings- und Evaluierungsumgebungskonfigurationen
@@ -9,18 +6,19 @@ def main():
     eval_env_config = qf.DEFAULT_EVAL_ENV_CONFIG
 
     # Liste der Agent-Klassen zur Optimierung
-    agent_classes = [qf.DQNAgent, qf.SACAgent, qf.TD3Agent]
+    agent_classes = [qf.ClassicOnePeriodMarkovitzAgent] #[qf.DQNAgent, qf.SACAgent, qf.TD3Agent, qf.ClassicOnePeriodMarkovitzAgent]
+    env_class = qf.MultiAgentPortfolioEnv
 
     # Optimierungskonfiguration
     optim_config = {
         "objective": "avg_reward - std_deviation",  # Zielmetrik: Durchschnittliche Belohnung minus Standardabweichung
         "max_timesteps": 50000,  # Maximale Anzahl an Trainings-Timesteps
-        "episodes": 10  # Anzahl der Evaluierungs-Episoden
+        "episodes": 1  # Anzahl der Evaluierungs-Episoden
     }
 
     # Hyperparameter-Optimierung durchführen
-    optimizer = HyperparameterOptimizer(agent_classes, train_env_config, eval_env_config, optim_config)
-    results, study = optimizer.optimize(n_trials=3)  # Anzahl der Optimierungsversuche
+    optimizer = qf.HyperparameterOptimizer(agent_classes, env_class, train_env_config, eval_env_config, optim_config)
+    results, study = optimizer.optimize(n_trials=5)  
 
     # Ergebnisse ausgeben
     print("Beste Agentenklasse:", results["best_agent_class"].__name__)
@@ -29,8 +27,7 @@ def main():
 
     # Visualisierung der Ergebnisse
     print("\nVisualisierung der Optimierungsergebnisse:")
-    plot_optimization_history(study).show()  # Zeigt die Optimierungshistorie
-    plot_param_importances(study).show()  # Zeigt die Wichtigkeit der Hyperparameter
+    optimizer.visualize()
 
 
 if __name__ == "__main__":

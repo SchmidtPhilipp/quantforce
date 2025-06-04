@@ -6,9 +6,8 @@ from tqdm import tqdm
 from qf.agents.utils.model_builder import ModelBuilder
 from qf.agents.buffers.replay_buffer import ReplayBuffer
 from qf.agents.agent import Agent
-
-
 import qf as qf
+
 
 # Attention this is Soft-DQN
 class DQNAgent(Agent):
@@ -169,3 +168,22 @@ class DQNAgent(Agent):
         """
         self.model.load_state_dict(torch.load(path, map_location=self.device))
         self.model.to(self.device)
+
+    @staticmethod   
+    def get_hyperparameter_space():
+        """ 
+        Returns the hyperparameter space for the DQN agent. 
+        Returns:
+            dict: Hyperparameter space for the DQN agent.
+        """
+        return qf.DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE
+    
+    @staticmethod
+    def get_default_config():
+        """
+        Returns the default configuration for the DQN agent.
+        Returns:
+            dict: Default configuration for the DQN agent.
+        """
+        return qf.DEFAULT_DQNAGENT_CONFIG
+

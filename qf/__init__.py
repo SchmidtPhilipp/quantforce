@@ -4,8 +4,9 @@ from qf.data import DOWJONES, NASDAQ100, SNP500
 VERBOSITY = 0
 
 DEFAULT_LOG_DIR = 'runs'
-
 DEFAULT_INITIAL_BALANCE = 1000000
+
+DEFAULT_MAX_TIMESTEPS = 50000  # Default maximum number of timesteps for training
 
 # Default data configuration
 DEFAULT_TICKERS = DOWJONES
@@ -115,27 +116,6 @@ DEFAULT_EVAL_ENV_CONFIG = {
 ##########################################################################################################
 ##########################################################################################################
 
-# Tangency Agent configurations
-DEFAULT_TANGENCY_LOG_RETURNS = True  # Use log returns for calculations
-DEFAULT_TANGENCY_RISK_FREE_RATE = 0.01  # Example risk-free rate for tangency portfolio calculations
-DEFAULT_TANGENCY_METHOD = "default"  # Optimization method for the tangency portfolio
-DEFAULT_TANGENCYAGENT_CONFIG = {
-    "risk_free_rate": DEFAULT_TANGENCY_RISK_FREE_RATE,  # Example risk-free rate
-    "method": DEFAULT_TANGENCY_METHOD,  # Optimization method for the tangency portfolio
-    "log_returns": DEFAULT_TANGENCY_LOG_RETURNS,  # Use log returns for calculations
-}
-
-DEFAULT_TANGENCY_HYPERPARAMETER_SPACE = {
-    # TODO implement different modes
-    #"risk_free_rate": [0.01, 0.02],  # Example risk-free rates for hyperparameter search
-    #"method": ["default", "alternative_method"],  # Different optimization methods for the tangency portfolio
-}
-
-##########################################################################################################
-##########################################################################################################
-##########################################################################################################
-##########################################################################################################
-
 # Classic One Period Markovitz Agent configurations
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = True  # Use log returns for calculations
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET = "Tangency"  # Optimization target: Tangency, MaxExpReturn, MinVariance
@@ -150,17 +130,18 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
 }
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
-    "target": ["Tangency", "MaxExpReturn", "MinVariance"],
-    "risk_model": ["sample_cov", 
-                   "exp_cov", 
-                   "ledoit_wolf", 
-                   "ledoit_wolf_constant_variance", 
-                   "ledoit_wolf_single_factor", 
-                   "ledoit_wolf_constant_correlation",
-                   "oracle_approximating"
-                ],
-    "risk_free_rate": [0.0],
-    "log_returns": [True, False],  # Whether to use log returns for calculations
+    "target": {"type": "categorical", "choices": ["Tangency", "MaxExpReturn", "MinVariance"]},
+    "risk_model": {"type": "categorical", "choices": [
+        "sample_cov", 
+        "exp_cov", 
+        "ledoit_wolf", 
+        "ledoit_wolf_constant_variance", 
+        "ledoit_wolf_single_factor", 
+        "ledoit_wolf_constant_correlation",
+        "oracle_approximating"
+    ]},
+    "risk_free_rate": {"type": "float", "low": 0.0, "high": 0.01},
+    "log_returns": {"type": "categorical", "choices": [True, False]}
 }
 
 ##########################################################################################################
@@ -192,11 +173,11 @@ DEFAULT_DQNAGENT_CONFIG = {
 }
 
 DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": [1e-3, 1e-4],
-    "epsilon_start": [0.1, 0.4],
-    "gamma": [0.95, 0.99],
-    "batch_size": [32, 64],
-    "buffer_max_size": [100000, 500000],
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2},
+    #"batch_size": {"type": "int", "low": 32, "high": 128},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
+    #"buffer_max_size": {"type": "int", "low": 10000, "high": 100000}
 }
 
 ##########################################################################################################
@@ -231,10 +212,11 @@ DEFAULT_SACAGENT_CONFIG = {
 }
 
 DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": [3e-4, 1e-4],
-    "buffer_size": [100000, 500000],
-    "batch_size": [64, 128],
-    "ent_coef": ["auto", "auto_0.1"],
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
+    "buffer_size": {"type": "int", "low": 100000, "high": 500000},
+    "batch_size": {"type": "int", "low": 64, "high": 128},
+    "ent_coef": {"type": "categorical", "choices": ["auto", "auto_0.1"]},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01}
 }
 
 ##########################################################################################################
@@ -268,10 +250,12 @@ DEFAULT_TD3AGENT_CONFIG = {
     "noise_clip": DEFAULT_TD3_NOISE_CLIP  # Clipping range for noise
 }
 
-DEFAULT_TD3_HYPERPARAMETER_SPACE = {
-    "learning_rate": [3e-4, 1e-4],
-    "noise_std": [0.1, 0.2],
-    "noise_clip": [0.3, 0.5],
+DEFAULT_TD3AGENT_HYPERPARAMETER_SPACE = {
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
+    "noise_std": {"type": "float", "low": 0.1, "high": 0.3},
+    "noise_clip": {"type": "float", "low": 0.3, "high": 0.5},
+    "batch_size": {"type": "int", "low": 64, "high": 128},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01}
 }
 
 ##########################################################################################################
@@ -303,6 +287,14 @@ DEFAULT_DDPGAGENT_CONFIG = {
     "verbose": DEFAULT_DDPG_VERBOSITY  # Verbosity level for logging
 }
 
+DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE = {
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01},
+    "batch_size": {"type": "int", "low": 64, "high": 128},
+    "buffer_size": {"type": "int", "low": 100000, "high": 1000000},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99}
+}
+
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
@@ -331,9 +323,11 @@ DEFAULT_PPOAGENT_CONFIG = {
 }
 
 DEFAULT_PPO_HYPERPARAMETER_SPACE = {
-    "learning_rate": [3e-4, 1e-4],
-    "clip_range": [0.1, 0.2],
-    "gae_lambda": [0.9, 0.95],
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
+    "clip_range": {"type": "float", "low": 0.1, "high": 0.3},
+    "gae_lambda": {"type": "float", "low": 0.9, "high": 0.99},
+    "batch_size": {"type": "int", "low": 32, "high": 128},
+    "n_steps": {"type": "int", "low": 512, "high": 2048}
 }
 
 ##########################################################################################################
@@ -371,9 +365,11 @@ DEFAULT_MADDPGAGENT_CONFIG = {
 }
 
 DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
-    "learning_rate": [1e-3, 1e-4],
-    "lambda_": [0.9, 0.95],
-    "loss_fn": ["mse", "weighted_correlation_loss"],
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
+    "lambda_": {"type": "float", "low": 0.9, "high": 0.95},
+    "loss_fn": {"type": "categorical", "choices": ["mse", "weighted_correlation_loss"]},
+    "batch_size": {"type": "int", "low": 64, "high": 128},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01}
 }
 
 
@@ -384,7 +380,6 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 
 
 # Hyperparameter search configuration
-from qf.optim.hyperparameter_search import hyperparameter_search
 from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer 
 
 # Environments

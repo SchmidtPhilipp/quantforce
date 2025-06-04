@@ -5,6 +5,8 @@ from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt import risk_models
 import pandas as pd
 from collections import OrderedDict
+import qf
+from pypfopt import expected_returns
 
 
 class ClassicOnePeriodMarkovitzAgent(Agent):
@@ -35,25 +37,20 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         """
         Trains the agent by calculating portfolio weights based on the selected target and risk model.
         """
+
+        # Get historical data from the environment's dataset
         dataset = self.env.get_dataset()
         self.historical_data = dataset.get_data()
         self.historical_data = self.historical_data.xs('Close', level=1, axis=1)
 
-        # Calculate returns as a pandas DataFrame
-        if self.config["log_returns"]:
-            returns = self.historical_data.pct_change().apply(lambda x: np.log(1 + x))  # Log returns
-        else:
-            returns = self.historical_data.pct_change()  # Simple returns
-
-        # Drop NaN values caused by pct_change
-        returns = returns.dropna()
+        # Calculate expected returns using the selected method
+        expected_return = expected_returns.mean_historical_return(self.historical_data, frequency=365, log_returns=self.config["log_returns"])  # Expected returns
 
         # Compute covariance matrix using the selected risk model
         try:
             cov_matrix = risk_models.risk_matrix(
-                prices=returns,
+                prices=self.historical_data,
                 method=self.config["risk_model"], 
-                returns_data=True, 
                 log_returns=self.config["log_returns"]
             )
         except ValueError:
@@ -63,19 +60,17 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         if not np.all(np.linalg.eigvals(cov_matrix) > 0):
             cov_matrix = risk_models.fix_non_positive_definite(cov_matrix)
 
-        mean_returns = returns.mean(axis=0)
-
         # Select optimization target
         n_assets = cov_matrix.shape[0]
         if self.config["target"] == "Tangency":
-            ef = EfficientFrontier(mean_returns, cov_matrix)
+            ef = EfficientFrontier(expected_return, cov_matrix)
             weights = ef.max_sharpe(risk_free_rate=self.config["risk_free_rate"])
         elif self.config["target"] == "MaxExpReturn":
-            weights = pd.Series(0, index=mean_returns.index)  # Initialize weights as a pandas Series with asset labels
-            weights[mean_returns.idxmax()] = 1.0  # Allocate all weight to the asset with the highest mean return
+            weights = pd.Series(0, index=expected_return.index)  # Initialize weights as a pandas Series with asset labels
+            weights[expected_return.idxmax()] = 1.0  # Allocate all weight to the asset with the highest mean return
             weights = OrderedDict(weights.items())
         elif self.config["target"] == "MinVariance":
-            ef = EfficientFrontier(mean_returns, cov_matrix)
+            ef = EfficientFrontier(expected_return, cov_matrix)
             weights = ef.min_volatility()
         else:
             raise ValueError(f"Unsupported target: {self.config['target']}")
@@ -132,3 +127,23 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         checkpoint = torch.load(path)
         self.weights = checkpoint['weights']
         self.config = checkpoint['config']
+
+    @staticmethod
+    def get_hyperparameter_space():
+        """
+        Returns the hyperparameters of the ClassicOnePeriodMarkovitzAgent.
+
+        Returns:
+            dict: Hyperparameter space for the agent.
+        """
+        return qf.DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE
+    
+    @staticmethod
+    def get_default_config():
+        """
+        Returns the default configuration for the ClassicOnePeriodMarkovitzAgent.
+
+        Returns:
+            dict: Default configuration for the agent.
+        """
+        return qf.DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG

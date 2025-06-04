@@ -46,4 +46,12 @@ class SACAgent(SB3Agent):
             ent_coef=self.config["ent_coef"]
         )
 
+    @staticmethod
+    def get_default_config():
+        return qf.DEFAULT_SACAGENT_CONFIG
+    
+    @staticmethod
+    def get_hyperparameter_space():
+        return qf.DEFAULT_SACAGENT_HYPERPARAMETER_SPACE
+
 

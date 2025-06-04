@@ -43,3 +43,11 @@ class DDPGAgent(SB3Agent):
             verbose=self.config["verbose"],
             device=self.config["device"]
         )
+
+    @staticmethod
+    def get_default_config():
+        return qf.DEFAULT_DDPGAGENT_CONFIG
+    
+    @staticmethod
+    def get_hyperparameter_space():
+        return qf.DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE

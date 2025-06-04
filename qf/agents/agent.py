@@ -105,3 +105,20 @@ class Agent:
         This method can be overridden by subclasses to provide specific visualizations.
         """
         return Warning("This method should be implemented by subclasses.")
+    
+    @staticmethod
+    def get_hyperparameter_space():
+        """
+        Returns the hyperparameters of the agent.
+        This method can be overridden by subclasses to provide specific hyperparameters.
+        """
+        return Warning("This method should be implemented by subclasses.")
+
+    @staticmethod
+    def get_default_config():
+        """
+        Returns the default configuration for the agent.
+        This method can be overridden by subclasses to provide specific default configurations.
+        """
+        return Warning("This method should be implemented by subclasses.")
+    
