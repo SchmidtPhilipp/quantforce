@@ -46,18 +46,14 @@ class MultiAgentPortfolioEnv(TensorEnv):
             "trade_cost_fixed": qf.DEFAULT_TRADE_COST_FIXED,
             "reward_function": qf.DEFAULT_REWARD_FUNCTION,
             "reward_scaling": qf.DEFAULT_REWARD_SCALING,
-            "fianl_reward": qf.DEFAULT_FINAL_REWARD,
+            "final_reward": qf.DEFAULT_FINAL_REWARD,
             "verbosity": qf.VERBOSITY,
             "log_dir": qf.DEFAULT_LOG_DIR,
-            "config_name": qf.DEFUALT_CONFIG_NAME
+            "config_name": qf.DEFUALT_CONFIG_NAME,
         }
 
         # If config is provided, update the default config with the provided config
         self.config = {**default_config, **(config or {})}
-
-
-        self.environment_mode = None
-
 
         self.dataset = TimeBasedDataset(tickers=self.config["tickers"],
                                         start_date=self.config["start_date"],
@@ -84,7 +80,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         # Reward function can be "linear_rate_of_return", "log_return", or "absolute_return", or "sharpe_ratio_wX" where X is the time horizon the sharpe ratio is calculated over
         self.reward_function = self.config["reward_function"]
         self.reward_scaling = self.config["reward_scaling"]
-        self.final_reward = self.config["fianl_reward"]
+        self.final_reward = self.config["final_reward"]
         
         # check if the reward function begins with "sharpe_ratio_w"
         if self.reward_function is not None and self.reward_function.startswith("sharpe_ratio_w"):
@@ -138,16 +134,6 @@ class MultiAgentPortfolioEnv(TensorEnv):
         self.metrics = qf.Metrics()
         self.balance = []
 
-    def set_environment_mode(self, mode):
-        """
-        Sets the mode of the environment for compatibility with different libraries (e.g., Gym, Stable-Baselines3).
-        Parameters:
-            mode (str): The mode of the environment ("gym" or "sb3").
-        """
-        if mode not in ["gym", "sb3"]:
-            raise ValueError("Invalid environment mode. Supported modes are 'gym' and 'sb3'.")
-
-        self.environment_mode = mode.lower()
 
     def get_observation_space(self):
         """
@@ -215,18 +201,16 @@ class MultiAgentPortfolioEnv(TensorEnv):
         self.current_step += 1
         done = self.current_step >= len(self.dataloader)
 
-        if done:
-            done = torch.full((self.n_agents, 1), float(done), dtype=torch.float32, device=self.device)
-            rewards = torch.ones(self.n_agents, device=self.device)*self.final_reward
+
+        if done: 
+            new_prices = old_prices # We use the last prices to calculate the balance a last time such that everything in the df has the same length
             obs = torch.zeros((self.n_agents, *self.observation_space.shape), dtype=torch.float32, device=self.device)
-            self._end_episode()
-            return obs, rewards, done, {}
-    
-        new_prices = torch.tensor(
-            self.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
-            dtype=torch.float32,
-            device=self.device
-        )
+        else:
+            new_prices = torch.tensor(
+                self.dataset.data.xs("Close", axis=1, level=1).iloc[self.current_step + self.obs_window_size - 1].values,
+                dtype=torch.float32,
+                device=self.device
+            )
         
         # 1. Use the current portfolio value
         current_portfolio_value_t = self.current_portfolio_value
@@ -270,25 +254,34 @@ class MultiAgentPortfolioEnv(TensorEnv):
         # 10. Calculate rewards
         if self.reward_function == "linear_rate_of_return":
             rewards = current_portfolio_value_t1/(current_portfolio_value_t + 1e-10) - 1
+
         elif self.reward_function == "log_return":
             rewards = current_portfolio_value_t1 / (current_portfolio_value_t + 1e-10)
             if rewards < 0:
                 raise ValueError("Negative reward detected. log_return is not defined for negative values. You may remove the costs of the transaction.")
             rewards = torch.log(rewards)
+
         elif self.reward_function == "absolute_return":
             rewards = current_portfolio_value_t1 - current_portfolio_value_t
 
         elif self.reward_function == "sharpe_ratio":
-            # We calculate the Sharpe ratio based on the current portfolio and the past stock prices
-            # Update the past portfolio val
-            adjusted_current_step = self.current_step + self.obs_window_size - 1
+            
+            # We have to adjust the current step because we already incremented it. 
+            adjusted_current_step = self.current_step - 1 
+
+            # We build a price matrix that contains the (sharpe time horizon of past prices)x(n_assets)
             past_price_matrix = torch.tensor(
-                self.dataset.data.xs("Close", axis=1, level=1).iloc[(adjusted_current_step - self.sharpe_time_horizon):adjusted_current_step].values,
+                self.dataset.data.xs("Close", axis=1, level=1).iloc[(adjusted_current_step - self.sharpe_time_horizon):(adjusted_current_step)].values,
                 dtype=torch.float32,
                 device=self.device
             ) # shape: [past_steps, n_assets]
-            self.current_portfolio_matrix # shape: [n_agents, n_assets]
+
+            # We take the pastt portfolio matrix which contains the portfolio for each agent ([n_agents, n_assets]) 
+            # and multiply it with the past price matrix to get the portfolio values for each agent in the past assuming 
+            # that the portfolio was held constant during the past steps. This gives us a matrix of strictly positive values
             past_portfolio_values = self.current_portfolio_matrix @ past_price_matrix.T # shape: [n_agents, past_steps]
+
+            # We calculate the past linear returns of this portfolio. 
             past_portfolio_linear_returns = past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-10) - 1
             past_portfolio_log_returns = torch.log(past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-10))
 
@@ -338,8 +331,15 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Resets the environment and returns the first observation.
         """
-        self.current_step = 0
+        self.current_step = 0 + self.sharpe_time_horizon if self.reward_function == "sharpe_ratio" else 0
         self.data_iterator = iter(self.dataloader)
+
+        if self.reward_function == "sharpe_ratio":
+            # we throw away the first self.sharpe_time_horizon steps, because we need at least that many steps to calculate the sharpe ratio
+            for _ in range(self.sharpe_time_horizon):
+                next(self.data_iterator)
+
+
         self.current_cash_vector = torch.full((self.n_agents,), self.initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
         self.current_portfolio_matrix = torch.zeros((self.n_agents, self.n_assets), dtype=torch.float32, device=self.device)
         self.current_portfolio_value = torch.full((self.n_agents,), self.initial_balance / self.n_agents, dtype=torch.float32, device=self.device)
@@ -395,8 +395,12 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Returns the number of timesteps in the environment.
         """
-        return len(self.dataloader)
-    
+        if self.reward_function == "sharpe_ratio":
+            # We need to adjust the number of timesteps because we throw away the first self.sharpe_time_horizon steps
+            return len(self.dataloader) - self.sharpe_time_horizon 
+        else:
+            return len(self.dataloader)
+
     def get_dataset(self):
         """
         Returns the dataset used in the environment.

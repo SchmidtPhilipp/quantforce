@@ -78,8 +78,8 @@ class Agent:
         if print_metrics:
             eval_env.print_metrics()
 
-        avg_reward = np.mean(rewards_matrix.sum(axis=1))
-        std_reward = np.std(rewards_matrix.sum(axis=1))
+        avg_reward = np.mean(rewards_matrix) # remember in rl is the reward R_t not G_t
+        std_reward = np.std(rewards_matrix) 
         print(f"Average reward over {episodes} episodes: {avg_reward}, Standard Deviation: {std_reward}")
         return rewards_matrix
     

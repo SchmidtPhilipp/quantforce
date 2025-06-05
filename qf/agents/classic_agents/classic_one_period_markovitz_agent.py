@@ -43,18 +43,37 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         self.historical_data = dataset.get_data()
         self.historical_data = self.historical_data.xs('Close', level=1, axis=1)
 
-        # Calculate expected returns using the selected method
-        expected_return = expected_returns.mean_historical_return(self.historical_data, frequency=365, log_returns=self.config["log_returns"])  # Expected returns
+        if self.config["risk_model"] == "ML_brownian_motion_logreturn":
+            # Use the MultiAssetBrownianMotionLogReturn model to estimate drift and covariance
+            from qf.agents.classic_agents.utils.ml_brownian_motion_logreturn import MultiAssetBrownianMotionLogReturn
+            delta_t = qf.DEFAULT_INTERVAL 
 
-        # Compute covariance matrix using the selected risk model
-        try:
-            cov_matrix = risk_models.risk_matrix(
-                prices=self.historical_data,
-                method=self.config["risk_model"], 
-                log_returns=self.config["log_returns"]
-            )
-        except ValueError:
-            raise ValueError(f"Unsupported risk model: {self.config['risk_model']}")
+            # Transform string of format "1d", "1h", etc. to float
+            if delta_t.endswith('d'):
+                delta_t = float(delta_t[:-1])
+            elif delta_t.endswith('h'):
+                delta_t = float(delta_t[:-1]) / 24.0
+            elif delta_t.endswith('m'):
+                delta_t = float(delta_t[:-1]) / (24.0 * 60.0)
+            else:
+                raise ValueError(f"Unsupported delta_t format: {delta_t}. Expected format like '1d', '1h', or '1m'.")
+
+            drift, covariance = MultiAssetBrownianMotionLogReturn.estimate_drift_and_covariance(self.historical_data, delta_t)
+            expected_return, cov_matrix = MultiAssetBrownianMotionLogReturn.estimate_linear_return_expectation_and_covariance(drift, covariance, T=1.0)
+            expected_return = pd.Series(expected_return, index=self.historical_data.columns)
+
+        else:
+            # Compute covariance matrix using the selected risk model
+            try:
+                # Calculate expected returns using the selected method
+                expected_return = expected_returns.mean_historical_return(self.historical_data, frequency=365, log_returns=self.config["log_returns"])  # Expected returns
+                cov_matrix = risk_models.risk_matrix(
+                    prices=self.historical_data,
+                    method=self.config["risk_model"], 
+                    log_returns=self.config["log_returns"]
+                )
+            except ValueError:
+                raise ValueError(f"Unsupported risk model: {self.config['risk_model']}")
         
         # Fix the matrix if it is not positive definite
         if not np.all(np.linalg.eigvals(cov_matrix) > 0):

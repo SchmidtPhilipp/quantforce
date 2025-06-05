@@ -1,4 +1,4 @@
-from qf.data import DOWJONES, NASDAQ100, SNP500
+from qf.data.tickers.tickers import NASDAQ100, DOWJONES, SNP500
 
 ### DEFAULTS
 VERBOSITY = 0
@@ -30,8 +30,9 @@ DEFAULT_CACHE_DIR = "../cache"
 DEFAULT_N_AGENTS = 1
 DEFAULT_TRADE_COST_PERCENT = 0.0
 DEFAULT_TRADE_COST_FIXED = 0
-DEFAULT_REWARD_FUNCTION = "log_return" # Options: "linear_rate_of_return", "sharpe_ratio", "log_return"
-DEFAULT_REWARD_SCALING = 100  # Scaling factor for the reward function
+DEFAULT_REWARD_FUNCTION = "sharpe_ratio_w100" # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
+
+DEFAULT_REWARD_SCALING = 1  # Scaling factor for the reward function
 DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
 
 DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG"
@@ -140,7 +141,8 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
         "ledoit_wolf_constant_variance", 
         "ledoit_wolf_single_factor", 
         "ledoit_wolf_constant_correlation",
-        "oracle_approximating"
+        "oracle_approximating",
+        "ML_brownian_motion_logreturn"
     ]},
     "log_returns": {"type": "categorical", "choices": [True, False]}
 }
@@ -163,6 +165,8 @@ DEFAULT_DQN_GAMMA = 0.99
 DEFAULT_DQN_BATCH_SIZE = 32
 DEFAULT_DQN_BUFFER_MAX_SIZE = 100000
 DEFAULT_DQN_EPSILON_START = 0.4
+DEFAULT_DQN_TARGET_MODE = "soft-bellman"  # Options: "hard-bellman" - uses the greedy next q-value, 
+    #  "soft-bellman" - uses the soft Bellman update
 DEFAULT_DQNAGENT_CONFIG = {
     "actor_config": None,  # Use default architecture
     "lr": DEFAULT_DQN_LR,
@@ -170,7 +174,8 @@ DEFAULT_DQNAGENT_CONFIG = {
     "batch_size": DEFAULT_DQN_BATCH_SIZE,
     "buffer_max_size": DEFAULT_DQN_BUFFER_MAX_SIZE,
     "device": DEFAULT_DEVICE,
-    "epsilon_start": DEFAULT_DQN_EPSILON_START
+    "epsilon_start": DEFAULT_DQN_EPSILON_START,
+    "target_mode": DEFAULT_DQN_TARGET_MODE  # Default target mode
 }
 
 DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
@@ -179,6 +184,38 @@ DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
     "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
     #"buffer_max_size": {"type": "int", "low": 10000, "high": 100000}
+}
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+# SPQL Agent configuration
+DEFAULT_SPQL_LR = 1e-3
+DEFAULT_SPQL_GAMMA = 0.99
+DEFAULT_SPQL_BATCH_SIZE = 64
+DEFAULT_SPQL_BUFFER_MAX_SIZE = 100000
+DEFAULT_SPQL_EPSILON_START = 0.4
+DEFAULT_SPQL_TAU = 0.005  # Target network update rate for SPQL
+DEFAULT_SPQL_TEMPERATURE = 1.0  # Temperature parameter for soft updates
+
+DEFAULT_SPQLAGENT_CONFIG = {
+    "actor_config": None,  # Use default architecture
+    "lr": DEFAULT_SPQL_LR,
+    "gamma": DEFAULT_SPQL_GAMMA,
+    "batch_size": DEFAULT_SPQL_BATCH_SIZE,
+    "buffer_max_size": DEFAULT_SPQL_BUFFER_MAX_SIZE,
+    "device": DEFAULT_DEVICE,
+    "epsilon_start": DEFAULT_SPQL_EPSILON_START,
+    "tau": DEFAULT_SPQL_TAU,  # Target network update rate
+}
+
+DEFAULT_SPQLAGENT_HYPERPARAMETER_SPACE = {
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01},
 }
 
 ##########################################################################################################
@@ -348,14 +385,20 @@ DEFAULT_PPO_HYPERPARAMETER_SPACE = {
 ##########################################################################################################
 
 # MADDPG Agent configuration
-DEFAULT_MADDPG_LR = 0.001  # Learning rate
+DEFAULT_MADDPG_LR = 0.0001  # Learning rate
 DEFAULT_MADDPG_GAMMA = 0.99  # Discount factor
 DEFAULT_MADDPG_BATCH_SIZE = 64  # Batch size
 DEFAULT_MADDPG_BUFFER_MAX_SIZE = 1000000  # Replay buffer size
 DEFAULT_MADDPG_TAU = 0.005  # Target network update rate
 DEFAULT_MADDPG_VERBOSITY = 0  # Verbosity level for logging
-DEFAULT_MADDPG_LAMBDA = 0.95  # lambda parameter for weighting the loss function. 
+DEFAULT_MADDPG_LAMBDA = 1  # lambda parameter for weighting the loss function. 
 DEFAULT_MADDPG_LOSS_FN = "mse"  # "MSE" or "weighted_correlation_loss"
+
+DEFAULT_MADDPG_OU_MU = 0.0  # Mean for Ornstein-Uhlenbeck noise
+DEFAULT_MADDPG_OU_THETA = 0.15
+DEFAULT_MADDPG_OU_SIGMA = 0.2  # Sigma for Ornstein-Uhlenbeck noise
+DEFAULT_MADDPG_OU_DT = 1e-2  # Time step for Ornstein-Uhlenbeck noise
+
 
 DEFAULT_MADDPGAGENT_CONFIG = {
     "learning_rate": DEFAULT_MADDPG_LR,
@@ -366,7 +409,11 @@ DEFAULT_MADDPGAGENT_CONFIG = {
     "lambda_": DEFAULT_MADDPG_LAMBDA,  # GAE lambda parameter
     "device": DEFAULT_DEVICE,  # Device to run the computations on
     "verbose": DEFAULT_MADDPG_VERBOSITY,  # Verbosity level for logging
-    "losloss_functions_fn": DEFAULT_MADDPG_LOSS_FN  # Loss function for MADDPG, can be "mse" or "huber"
+    "losloss_functions_fn": DEFAULT_MADDPG_LOSS_FN,  # Loss function for MADDPG, can be "mse" or "huber"
+    "ou_mu": DEFAULT_MADDPG_OU_MU,  # Mean for Ornstein-Uhlenbeck noise
+    "ou_theta": DEFAULT_MADDPG_OU_THETA,  # Theta for Ornstein-Uhlenbeck noise
+    "ou_sigma": DEFAULT_MADDPG_OU_SIGMA,  # Sigma for Ornstein-Uhlenbeck noise
+    "ou_dt": DEFAULT_MADDPG_OU_DT  # Time step for Ornstein-Uhlenbeck noise
 }
 
 DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
@@ -374,7 +421,12 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
     "lambda_": {"type": "float", "low": 0.9, "high": 0.95},
     "loss_fn": {"type": "categorical", "choices": ["mse", "weighted_correlation_loss"]},
     #"batch_size": {"type": "int", "low": 64, "high": 128},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01}
+    "tau": {"type": "float", "low": 0.001, "high": 0.01},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "ou_mu": {"type": "float", "low": -0.1, "high": 0.1},  # Mean for Ornstein-Uhlenbeck noise
+    "ou_theta": {"type": "float", "low": 0.1, "high": 0.2},  # Theta for Ornstein-Uhlenbeck noise
+    "ou_sigma": {"type": "float", "low": 0.1, "high": 0.3},  # Sigma for Ornstein-Uhlenbeck noise
+    "ou_dt": {"type": "float", "low": 1e-3, "high": 1e-2}  # Time step for Ornstein-Uhlenbeck noise
 }
 
 
@@ -390,13 +442,13 @@ from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer
 from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
 
 # Data
-from qf.data import TimeBasedDataset
-from qf.data import load_data
-from qf.data import add_technical_indicators
-from qf.data import get_data
+from qf.data.tickers.tickers import NASDAQ100, DOWJONES, SNP500
+from qf.data.dataset import TimeBasedDataset
+from qf.data.utils.get_data import get_data
 
 # Custom Agents
 from qf.agents.tensor_agents.dqn_agent import DQNAgent
+from qf.agents.tensor_agents.spql_agent import SPQLAgent
 
 # Classic Agents
 from qf.agents.classic_agents.classic_one_period_markovitz_agent import ClassicOnePeriodMarkovitzAgent

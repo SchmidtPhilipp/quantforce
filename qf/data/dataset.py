@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 from .utils.get_data import get_data
-import qf
+import qf as qf
 
 class TimeBasedDataset(Dataset):
     """

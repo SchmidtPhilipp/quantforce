@@ -5,7 +5,7 @@ from optuna.visualization import plot_optimization_history, plot_param_importanc
 
 
 class HyperparameterOptimizer:
-    def __init__(self, agent_classes, optim_config=None, env_class=None, train_env_config=None, eval_env_config=None):
+    def __init__(self, agent_classes, optim_config=None, env_class=None, train_env_config=None, eval_env_config=None, agent_config=None):
         """
         Initialisiert die Hyperparameter-Optimierung.
 
@@ -21,10 +21,36 @@ class HyperparameterOptimizer:
         self.eval_env_config = eval_env_config or qf.DEFAULT_EVAL_ENV_CONFIG
         self.optim_config = optim_config or {"objective": "avg_reward"}  # Standard-Zielmetrik: Durchschnittliche Belohnung
 
+        self.agent_config = agent_config
+
+        # check if agent_config is provided, otherwise use default
+        if agent_config is None:
+            agent_config = []
+            for agent_class in self.agent_classes:
+                agent_config.append(agent_class.get_default_config())
+            
+            self.agent_config = agent_config
+
+        elif isinstance(self.agent_config, list):
+            # check the length of agent_config matches the number of agent_classes
+            if len(self.agent_config) != len(self.agent_classes):
+                raise ValueError("agent_config should be a list of dictionaries, one for each agent class.")
+            # check if each item in agent_config is a dictionary
+            for config in self.agent_config:
+                if not isinstance(config, dict):
+                    raise ValueError("Each item in agent_config should be a dictionary for the corresponding agent class.")
+
+        elif isinstance(self.agent_config, dict):
+            raise ValueError("agent_config should be a list of dictionaries, one for each agent class.")
+        elif not isinstance(self.agent_config, list):
+            raise ValueError("agent_config should be a list of dictionaries, one for each agent class.")
+        
+
+
         self.best_study = None
         self.all_studies = None
 
-    def _objective(self, trial, agent_class, use_tqdm=True):
+    def _objective(self, trial, agent_class, agent_config, use_tqdm=True):
         """
         Objective-Funktion für Optuna.
 
@@ -48,7 +74,7 @@ class HyperparameterOptimizer:
                 raise ValueError(f"Unsupported parameter type: {param_space['type']}")
 
         # Agent-Konfiguration erstellen
-        default_config = agent_class.get_default_config()
+        default_config = agent_config.copy()
         merged_config = {**default_config, **hyperparameters}
 
         # Set the environment's config_name to reflect the current hyperparameter sweep
@@ -63,7 +89,10 @@ class HyperparameterOptimizer:
 
         # Agent evaluieren
         eval_env = self.env_class(tensorboard_prefix="EVAL", config=self.eval_env_config)
-        rewards = agent.evaluate(eval_env, episodes=self.optim_config.get("episodes", 10), use_tqdm=use_tqdm)
+        rewards = agent.evaluate(eval_env, episodes=self.optim_config.get("episodes", 10), use_tqdm=use_tqdm) #shape (n_episodes, n_steps, n_agents)
+
+        # Flatten the rewards to a 1D array for easier processing
+        
 
         # Zielmetrik berechnen
         if self.optim_config["objective"] == "avg_reward":
@@ -93,9 +122,9 @@ class HyperparameterOptimizer:
         best_study = None
         all_studies = []
 
-        for agent_class in self.agent_classes:
+        for agent_class, agent_config in zip(self.agent_classes, self.agent_config):
             study = optuna.create_study(direction="maximize", study_name=f"{agent_class.__name__}_hyperparameter_optimization")
-            study.optimize(lambda trial: self._objective(trial, agent_class), n_trials=n_trials)
+            study.optimize(lambda trial: self._objective(trial, agent_class, agent_config), n_trials=n_trials)
 
             # Append the study to the list of all studies
             all_studies.append(study)

@@ -59,6 +59,20 @@ class Tracker:
             "labels": labels,
         }
 
+    def get_value(self, name):
+        """
+        Retrieves the data for a specific tracked value.
+
+        Parameters:
+            name (str): Name of the tracked value.
+
+        Returns:
+            list: Data for the specified tracked value.
+        """
+        if name not in self.tracked_values:
+            raise ValueError(f"Value '{name}' is not registered.")
+        return self.tracked_values[name]["data"]
+
     def get_labels(self, name):
         """
         Retrieves the labels for a specific tracked value.

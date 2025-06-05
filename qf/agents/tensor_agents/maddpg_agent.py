@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from collections import deque
 
 from ..utils.model_builder import ModelBuilder
 from qf.utils.loss_functions.loss_functions import weighted_mse_correlation_loss
@@ -49,7 +50,11 @@ class MADDPGAgent(Agent):
             "batch_size": qf.DEFAULT_MADDPG_BATCH_SIZE,
             "loss_function": qf.DEFAULT_MADDPG_LOSS_FN,  # Default to None, will use nn.MSELoss if not provided
             "lambda_": qf.DEFAULT_MADDPG_LAMBDA,  # Custom weighting factor for the loss function
-            "buffer_max_size": qf.DEFAULT_MADDPG_BUFFER_MAX_SIZE
+            "buffer_max_size": qf.DEFAULT_MADDPG_BUFFER_MAX_SIZE,
+            "ou_mu": qf.DEFAULT_MADDPG_OU_MU,  # Mean for Ornstein-Uhlenbeck noise
+            "ou_theta": qf.DEFAULT_MADDPG_OU_THETA,  # Theta for Ornstein-Uhlenbeck noise
+            "ou_sigma": qf.DEFAULT_MADDPG_OU_SIGMA,  # Sigma for Ornstein-Uhlenbeck noise
+            "ou_dt": qf.DEFAULT_MADDPG_OU_DT,  # Time step for Ornstein-Uhlenbeck noise
         }
 
         self.config = {**default_config, **(config or {})}
@@ -96,8 +101,8 @@ class MADDPGAgent(Agent):
         #actor_config.append({"type": "softmax", "params": {}})
 
         # Dynamically replace placeholders in the network architecture
-        actor_config = self._replace_placeholders(actor_config, obs_dim, act_dim, n_agents)
-        critic_config = self._replace_placeholders(critic_config, obs_dim, act_dim, n_agents)
+        #actor_config = self._replace_placeholders(actor_config, obs_dim, act_dim, n_agents)
+        #critic_config = self._replace_placeholders(critic_config, obs_dim, act_dim, n_agents)
 
         # Create actor and critic networks
         self.actors = [ModelBuilder(actor_config).build() for _ in range(n_agents)]
@@ -111,43 +116,33 @@ class MADDPGAgent(Agent):
         self.actor_optimizers = [optim.Adam(actor.parameters(), lr=self.lr) for actor in self.actors]
         self.critic_optimizers = [optim.Adam(critic.parameters(), lr=self.lr) for critic in self.critics]
 
-        # Initialize replay memory
-        self.memory = []
+        # Initialize replay memory using deque for efficient operations
+        self.memory = deque(maxlen=self.buffer_max_size)
 
         # Initialize target networks with the same weights as the original networks
         for i in range(n_agents):
             self.target_actors[i].load_state_dict(self.actors[i].state_dict())
             self.target_critics[i].load_state_dict(self.critics[i].state_dict())
 
+        # Initialize Ornstein-Uhlenbeck noise for each agent
+        self.ou_noises = [OrnsteinUhlenbeckNoise(size=act_dim, mu=self.config.get("ou_mu", 0.0),
+                                                    theta=self.config.get("ou_theta", 0.15),
+                                                    sigma=self.config.get("ou_sigma", 0.2),
+                                                    dt=self.config.get("ou_dt", 1e-2)) for _ in range(n_agents)]
+
         if self.verbosity > 0:
-            print(f"MADDPGAgent initialized with {self.n_agents} agents.")
+            print(f"MADDPGAgent initialized with {self.n_agents} agents and replay memory size {self.buffer_max_size}.")
 
-    def set_env_mode(self):
-        return "gym"
 
-    def _replace_placeholders(self, config, obs_dim, act_dim, n_agents):
+
+    def act(self, states: torch.Tensor, epsilon: float = 0.0, use_ou_noise=False) -> torch.Tensor:
         """
-        Replace placeholders in the network architecture with actual dimensions.
-
-        Parameters:
-            config (list): Network architecture configuration.
-            obs_dim (int): Observation space dimension.
-            act_dim (int): Action space dimension.
-            n_agents (int): Number of agents.
-
-        Returns:
-            list: Updated network architecture configuration.
-        """
-
-        return config
-
-    def act(self, states: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
-        """
-        Select actions for each agent based on the current policy (actor network) with epsilon-greedy exploration.
+        Select actions for each agent based on the current policy (actor network) with optional OU noise.
 
         Parameters:
             states (torch.Tensor): A tensor of states for all agents (shape: [n_agents, obs_dim]).
             epsilon (float): Probability of selecting a random action.
+            use_ou_noise (bool): Whether to use Ornstein-Uhlenbeck noise for exploration.
 
         Returns:
             actions (torch.Tensor): A tensor of normalized actions for all agents (shape: [n_agents, act_dim]).
@@ -155,34 +150,37 @@ class MADDPGAgent(Agent):
         actions = []
 
         for i, actor in enumerate(self.actors):
-            state = states[i] # Add batch dimension (shape: [1, obs_dim])
+            state = states[i]  # (shape: [obs_dim])
 
             with torch.no_grad():
-                logits = actor(state)  # Remove batch dimension (shape: [act_dim])
+                logits = actor(state)  # (shape: [act_dim])
 
-            # add simple epsilon decaing noise
-            act_dim = logits.shape[0]
-            action = logits + torch.FloatTensor(act_dim).normal_(-epsilon, epsilon)
+                # Add Ornstein-Uhlenbeck noise or epsilon-decaying noise
+                if use_ou_noise:
+                    noise = torch.FloatTensor(self.ou_noises[i].sample())  # OU noise
+                else:
+                    act_dim = logits.shape[0]
+                    noise = torch.FloatTensor(act_dim).normal_(-epsilon, epsilon)  # Epsilon-decaying noise
 
-            logits = F.softmax(logits, dim=-1)  # Normalize the logits to [0, 1]
-            actions.append(logits)
+                noisy_logits = logits + noise
+                action = F.softmax(noisy_logits, dim=-1)
+
+                actions.append(action)
 
             if self.verbosity > 1:
                 print(f"Agent {i} action (normalized): {logits}")
 
         # Stack actions into a single tensor (shape: [n_agents, act_dim])
-        return torch.stack(actions)
+        return torch.stack(actions)  # shape: [n_agents, act_dim]
 
     def store(self, transition):
         """
         Store a transition in the replay memory.
 
         Parameters:
-            transition (tuple): A tuple containing (states, actions, rewards, next_states).
+            transition (tuple): A tuple containing (states, actions, rewards, next_states, dones).
         """
-        self.memory.append(transition)
-        if len(self.memory) > self.buffer_max_size:
-            self.memory.pop(0)
+        self.memory.append(transition)  # Efficiently adds to the deque
         if self.verbosity > 1:
             print(f"Stored transition. Memory size: {len(self.memory)}")
 
@@ -197,15 +195,16 @@ class MADDPGAgent(Agent):
         progress = tqdm(range(total_timesteps), desc="Training MADDPGAgent") if use_tqdm else range(total_timesteps)
 
         state, _ = self.env.reset()
+        self.reset_noise()  # Reset OU noise
         total_reward = 0
         timestep = 0
 
         for _ in progress:
             # Select actions for each agent
-            actions = self.act(state)
+            actions = self.act(state, use_ou_noise=True)
 
             # Step the environment
-            next_state, rewards, done, _, _ = self.env.step(actions)
+            next_state, rewards, done, _ = self.env.step(actions)
 
             # Store transition in replay memory
             self.store((state, actions, rewards, next_state, done))
@@ -215,63 +214,75 @@ class MADDPGAgent(Agent):
             timestep += 1
 
             # Train the agents
-            self._train()
+            td_error = self._train()
 
             # Reset environment if done
             if done:
                 state, _ = self.env.reset()
+                self.reset_noise()  # Reset OU noise
                 total_reward = 0
 
-            # Update tqdm progress bar
-            if use_tqdm:
-                progress.set_postfix({"Timestep": timestep, "Last Reward": f"{rewards}"})
+            # Report the td_error in the env logger
+            if td_error is not None:
+                for i in range(self.n_agents):
+                    self.env.logger.log_scalar("TRAIN_TD_Error/10*log(TD_Error)", 10*np.log10(np.clip(td_error[i], min=1e-5)), timestep)
+
+
+                td_error = np.mean(td_error) if td_error is not None else "N/A"
+                text = f"Timestep: {timestep:010d}, Last Reward: {rewards.mean().item():+015.2f}, TD Error: {td_error:+015.2f}"
             else:
-                print(f"Timestep: {timestep}, Last Reward: {rewards}")
+                text = f"Timestep: {timestep:010d}, Last Reward: {rewards.mean().item():+015.2f}, TD Error: N/A"
+
+            if use_tqdm:
+                progress.set_postfix(text=text)
+            else:
+                print(f"Timestep: {timestep}, Last Reward: {rewards} TD Error: {td_error if td_error else 'N/A'}")
 
 
     def _train(self):
         """
         Train the agents by sampling a batch of transitions from the replay memory.
+        Returns:
+            list: TD errors for each agent.
         """
         if len(self.memory) < self.batch_size:
-            return
+            return None
 
         # Sample a batch of transitions from the replay memory
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        states = torch.FloatTensor(np.array(states))
-        actions = torch.FloatTensor(np.array(actions))
-        rewards = torch.FloatTensor(np.array(rewards))
-        next_states = torch.FloatTensor(np.array(next_states))
+        states = torch.FloatTensor(np.array(states))            # shape: [batch_size, n_agents, obs_dim]
+        actions = torch.FloatTensor(np.array(actions))          # shape: [batch_size, n_agents, act_dim]
+        rewards = torch.FloatTensor(np.array(rewards))          # shape: [batch_size, n_agents]
+        next_states = torch.FloatTensor(np.array(next_states))  # shape: [batch_size, n_agents, obs_dim]
+
+        td_errors = []  # List to store TD errors for each agent
 
         with torch.no_grad():
             # Get the actions for the next states from the target actors
-            next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)]
+            next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)] # shape: [batch_size, n_agents, act_dim]
 
             # Normalize each agent's actions
             next_actions = [F.softmax(action, dim=-1) for action in next_actions]
 
             # Concatenate normalized actions -> Important removes the list
-            next_actions = torch.cat(next_actions, dim=-1)
+            next_actions = torch.cat(next_actions, dim=-1) # shape: [batch_size, n_agents * act_dim]
 
             # Concatenate next_states and next_actions
-            next_inputs = torch.cat([next_states.view(self.batch_size, -1), next_actions], dim=-1)
+            next_inputs = torch.cat([next_states.view(self.batch_size, -1), next_actions], dim=-1)  # shape: [batch_size, n_agents * obs_dim + n_agents * act_dim]
 
         for i in range(self.n_agents):
             # Update critic
-
             with torch.no_grad():
                 # Compute the target Q value
-                target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_inputs).squeeze()
+                target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_inputs).squeeze()  # shape: [batch_size]
 
-
-            # Concatenate states and actions for the current Q value 
-            # We view here to flatten the tensor because every critic sees the whole state-action space of all agents
-            current_inputs = torch.cat([states.view(self.batch_size, -1), actions.view(self.batch_size, -1)], dim=-1)
+            # Concatenate states and actions for the current Q value
+            current_inputs = torch.cat([states.view(self.batch_size, -1), actions.view(self.batch_size, -1)], dim=-1)  # shape: [batch_size, n_agents * obs_dim + n_agents * act_dim]
 
             # Compute the current Q value
-            current_q = self.critics[i](current_inputs).squeeze()
+            current_q = self.critics[i](current_inputs).squeeze()  # shape: [batch_size]
 
             # Compute the correlation penalty
             with torch.no_grad():
@@ -281,7 +292,7 @@ class MADDPGAgent(Agent):
                         correlation_penality += compute_correlation(actions[:, i], actions[:, j])
 
             # Compute the critic loss using the custom loss function
-            critic_loss = self.lambda_*self.loss_function(current_q, target_q) #+ (1-self.lambda_)*per_sample_correlation_penalty(actions, i)
+            critic_loss = self.lambda_ * self.loss_function(current_q, target_q) + (1 - self.lambda_) * correlation_penality
 
             # Optimize the critic
             self.critic_optimizers[i].zero_grad()
@@ -290,6 +301,10 @@ class MADDPGAgent(Agent):
 
             if self.verbosity > 0:
                 print(f"Agent {i} critic loss: {critic_loss.item()}")
+
+            # Compute TD error for the agent
+            td_error = torch.abs(target_q - current_q).mean().item()
+            td_errors.append(td_error)
 
             # Update actor
             current_actions = [self.actors[j](states[:, j, :]) if j == i else actions[:, j, :] for j in range(self.n_agents)]
@@ -318,6 +333,8 @@ class MADDPGAgent(Agent):
 
             if self.verbosity > 0:
                 print(f"Agent {i} target networks updated.")
+
+        return np.array(td_errors)
 
     def save(self, save_path):
         """
@@ -367,5 +384,43 @@ class MADDPGAgent(Agent):
 
         if self.verbosity > 0:
             print(f"MADDPG agent loaded from {load_path}")
+
+    def reset_noise(self):
+        """
+        Reset the Ornstein-Uhlenbeck noise for all agents.
+        """
+        for noise in self.ou_noises:
+            noise.reset()
+
+class OrnsteinUhlenbeckNoise:
+    def __init__(self, size, mu=0.0, theta=0.15, sigma=0.2, dt=1e-2, x0=None):
+        """
+        Initialize the Ornstein-Uhlenbeck noise process.
+
+        Parameters:
+            size (int): Dimension of the noise.
+            mu (float): Mean of the noise.
+            theta (float): Speed of mean reversion.
+            sigma (float): Volatility of the noise.
+            dt (float): Time step.
+            x0 (float or None): Initial value of the noise.
+        """
+        self.size = size
+        self.mu = mu
+        self.theta = theta
+        self.sigma = sigma
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def reset(self):
+        """Reset the noise to its initial state."""
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros(self.size)
+
+    def sample(self):
+        """Generate a sample of OU noise."""
+        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.size)
+        self.x_prev = x
+        return x
 
 

@@ -9,19 +9,19 @@ from qf.agents.agent import Agent
 import qf as qf
 
 
-# Attention this is Soft-DQN
-class DQNAgent(Agent):
+# Attention this is Soft-SPQL
+class SPQLAgent(Agent):
     def __init__(self, env, config=None):
         super().__init__(env=env)
         
         default_config = {
-                "learning_rate": qf.DEFAULT_DQN_LR,
-                "gamma": qf.DEFAULT_DQN_GAMMA,
-                "batch_size": qf.DEFAULT_DQN_BATCH_SIZE,
-                "buffer_max_size": qf.DEFAULT_DQN_BUFFER_MAX_SIZE,
+                "learning_rate": qf.DEFAULT_SPQL_LR,
+                "gamma": qf.DEFAULT_SPQL_GAMMA,
+                "batch_size": qf.DEFAULT_SPQL_BATCH_SIZE,
+                "buffer_max_size": qf.DEFAULT_SPQL_BUFFER_MAX_SIZE,
                 "device": qf.DEFAULT_DEVICE,
-                "epsilon_start": qf.DEFAULT_DQN_EPSILON_START,
-                "target_mode": qf.DEFAULT_DQN_TARGET_MODE  # Default
+                "epsilon_start": qf.DEFAULT_SPQL_EPSILON_START,
+                "tau": qf.DEFAULT_SPQL_TAU
         }
 
         # Merge default config with provided config
@@ -41,7 +41,7 @@ class DQNAgent(Agent):
         self.n_agents = 1
         # Check if the environment agent settings are compatible
         if hasattr(env, 'n_agents') and env.n_agents != self.n_agents:
-            raise ValueError(f"Environment is configured for {env.n_agents} agents, but DQNAgent is set up for {self.n_agents} agents.")
+            raise ValueError(f"Environment is configured for {env.n_agents} agents, but SPQLAgent is set up for {self.n_agents} agents.")
 
         self.device = self.config["device"]
         # Use ModelBuilder to create the models
@@ -55,7 +55,7 @@ class DQNAgent(Agent):
         self.epsilon_start = self.config["epsilon_start"]
         self.loss_fn = torch.nn.MSELoss()
         self.memory = ReplayBuffer(capacity=self.buffer_max_size)  # Initialize the replay buffer
-        self.target_mode = self.config["target_mode"]
+        self.tau = self.config["tau"]
 
     def act(self, state: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
         """
@@ -85,7 +85,7 @@ class DQNAgent(Agent):
             total_timesteps (int): Total number of timesteps to train the agent.
             use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print training summaries.
         """
-        progress = tqdm(range(total_timesteps), desc="Training DQNAgent") if use_tqdm else range(total_timesteps)
+        progress = tqdm(range(total_timesteps), desc="Training SPQLAgent") if use_tqdm else range(total_timesteps)
 
         state, info = self.env.reset()
         total_reward = 0
@@ -106,22 +106,40 @@ class DQNAgent(Agent):
             total_reward += reward
             timestep += 1
 
-            # Perform training step
-            self._train_step()
+            # Perform training step and calculate TD error
+            td_error = self._train_step()
 
             # Reset environment if done
             if done:
                 state, info = self.env.reset()
                 total_reward = 0
 
-            # Update tqdm progress bar
+            # Report the td_error in the env logger
+            if td_error is not None:
+                for i in range(self.n_agents):
+                    self.env.logger.log_scalar("TRAIN_TD_Error/10*log(TD_Error)", 10*np.log10(np.clip(td_error, min=1e-5)), timestep)
+
+
+                td_error = np.mean(td_error) if td_error is not None else "N/A"
+                text = f"Timestep: {timestep:010d}, Last Reward: {reward.mean().item():+015.2f}, TD Error: {td_error:+015.2f}"
+            else:
+                text = f"Timestep: {timestep:010d}, Last Reward: {reward.mean().item():+015.2f}, TD Error: N/A"
+
             if use_tqdm:
-                progress.set_postfix({"Epsilon": epsilon, "Timestep": timestep, "Last Reward": f"{reward.item():.2f}"})
+                progress.set_postfix(text=text)
+            else:
+                print(f"Timestep: {timestep}, Last Reward: {reward} TD Error: {td_error if td_error else 'N/A'}")
 
     def _train_step(self):
+        """
+        Perform a single training step and calculate TD error.
+
+        Returns:
+            float: TD error for the current training step.
+        """
         if len(self.memory) < self.batch_size:
-            return
-        
+            return None
+
         # Sample a batch from memory
         states, actions, rewards, next_states, _ = self.memory.sample(self.batch_size)
 
@@ -137,27 +155,26 @@ class DQNAgent(Agent):
             rewards = torch.FloatTensor(np.array(rewards)).to(self.device)
             next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
 
+        # Compute Q-values for current states and actions
+        q_values = self.model(states)  # shape: [batch_size, act_dim]
+        q_values_selected = torch.sum(q_values * actions, dim=-1)  # shape: [batch_size]
 
-        q_values = self.model(states)  # shape: [B, 1, n_actions]
-        q_values_selected = torch.sum(q_values * actions, dim=-1)  # shape: [B, 1]
+        with torch.no_grad():
+            # Compute target Q-values using the target model
+            next_q = self.target_model(next_states)  # shape: [batch_size, act_dim]
+            logsumexp_next_q = self.tau * torch.logsumexp(next_q / self.tau, dim=-1)  # shape: [batch_size]
+            target = rewards + self.gamma * logsumexp_next_q  # shape: [batch_size]
 
-        if self.target_mode == "soft-bellman":
-            with torch.no_grad():
-                next_q = self.target_model(next_states)  # shape: [B, 1, n_actions]
-                temperature = 1.0
-                logsumexp_next_q = temperature * torch.logsumexp(next_q / temperature, dim=-1)  # shape: [B, 1]
-                target = rewards + self.gamma * logsumexp_next_q
+        # Compute TD error
+        td_error = torch.abs(target - q_values_selected).mean().item()
 
-        elif self.target_mode == "hard-bellman":
-            with torch.no_grad():
-                next_q = self.target_model(next_states)  # shape: [B, 1, n_actions]
-                max_next_q = next_q.max(dim=-1).values  # shape: [B, 1]
-                target = rewards + self.gamma * max_next_q
-
+        # Compute loss and optimize the model
         loss = self.loss_fn(q_values_selected, target)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        return td_error
 
     def save(self, path):
         """
@@ -168,7 +185,7 @@ class DQNAgent(Agent):
         if path.endswith('.pt'):
             path = path
         else:
-            path = path + '/DQN_Agent.pt'
+            path = path + '/SPQL_Agent.pt'
         torch.save(self.model.state_dict(), path)
 
     def load(self, path):
@@ -183,18 +200,18 @@ class DQNAgent(Agent):
     @staticmethod   
     def get_hyperparameter_space():
         """ 
-        Returns the hyperparameter space for the DQN agent. 
+        Returns the hyperparameter space for the SPQL agent. 
         Returns:
-            dict: Hyperparameter space for the DQN agent.
+            dict: Hyperparameter space for the SPQL agent.
         """
-        return qf.DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE
+        return qf.DEFAULT_SPQLAGENT_HYPERPARAMETER_SPACE
     
     @staticmethod
     def get_default_config():
         """
-        Returns the default configuration for the DQN agent.
+        Returns the default configuration for the SPQL agent.
         Returns:
-            dict: Default configuration for the DQN agent.
+            dict: Default configuration for the SPQL agent.
         """
-        return qf.DEFAULT_DQNAGENT_CONFIG
+        return qf.DEFAULT_SPQLAGENT_CONFIG
 

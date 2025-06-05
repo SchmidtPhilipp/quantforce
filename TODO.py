@@ -3,12 +3,7 @@
 # DONE: Asset Tracker für beliebige anzahl an Episoden implementieren.
 # DONE: Implementiere einen generallen Tracker.
 # DONE: Überprüfe den Dataloader.
-# TODO: Visualize torch gradients
 # DONE: optimize the code for MPS
-# TODO: Achsenbeschriftung im Tracker mitgeben.
-
-# DONE: Überprüfe die Daten auf Aktiensplits. 
-# TODO: Überleg dir ein System um die Ergebnisse zu vergleichen bzw zu labeln. 
 
 # DONE: holdings nennen wir handelsstrategien bzw portfolio
 # TODO; Ein-Periodenmodell um Umschichtungen zu vermeiden.
@@ -21,6 +16,9 @@
 # DONE: Alle ticker herausfinden.
 # DONE: Datamanger implementieren. Sollte alle daten laden können. Vorhandene Daten ergänzen können. etc...
 # TODO: Survival bias umgehen.
+
+# DONE: Überprüfe die Daten auf Aktiensplits. 
+# - Aktiensplits und Dividenden werden automatisch im adjusted Close Preis berücksichtigt. -> wir verwenden yfiance auto adjusted Close Preis.
 
 ##################################################
 # Preprocessor
