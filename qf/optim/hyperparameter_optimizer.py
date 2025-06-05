@@ -5,26 +5,26 @@ from optuna.visualization import plot_optimization_history, plot_param_importanc
 
 
 class HyperparameterOptimizer:
-    def __init__(self, agent_classes, env_class, env_config, eval_env_config, optim_config=None):
+    def __init__(self, agent_classes, optim_config=None, env_class=None, train_env_config=None, eval_env_config=None):
         """
         Initialisiert die Hyperparameter-Optimierung.
 
         Parameters:
             agent_classes (list): Liste der Agent-Klassen, die optimiert werden sollen.
-            env_config (dict): Konfiguration für die Trainingsumgebung.
-            eval_env_config (dict): Konfiguration für die Evaluierungsumgebung.
+            train_env_config (dict): Konfiguration für die Trainingsumgebung.
+            eval_train_env_config (dict): Konfiguration für die Evaluierungsumgebung.
             optim_config (dict, optional): Konfiguration für die Optimierung, z.B. Zielmetrik.
         """
         self.agent_classes = agent_classes
-        self.env_class = env_class
-        self.env_config = env_config
-        self.eval_env_config = eval_env_config
+        self.env_class = env_class or qf.MultiAgentPortfolioEnv
+        self.train_env_config = train_env_config or qf.DEFAULT_TRAIN_ENV_CONFIG
+        self.eval_env_config = eval_env_config or qf.DEFAULT_EVAL_ENV_CONFIG
         self.optim_config = optim_config or {"objective": "avg_reward"}  # Standard-Zielmetrik: Durchschnittliche Belohnung
 
         self.best_study = None
         self.all_studies = None
 
-    def _objective(self, trial, agent_class):
+    def _objective(self, trial, agent_class, use_tqdm=True):
         """
         Objective-Funktion für Optuna.
 
@@ -51,18 +51,19 @@ class HyperparameterOptimizer:
         default_config = agent_class.get_default_config()
         merged_config = {**default_config, **hyperparameters}
 
-        # Trainingsumgebung initialisieren
-        self.env_config["config_name"] = f"{agent_class.__name__}_{trial.number}"
+        # Set the environment's config_name to reflect the current hyperparameter sweep
+        self.train_env_config["config_name"] = f"{agent_class.__name__}{'_'.join([f'{k}_{v}' for k, v in hyperparameters.items()])}"
+        self.eval_env_config["config_name"] = self.train_env_config["config_name"]
 
-        env = self.env_class(tensorboard_prefix="TRAIN", config=self.env_config)
+        env = self.env_class(tensorboard_prefix="TRAIN", config=self.train_env_config)
         agent = agent_class(env, config=merged_config)
 
         # Agent trainieren
-        agent.train(total_timesteps=self.optim_config.get("max_timesteps", qf.DEFAULT_MAX_TIMESTEPS), use_tqdm=False)
+        agent.train(total_timesteps=self.optim_config.get("max_timesteps", qf.DEFAULT_MAX_TIMESTEPS), use_tqdm=use_tqdm)
 
         # Agent evaluieren
         eval_env = self.env_class(tensorboard_prefix="EVAL", config=self.eval_env_config)
-        rewards = agent.evaluate(eval_env, episodes=self.optim_config.get("episodes", 10))
+        rewards = agent.evaluate(eval_env, episodes=self.optim_config.get("episodes", 10), use_tqdm=use_tqdm)
 
         # Zielmetrik berechnen
         if self.optim_config["objective"] == "avg_reward":
@@ -74,7 +75,7 @@ class HyperparameterOptimizer:
         else:
             raise ValueError(f"Unsupported objective: {self.optim_config['objective']}")
 
-    def optimize(self, n_trials=50):
+    def optimize(self, n_trials=50, use_tqdm=True):
         """
         Conducts hyperparameter optimization for all agent classes.
 
@@ -93,7 +94,7 @@ class HyperparameterOptimizer:
         all_studies = []
 
         for agent_class in self.agent_classes:
-            study = optuna.create_study(direction="maximize")
+            study = optuna.create_study(direction="maximize", study_name=f"{agent_class.__name__}_hyperparameter_optimization")
             study.optimize(lambda trial: self._objective(trial, agent_class), n_trials=n_trials)
 
             # Append the study to the list of all studies
@@ -128,17 +129,15 @@ class HyperparameterOptimizer:
         Returns:
             None: Displays the plots for optimization history and parameter importance.
         """
-
         import plotly.io as pio
         pio.renderers.default = 'png'
         import os
 
-
         if save_path is None:
-            save_path = os.getcwd()
-        
-
-        print("\nVisualizing Best Study Results...")
+            save_path = qf.DEFAULT_LOG_DIR + "/hyperparameter_optimization_results"
+            
+        # Ensure the directory exists
+        os.makedirs(save_path, exist_ok=True)
         
         # Plot optimization history for the best study
         opt_history_fig = plot_optimization_history(self.best_study)
@@ -148,13 +147,11 @@ class HyperparameterOptimizer:
         param_importance_fig = plot_param_importances(self.best_study)
         param_importance_fig.write_image(os.path.join(save_path, "param_importance_best_study.png"))
 
-        
-        # Combine studies into a single visualization
-        opt_history_fig_all = plot_optimization_history(self.all_studies)
-        opt_history_fig_all.write_image(os.path.join(save_path, "opt_history_all_studies.png"))
-
-
         #print("Parameter Importance Across All Studies:")
-        param_importance_fig_all = plot_param_importances(self.all_studies)
-        param_importance_fig_all.write_image(os.path.join(save_path, "param_importance_all_studies.png"))
+        for study in self.all_studies:
+            opt_history_fig_all = plot_optimization_history(study)
+            opt_history_fig_all.write_image(os.path.join(save_path, f"opt_history_study_{study.study_name}.png"))
+
+            param_importance_fig_all = plot_param_importances(study)
+            param_importance_fig_all.write_image(os.path.join(save_path, f"param_importance_study_{study.study_name}.png"))
 

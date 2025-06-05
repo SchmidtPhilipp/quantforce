@@ -4,16 +4,19 @@ from qf.data import DOWJONES, NASDAQ100, SNP500
 VERBOSITY = 0
 
 DEFAULT_LOG_DIR = 'runs'
+DEFAULT_CACHE_DIR = '../cache'
 DEFAULT_INITIAL_BALANCE = 1000000
 
 DEFAULT_MAX_TIMESTEPS = 50000  # Default maximum number of timesteps for training
 
 # Default data configuration
 DEFAULT_TICKERS = DOWJONES
-DEFAULT_TRAIN_START = "2000-01-01"
-DEFAULT_TRAIN_END = "2020-01-01"
-DEFAULT_EVAL_START = "2020-01-02"
-DEFAULT_EVAL_END = "2025-01-01"
+DEFAULT_TRAIN_START = "1990-01-01"
+DEFAULT_TRAIN_END = "2015-01-01"
+DEFAULT_EVAL_START = "2015-01-01"
+DEFAULT_EVAL_END = "2020-01-01"
+DEFAULT_TEST_START = "2020-01-01"
+DEFAULT_TEST_END = "2025-01-01"
 
 
 # Default parameters for TimeBasedDataset
@@ -211,9 +214,12 @@ DEFAULT_SACAGENT_CONFIG = {
 
 DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
-    "buffer_size": {"type": "int", "low": 100000, "high": 500000},
-    "batch_size": {"type": "int", "low": 64, "high": 128},
-    "ent_coef": {"type": "categorical", "choices": ["auto", "auto_0.1"]},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "gradient_steps": {"type": "int", "low": 1, "high": 10},
+    "train_freq": {"type": "int", "low": 1, "high": 10},
+    #"buffer_size": {"type": "int", "low": 100000, "high": 500000},
+    #"batch_size": {"type": "int", "low": 64, "high": 128},
+    "ent_coef": {"type": "categorical", "choices": ["auto", "auto_0.01", "auto_0.1", "auto_1", "auto_10", "auto_100"]},
     "tau": {"type": "float", "low": 0.001, "high": 0.01}
 }
 
@@ -252,8 +258,9 @@ DEFAULT_TD3AGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
     "noise_std": {"type": "float", "low": 0.1, "high": 0.3},
     "noise_clip": {"type": "float", "low": 0.3, "high": 0.5},
-    "batch_size": {"type": "int", "low": 64, "high": 128},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01}
+    #"batch_size": {"type": "int", "low": 64, "high": 128},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
 }
 
 ##########################################################################################################
@@ -288,8 +295,8 @@ DEFAULT_DDPGAGENT_CONFIG = {
 DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
     "tau": {"type": "float", "low": 0.001, "high": 0.01},
-    "batch_size": {"type": "int", "low": 64, "high": 128},
-    "buffer_size": {"type": "int", "low": 100000, "high": 1000000},
+    #"batch_size": {"type": "int", "low": 64, "high": 128},
+    #"buffer_size": {"type": "int", "low": 100000, "high": 1000000},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99}
 }
 
@@ -324,7 +331,7 @@ DEFAULT_PPO_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
     "clip_range": {"type": "float", "low": 0.1, "high": 0.3},
     "gae_lambda": {"type": "float", "low": 0.9, "high": 0.99},
-    "batch_size": {"type": "int", "low": 32, "high": 128},
+    #"batch_size": {"type": "int", "low": 32, "high": 128},
     "n_steps": {"type": "int", "low": 512, "high": 2048}
 }
 
@@ -366,7 +373,7 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
     "lambda_": {"type": "float", "low": 0.9, "high": 0.95},
     "loss_fn": {"type": "categorical", "choices": ["mse", "weighted_correlation_loss"]},
-    "batch_size": {"type": "int", "low": 64, "high": 128},
+    #"batch_size": {"type": "int", "low": 64, "high": 128},
     "tau": {"type": "float", "low": 0.001, "high": 0.01}
 }
 
@@ -375,20 +382,6 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
-
-def setDebugMode(debug_mode: bool):
-    """
-    Sets the debug mode for the QF library.
-    
-    Parameters:
-        debug_mode (bool): If True, enables debug mode with additional logging and checks.
-    """
-    if not debug_mode:
-        return
-    
-    print("Debug mode is enabled.")
-    DEFAULT_TICKERS = ["AAPL", "GOOGL"]
-
 
 # Hyperparameter search configuration
 from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer 

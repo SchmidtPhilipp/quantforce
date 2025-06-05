@@ -1,13 +1,21 @@
 import torch
 from torch.utils.data import Dataset
 from .utils.get_data import get_data
+import qf
 
 class TimeBasedDataset(Dataset):
     """
     A PyTorch Dataset for time-based financial data with a sliding window of size t.
     """
 
-    def __init__(self, tickers, start_date, end_date, interval="1d", window_size=60, cache_dir="../cache", indicators=("sma", "rsi", "macd")):
+    def __init__(self, 
+                 tickers, 
+                 start_date, 
+                 end_date, 
+                 interval=qf.DEFAULT_INTERVAL, 
+                 window_size=qf.DEFAULT_WINDOW_SIZE, 
+                 cache_dir=qf.DEFAULT_CACHE_DIR, 
+                 indicators=qf.DEFAULT_INDICATORS):
         """
         Initializes the dataset.
 
