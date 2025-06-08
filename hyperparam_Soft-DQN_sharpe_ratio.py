@@ -7,7 +7,7 @@ def main():
 
     # Hier können Sie die Konfigurationen anpassen, z.B.:
     env_ajustments = {
-        "reward_function": "sharpe_ratio_w100",  # Belohnungsfunktion auf Sharpe Ratio setzen
+        "reward_function": "sharpe_ratio_w10",  # Belohnungsfunktion auf Sharpe Ratio setzen
         "trade_costs": 1,  # Handelskosten auf 0.1% setzen
         "trade_costs_percent": 0.01,  # Handelskosten in Prozent
     }
@@ -21,12 +21,13 @@ def main():
 
     # Liste der Agent-Klassen zur Optimierung
     agent_classes = [qf.SPQLAgent]
+    #agent_classes = [qf.SACAgent]
     env_class = qf.MultiAgentPortfolioEnv
 
     # Optimierungskonfiguration
     optim_config = {
         "objective": "avg_reward",  # Zielmetrik: Durchschnittliche Belohnung minus Standardabweichung
-        "max_timesteps": 50000,  # Maximale Anzahl an Trainings-Timesteps
+        "max_timesteps": 1_000_000,  # Maximale Anzahl an Trainings-Timesteps
         "episodes": 1  # Anzahl der Evaluierungs-Episoden
     }
 
@@ -38,7 +39,7 @@ def main():
                                            optim_config=optim_config)
 
     # Optuna-Optimierung starten
-    results = optimizer.optimize(n_trials=50)  
+    results = optimizer.optimize(n_trials=10)  
 
     # Ergebnisse ausgeben
     print("Beste Agentenklasse:", results["best_agent_class"].__name__)

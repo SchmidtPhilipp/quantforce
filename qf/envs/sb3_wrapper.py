@@ -51,3 +51,15 @@ class SB3Wrapper(gym.Env):
         This method can be overridden by subclasses to provide specific metrics.
         """
         self.env.print_metrics()
+
+    def get_save_dir(self):
+        """
+        Returns the save directory of the environment.
+        """
+        return self.env.save_dir
+    
+    def save_data(self, path):
+        """
+        Saves the environment data to the specified path.
+        """
+        self.env.save_data(path)

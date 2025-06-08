@@ -1,5 +1,4 @@
 from qf.agents.agent import Agent
-import numpy as np
 from qf.envs.sb3_wrapper import SB3Wrapper
 
 class SB3Agent(Agent):
@@ -19,13 +18,12 @@ class SB3Agent(Agent):
 
     def train(self, total_timesteps=100000, use_tqdm=True):
         """
-        Trains the SAC agent for a specified number of episodes using the `learn` method.
+        Trains the SB3 agent for a specified number of timesteps and tracks the TD error.
         Parameters:
-            episodes (int): Number of episodes to train the agent.
-            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
+            total_timesteps (int): Total number of timesteps to train the agent.
+            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print summaries.
         """
-
-        self.model.learn(total_timesteps=total_timesteps, progress_bar=True if use_tqdm else False)
+        self.model.learn(total_timesteps=total_timesteps, progress_bar=True if use_tqdm else False, reset_num_timesteps=False)
 
     def act(self, state, deterministic=True):
         """
@@ -71,3 +69,6 @@ class SB3Agent(Agent):
         agent = agent_class(env)
         agent.model = model
         return agent
+
+
+

@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 
 class Agent:
-    def __init__(self, env):
+    def __init__(self, env, config=None):
         """
         Initializes the agent with the given environment.
         Parameters:
@@ -13,6 +13,7 @@ class Agent:
         self.env = env
         self.obs_dim = env.observation_space.shape[0]
         self.act_dim = env.action_space.shape[0]
+        self.config = config
     
     def train(self, episodes=10, use_tqdm=True):
         """
@@ -81,6 +82,20 @@ class Agent:
         avg_reward = np.mean(rewards_matrix) # remember in rl is the reward R_t not G_t
         std_reward = np.std(rewards_matrix) 
         print(f"Average reward over {episodes} episodes: {avg_reward}, Standard Deviation: {std_reward}")
+
+
+        # End of evaluation save data
+        eval_env.save_data()
+        eval_env.log_metrics(logger=eval_env.logger, run_type="EVAL")
+
+        # Save agent configs
+        if self.config is not None:
+            # Save config as a json file
+            import json
+            with open(eval_env.get_save_path() + "/agent_config.json", "w") as f:
+                json.dump(self.config, f, indent=4)
+
+
         return rewards_matrix
     
     def save(self, path):

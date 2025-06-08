@@ -21,7 +21,8 @@ class SPQLAgent(Agent):
                 "buffer_max_size": qf.DEFAULT_SPQL_BUFFER_MAX_SIZE,
                 "device": qf.DEFAULT_DEVICE,
                 "epsilon_start": qf.DEFAULT_SPQL_EPSILON_START,
-                "tau": qf.DEFAULT_SPQL_TAU
+                "tau": qf.DEFAULT_SPQL_TAU,
+                "temperature": qf.DEFAULT_SPQL_TEMPERATURE,
         }
 
         # Merge default config with provided config
@@ -29,10 +30,12 @@ class SPQLAgent(Agent):
 
         # Use the provided network architecture or a default one
         default_architecture = [
-            {"type": "Linear", "params": {"in_features": self.obs_dim, "out_features": 128}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 128, "out_features": 128}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 128, "out_features": 64}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 64, "out_features": self.act_dim}}
+            {"type": "Linear", "params": {"in_features": self.obs_dim, "out_features": 256}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 256, "out_features": 256}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 256, "out_features": 512}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 512, "out_features": 256}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 256, "out_features": 128}, "activation": "ReLU"},
+            {"type": "Linear", "params": {"in_features": 128, "out_features": self.act_dim}}
         ]
         #actor_config = actor_config or default_architecture
         actor_config = default_architecture
@@ -56,29 +59,26 @@ class SPQLAgent(Agent):
         self.loss_fn = torch.nn.MSELoss()
         self.memory = ReplayBuffer(capacity=self.buffer_max_size)  # Initialize the replay buffer
         self.tau = self.config["tau"]
+        self.temperature = self.config["temperature"]
+
+        self.target_model.load_state_dict(self.model.state_dict())
 
     def act(self, state: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
-        """
-        Gibt eine Wahrscheinlichkeitsverteilung (Länge = act_dim, Summe = 1)
-        """
-        state = state.to(self.device)#.unsqueeze(0)  # [1, obs_dim]
-
+        state = torch.as_tensor(state, device=self.device).unsqueeze(0)
+        T = self.temperature
         with torch.no_grad():
-            logits = self.model(state)  # [1, act_dim]
+            logits = self.model(state).squeeze(0) / T
+            soft_probs = torch.softmax(logits, dim=-1)
 
-            if random.random() < epsilon:
-                # Uniforme Zufallsverteilung
-                probs = torch.rand_like(logits)
-                probs = probs / probs.sum(dim=1, keepdim=True)
-            else:
-                probs = torch.softmax(logits, dim=1)  # Softmax Q → Verteilung
+            uniform_probs = torch.ones_like(soft_probs) / soft_probs.shape[0]
+            probs = (1 - epsilon) * soft_probs + epsilon * uniform_probs
 
-        return probs#.squeeze(0)  # [act_dim]
+        return probs  # shape: [act_dim]
 
     def store(self, transition):
         self.memory.store(transition)
 
-    def train(self, total_timesteps=5000, use_tqdm=True):
+    def train(self, total_timesteps=500_000, use_tqdm=True, patience=10_000, min_delta=1e-3):
         """
         Trains the agent for a specified number of timesteps.
         Parameters:
@@ -91,6 +91,9 @@ class SPQLAgent(Agent):
         total_reward = 0
         epsilon = self.epsilon_start  # Initial epsilon for exploration
         timestep = 0
+
+        best_td_error = float('inf')  # Best TD error observed
+        no_improvement_steps = 0  # Counter for steps without improvement
 
         for _ in progress:
             # Linear epsilon decay
@@ -116,9 +119,17 @@ class SPQLAgent(Agent):
 
             # Report the td_error in the env logger
             if td_error is not None:
-                for i in range(self.n_agents):
-                    self.env.logger.log_scalar("TRAIN_TD_Error/10*log(TD_Error)", 10*np.log10(np.clip(td_error, min=1e-5)), timestep)
+                
+                # Check for early stopping based on TD error
+                if td_error < best_td_error - min_delta:
+                    best_td_error = td_error
+                    no_improvement_steps = 0  # Reset patience counter
+                else:
+                    no_improvement_steps += 1
 
+                # Log TD error for each agent
+                for i in range(self.n_agents):
+                    self.env.logger.log_scalar("TRAIN_model_loss/10*log(TD_Error)", 10*np.log10(np.clip(td_error, min=1e-5)), timestep)
 
                 td_error = np.mean(td_error) if td_error is not None else "N/A"
                 text = f"Timestep: {timestep:010d}, Last Reward: {reward.mean().item():+015.2f}, TD Error: {td_error:+015.2f}"
@@ -129,6 +140,12 @@ class SPQLAgent(Agent):
                 progress.set_postfix(text=text)
             else:
                 print(f"Timestep: {timestep}, Last Reward: {reward} TD Error: {td_error if td_error else 'N/A'}")
+
+
+        # End of training save data
+        self.env.save_data()
+
+        return True
 
     def _train_step(self):
         """
@@ -162,7 +179,7 @@ class SPQLAgent(Agent):
         with torch.no_grad():
             # Compute target Q-values using the target model
             next_q = self.target_model(next_states)  # shape: [batch_size, act_dim]
-            logsumexp_next_q = self.tau * torch.logsumexp(next_q / self.tau, dim=-1)  # shape: [batch_size]
+            logsumexp_next_q = self.temperature * torch.logsumexp(next_q / self.temperature, dim=-1)  # shape: [batch_size]
             target = rewards + self.gamma * logsumexp_next_q  # shape: [batch_size]
 
         # Compute TD error
@@ -172,9 +189,16 @@ class SPQLAgent(Agent):
         loss = self.loss_fn(q_values_selected, target)
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=10.0) # Max norm 5-10
         self.optimizer.step()
 
+        self.soft_update()
+
         return td_error
+    
+    def soft_update(self):
+        for target_param, param in zip(self.target_model.parameters(), self.model.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
 
     def save(self, path):
         """
@@ -186,7 +210,11 @@ class SPQLAgent(Agent):
             path = path
         else:
             path = path + '/SPQL_Agent.pt'
+
+        # Speichern des Modells und Target-Modells
         torch.save(self.model.state_dict(), path)
+        torch.save(self.target_model.state_dict(), path.replace('.pt', '_target.pt'))
+        print(f"Model saved to {path} and target model to {path.replace('.pt', '_target.pt')}")
 
     def load(self, path):
         """
@@ -194,8 +222,14 @@ class SPQLAgent(Agent):
         Parameters:
             path (str): Path to load the model from.
         """
+        # Laden des Modells und Target-Modells
+        if path.endswith('.pt'):
+            path = path
+        else:
+            path = path + '/SPQL_Agent.pt'
         self.model.load_state_dict(torch.load(path, map_location=self.device))
-        self.model.to(self.device)
+        self.target_model.load_state_dict(torch.load(path.replace('.pt', '_target.pt'), map_location=self.device))
+        print(f"Model loaded from {path} and target model from {path.replace('.pt', '_target.pt')}")
 
     @staticmethod   
     def get_hyperparameter_space():

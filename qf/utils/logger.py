@@ -29,6 +29,15 @@ class Logger:
     def next_step(self):
         self.step += 1
 
+    def record(self, name, value, step=None):
+        """
+        Record a scalar value in TensorBoard.
+        :param name: Name of the scalar.
+        :param value: Value to log.
+        :param step: Step number (optional).
+        """
+        self.log_scalar(name, value, step)
+
     def log_metrics(self, metrics_dict):
         for key, values in metrics_dict.items():
             arr = np.array(values)

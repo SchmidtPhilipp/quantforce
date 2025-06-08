@@ -7,7 +7,7 @@ DEFAULT_LOG_DIR = 'runs'
 DEFAULT_CACHE_DIR = '../cache'
 DEFAULT_INITIAL_BALANCE = 1000000
 
-DEFAULT_MAX_TIMESTEPS = 50000  # Default maximum number of timesteps for training
+DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for training
 
 # Default data configuration
 DEFAULT_TICKERS = DOWJONES
@@ -209,13 +209,27 @@ DEFAULT_SPQLAGENT_CONFIG = {
     "device": DEFAULT_DEVICE,
     "epsilon_start": DEFAULT_SPQL_EPSILON_START,
     "tau": DEFAULT_SPQL_TAU,  # Target network update rate
+    "temperature": DEFAULT_SPQL_TEMPERATURE  # Temperature parameter for soft updates
+}
+
+DEFAULT_SPQLAGENT_CONFIG_OPTIMIZED = {
+    "actor_config": None,  # Use default architecture
+    "lr": 0.005511452523855128,
+    "gamma": 0.8923961400174644,
+    "batch_size": DEFAULT_SPQL_BATCH_SIZE,
+    "buffer_max_size": DEFAULT_SPQL_BUFFER_MAX_SIZE,
+    "device": DEFAULT_DEVICE,
+    "epsilon_start": 0.4140285477731602,
+    "temperature": 0.0022636670850494545,  # Target network update rate
+    "tau": DEFAULT_SPQL_TAU  # Target network update rate
 }
 
 DEFAULT_SPQLAGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
     "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01},
+    "tau": {"type": "float", "low": 0.001, "high": 0.05},
+    "temperature": {"type": "float", "low": 0.001, "high": 1},
 }
 
 ##########################################################################################################

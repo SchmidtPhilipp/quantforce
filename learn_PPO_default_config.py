@@ -3,21 +3,25 @@ import qf as qf
 
 def main():
 
-    log_dir = "runs_test"
+    log_dir = "runs_base_config"
+    config_name = "PPOAgent_default_config"
 
-    qf.start_tensorboard(logdir=log_dir, port=6007)
+    qf.start_tensorboard(logdir=log_dir, port=6009)
 
     qf.DEFAULT_EVAL_ENV_CONFIG["log_dir"] = log_dir
     qf.DEFAULT_TRAIN_ENV_CONFIG["log_dir"] = log_dir
-    qf.DEFAULT_TRAIN_ENV_CONFIG["config_name"] = "MADDPGAgent"
-    qf.DEFAULT_EVAL_ENV_CONFIG["config_name"] = "MADDPGAgent"
+    qf.DEFAULT_TRAIN_ENV_CONFIG["config_name"] = config_name 
+    qf.DEFAULT_EVAL_ENV_CONFIG["config_name"] = qf.DEFAULT_TRAIN_ENV_CONFIG["config_name"]
 
     env = qf.MultiAgentPortfolioEnv(tensorboard_prefix="TRAIN", config=qf.DEFAULT_TRAIN_ENV_CONFIG)
 
-    agent = qf.MADDPGAgent(env, config=qf.DEFAULT_MADDPGAGENT_CONFIG)
+    agent = qf.PPOAgent(
+        env=env,
+        config=qf.DEFAULT_PPOAGENT_CONFIG,
+    )
 
     # approximate the training steps
-    agent.train(total_timesteps=50000, use_tqdm=True)
+    agent.train(total_timesteps=100_000, use_tqdm=True)
 
     eval_env = qf.MultiAgentPortfolioEnv(tensorboard_prefix="EVAL", config=qf.DEFAULT_EVAL_ENV_CONFIG)
     agent.evaluate(eval_env, episodes=1)

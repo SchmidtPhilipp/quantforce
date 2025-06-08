@@ -44,6 +44,9 @@ class DDPGAgent(SB3Agent):
             device=self.config["device"]
         )
 
+        from .td3_agent import train_TD3_with_TD_error_logging
+        self.model.train = lambda gradient_steps, batch_size=64: train_TD3_with_TD_error_logging(self.model, gradient_steps, batch_size)
+
     @staticmethod
     def get_default_config():
         return qf.DEFAULT_DDPGAGENT_CONFIG

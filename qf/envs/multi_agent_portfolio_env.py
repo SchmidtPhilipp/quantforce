@@ -448,10 +448,8 @@ class MultiAgentPortfolioEnv(TensorEnv):
         # Record the values
         self.tracker.record_step(**values)
 
-    def save_and_close(self):
+    def save_data(self):
         import os
-        # Close the loggers
-        self.logger.close()
 
         # Save tracker data
         self.tracker.save(self.save_dir)
