@@ -160,7 +160,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         Returns:
             obs (torch.Tensor): A tensor of observations for all agents.
         """
-        current_observations = next(self.data_iterator).squeeze(0).to(self.device)  # Move to device
+        current_observations = next(self.data_iterator).squeeze(0).to(self.device) 
         current_observations = current_observations.flatten()
         current_observations = current_observations.repeat(self.n_agents, 1)
 
@@ -424,6 +424,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         #tracker.register_value("asset_holdings",shape=(self.n_agents, self.n_assets),description="Asset holdings per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.tickers])
         self.tracker.register_value("balance", shape=(1,), description="Environment balance", dimensions=["timesteps"], labels=[["balance"]])
         #tracker.register_value("actor_balance",shape=(self.n_agents,),description="Actor balances",dimensions=["timesteps", "agents"],labels=[range(self.n_agents)])
+        self.tracker.register_value("date", shape=(1,), description="Current date", dimensions=["timesteps"], labels=[["date"]])
 
     def record_data(self, action=None, reward=None):
 
@@ -444,6 +445,8 @@ class MultiAgentPortfolioEnv(TensorEnv):
             values["actor_balance"] = self.current_portfolio_value
         if "balance" in values_to_record:
             values["balance"] = self.get_portfolio_value().unsqueeze(0)
+        if "date" in values_to_record:
+            values["date"] = torch.tensor([self.dataset.data.index[self.current_step + self.obs_window_size - 1]], dtype=torch.float32, device=self.device)
 
         # Record the values
         self.tracker.record_step(**values)
@@ -464,7 +467,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         metrics_path = os.path.join(self.save_dir, "metrics")
         self.metrics.save(metrics_path)
 
-    def get_save_path(self):
+    def get_save_dir(self):
         """
         Returns the path where the environment data is saved.
         
@@ -472,6 +475,27 @@ class MultiAgentPortfolioEnv(TensorEnv):
             str: Path to the saved environment data.
         """
         return self.save_dir
+    
+    def log_metrics(self, logger=None, run_type=None):
+        """
+        Logs the metrics of the environment at a specific step.
         
+        Parameters:
+            logger (Logger): Logger instance to log the metrics.
+            run_type (str): Type of run (e.g., "train", "eval").
+        """
+        if logger is None:
+            logger = self.logger
 
+        self.metrics.log(logger=logger, run_type=run_type)
+
+    def get_logger(self):
+        """
+        Returns the logger instance for the environment.
+
+        Returns:
+            Logger: Logger instance.
+        """
+        return self.logger
+        
 

@@ -172,7 +172,7 @@ def train_PPO_with_TD_error_logging(self) -> None:
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/entropy_loss", np.mean(entropy_losses), step=self._n_updates)
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/policy_gradient_loss", np.mean(pg_losses), step=self._n_updates)
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/value_loss", np.mean(value_losses), step=self._n_updates)
-        self.env.envs[0].env.env.logger.record("TRAIN_model_loss/10*log(TD_Error)", 10 * np.log10(np.mean(td_errors)), step=self._n_updates)
+        self.env.envs[0].env.env.logger.record("TRAIN_model_loss/10*log(TD_Error)", 10 * np.log10(np.mean(td_errors)), step=self._n_updates*self.n_epochs)
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/approx_kl", np.mean(approx_kl_divs), step=self._n_updates)
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/clip_fraction", np.mean(clip_fractions), step=self._n_updates)
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/loss", loss.item(), step=self._n_updates)

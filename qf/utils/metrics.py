@@ -8,11 +8,13 @@ def calculate_returns(balances):
     returns = balances[1:] / (balances[:-1] + 1e-8) - 1   
     return returns
 
-def sharpe_ratio(returns, risk_free_rate=0.0):
+def sharpe_ratio(returns, risk_free_rate=0.0, periods_per_year=365):
     if len(returns) == 0:
-        return 0.0  # Return 0 if no returns are available
+        return 0.0
     excess_returns = returns - risk_free_rate
-    return np.mean(excess_returns) / (np.std(excess_returns) + 1e-8)   
+    mean_excess = np.mean(excess_returns)
+    std_excess = np.std(excess_returns) + 1e-8
+    return (mean_excess / std_excess) * np.sqrt(periods_per_year)
 
 def sortino_ratio(returns, risk_free_rate=0.0):
     if len(returns) == 0:
@@ -29,7 +31,7 @@ def max_drawdown(balances):
     peak = np.maximum.accumulate(balances)
     drawdown = (balances - peak) / (peak + 1e-8)   
     return np.min(drawdown)
-
+ 
 def volatility(returns):
     if len(returns) == 0:
         return 0.0  # Return 0 if no returns are available
@@ -116,7 +118,7 @@ class Metrics:
             else:
                 print(f"{name.capitalize():<12s}: {stats['mean']:>8.3f} ± {stats['std']:>5.3f}")
 
-    def log_metrics(self, logger, run_type="train"):
+    def log(self, logger, run_type="train"):
         """
         Log metrics using a logger.
 

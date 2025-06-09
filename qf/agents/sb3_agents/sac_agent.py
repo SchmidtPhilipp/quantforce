@@ -130,7 +130,16 @@ def train_SAC_with_TD_error_logging(self, gradient_steps: int, batch_size: int =
         current_q_values = self.critic(replay_data.observations, replay_data.actions)
 
         # Compute TD error
-        td_error = th.abs(target_q_values - current_q_values[0]).mean().item() # This line is added
+        sac_td_error = th.abs(target_q_values - current_q_values[0]).mean().item() # This line is added
+
+        with th.no_grad():
+            next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions), dim=1)
+            next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
+            # 👉 KEIN Entropie-Term hier:
+            corrected_target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
+
+        # TD Error "wie bei Q-Learning"
+        td_error = th.abs(corrected_target_q_values - current_q_values[0]).mean().item()
 
         # Compute critic loss
         critic_loss = 0.5 * sum(F.mse_loss(current_q, target_q_values) for current_q in current_q_values)
@@ -167,6 +176,7 @@ def train_SAC_with_TD_error_logging(self, gradient_steps: int, batch_size: int =
     if len(ent_coef_losses) > 0:
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/ent_coef_loss", np.mean(ent_coef_losses))        
     self.env.envs[0].env.env.logger.record("TRAIN_model_loss/10*log(TD_Error)", 10*np.log10(td_error), step=self._n_updates)
+    self.env.envs[0].env.env.logger.record("TRAIN_model_loss/10*log(SAC_TD_Error)", 10*np.log10(sac_td_error), step=self._n_updates)
     if len(actor_losses) > 0:
         self.env.envs[0].env.env.logger.record("TRAIN_model_loss/actor_loss", np.mean(actor_losses), step=self._n_updates)
     self.env.envs[0].env.env.logger.record("TRAIN_model_loss/critic_loss", np.mean(critic_losses), step=self._n_updates)

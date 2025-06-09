@@ -52,14 +52,27 @@ class SB3Wrapper(gym.Env):
         """
         self.env.print_metrics()
 
+    def log_metrics(self, logger=None, run_type=None):
+        """
+        Logs the metrics of the environment at a specific step.
+        This method can be overridden by subclasses to provide specific logging functionality.
+        """
+        self.env.log_metrics(logger=logger, run_type=run_type)
+
     def get_save_dir(self):
         """
         Returns the save directory of the environment.
         """
         return self.env.save_dir
     
-    def save_data(self, path):
+    def save_data(self):
         """
         Saves the environment data to the specified path.
         """
-        self.env.save_data(path)
+        self.env.save_data()
+
+    def get_logger(self):
+        """
+        Returns the logger associated with the environment.
+        """
+        return self.env.logger

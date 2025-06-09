@@ -86,13 +86,13 @@ class Agent:
 
         # End of evaluation save data
         eval_env.save_data()
-        eval_env.log_metrics(logger=eval_env.logger, run_type="EVAL")
+        eval_env.log_metrics(logger=eval_env.get_logger(), run_type="EVAL")
 
         # Save agent configs
         if self.config is not None:
             # Save config as a json file
             import json
-            with open(eval_env.get_save_path() + "/agent_config.json", "w") as f:
+            with open(eval_env.get_save_dir() + "/agent_config.json", "w") as f:
                 json.dump(self.config, f, indent=4)
 
 
