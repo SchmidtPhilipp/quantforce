@@ -1,7 +1,8 @@
 # Import the root folder of this folder
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Include ../../ to access the get_data and tickers modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../"*2)))
 import qf as qf
 
 def main():
@@ -21,7 +22,6 @@ def main():
     qf.DEFAULT_EVAL_ENV_CONFIG["reward_scaling"] = 100
 
 
-
     config = {
         "policy": "MlpPolicy",  # Default policy architecture
         "learning_rate": qf.DEFAULT_SAC_LR,
@@ -33,7 +33,11 @@ def main():
         "gradient_steps": 4,  # Number of gradient steps per training iteration
         "device": qf.DEFAULT_DEVICE,  # Device to run the computations on
         "ent_coef": "0.2",  # Entropy coefficient for exploration
-        "verbose": qf.DEFAULT_SAC_VERBOSITY  # Verbosity level for logging
+        "verbose": qf.DEFAULT_SAC_VERBOSITY,  # Verbosity level for logging
+        "action_noise": qf.DEFAULT_SAC_ACTION_NOISE,  # Action noise for exploration
+        "action_noise_sigma_init": qf.DEFAULT_SAC_ACTION_NOISE_SIGMA_INIT,  # Initial action noise sigma
+        "action_noise_sigma_final": qf.DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL,  # Final action noise sigma
+        "action_noise_decay_steps": qf.DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS  # Decay steps for action noise
     }
 
     env = qf.MultiAgentPortfolioEnv(tensorboard_prefix="TRAIN", config=qf.DEFAULT_TRAIN_ENV_CONFIG)

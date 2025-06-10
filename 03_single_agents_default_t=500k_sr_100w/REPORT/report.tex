@@ -1,0 +1,106 @@
+
+    \documentclass[a4paper,
+        fleqn,            % Linksbündige Gleichungen
+        12pt,             % Standard-Schriftgröße
+        ngerman,          % Deutsche Sprache
+        oneside,          % Doppelseitiges Layout
+        chapterentrydots=true,  % Punkte in Inhaltsverzeichnis für Kapitel
+        parskip=half      % Halber Zeilenabstand zwischen Absätzen
+        ]{article}
+    \usepackage{graphicx}   % Für Grafiken
+    \usepackage{float}      % Für die Verwendung von [H] in \begin{figure}
+    \usepackage{hyperref}   % Für Hyperlinks im PDF
+    \hypersetup{
+        colorlinks=true,
+        linkcolor=blue,
+        urlcolor=cyan,
+    }
+    \usepackage{booktabs}   % Für bessere Tabellen
+    \usepackage{pgf}        % Für die Verwendung von .pgf-Dateien
+    \usepackage{pgfplots}   % Für die Verwendung von pgfplots
+    \usepackage{lmodern}    % Verbessert die Schriftart
+    \usepackage{import}     % Importiere die pgf-Datei
+    \def\mathdefault#1{#1}  % Verhindert Fehler bei der Verwendung von \mathdefault
+    \pgfplotsset{compat=1.18}  % Setze die Kompatibilitätsversion
+    \usepackage{amsmath}    % Für mathematische Formeln
+    \usepackage{amssymb}    % Für mathematische Symbole
+    
+    \usepackage[a4paper, % Setze das Papierformat auf A4
+    left=2cm, % Linker Rand
+    right=2cm, % Rechter Rand
+    top=1cm, % Oberer Rand
+    bottom=1cm, % Unterer Rand
+    includehead,  % Kopfzeilen einbeziehen
+    includefoot, % Kopf- und Fußzeilen einbeziehen
+    nomarginpar,% We don't want any margin paragraphs
+    textwidth=10cm,% Set \textwidth to 10cm
+    headheight=10mm,% Set \headheight to 10mm
+    ]{geometry}
+    \usepackage{fancyhdr}
+    \pagestyle{fancy}
+    \fancyhead{} % clear all header fields
+    \fancyfoot{} % clear all footer fields
+    \fancyfoot[LE,RO]{\thepage}
+    \fancyhead[LE]{\leftmark} % left even page
+    \fancyhead[RO]{\rightmark} % right odd page
+    
+            \begin{document}
+    \title{Report}
+    \date{\today}
+    \maketitle
+    \newpage
+    \tableofcontents
+    \newpage
+    
+    \begin{figure}[H]
+        \centering
+        \input{REPORT/portfolio_value_paper.pgf}
+        \caption{}
+        \label{fig:portfolio_value_paper}
+    \end{figure}
+    
+
+    \begin{figure}[H]
+        \centering
+        \input{REPORT/portfolio_value_beamer.pgf}
+        \caption{}
+        \label{fig:portfolio_value_beamer}
+    \end{figure}
+    
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccccc}
+\toprule
+Metric & SPQL & PPO & TD3 & DDPG & SAC & Tangency \\
+\midrule
+Sharpe Ratio & 1.587 & 1.086 & 1.426 & 1.307 & 1.468 & 1.407 \\
+Sortino Ratio & 0.092 & 0.062 & 0.079 & 0.074 & 0.082 & 0.080 \\
+Max Drawdown & -24.84 \% & -17.77 \% & -14.48 \% & -21.04 \% & -15.93 \% & -14.17 \% \\
+Annualized Volatility & 17.99 \% & 12.99 \% & 11.85 \% & 15.72 \% & 13.28 \% & 13.10 \% \\
+Cumulative Return & 256.97 \% & 87.13 \% & 115.01 \% & 149.14 \% & 141.10 \% & 129.50 \% \\
+Annualized Return & 30.88 \% & 14.17 \% & 17.57 \% & 21.29 \% & 20.45 \% & 19.21 \% \\
+Calmar Ratio & 1.243 & 0.797 & 1.213 & 1.012 & 1.284 & 1.356 \\
+\bottomrule
+\end{tabular}
+\caption{Metrics Table}
+\label{tab:metrics_table}
+\end{table}
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|c|c|c|c|}
+\toprule
+\rotatebox{90}{Name} & \rotatebox{90}{Sharpe Ratio} & \rotatebox{90}{Sortino Ratio} & \rotatebox{90}{Max Drawdown} & \rotatebox{90}{Annualized Volatility} & \rotatebox{90}{Cumulative Return} & \rotatebox{90}{Annualized Return} & \rotatebox{90}{Calmar Ratio} \\
+\midrule
+SPQL & 1.587 & 0.092 & -24.84 \% & 17.99 \% & 256.97 \% & 30.88 \% & 1.243 \\
+PPO & 1.086 & 0.062 & -17.77 \% & 12.99 \% & 87.13 \% & 14.17 \% & 0.797 \\
+TD3 & 1.426 & 0.079 & -14.48 \% & 11.85 \% & 115.01 \% & 17.57 \% & 1.213 \\
+DDPG & 1.307 & 0.074 & -21.04 \% & 15.72 \% & 149.14 \% & 21.29 \% & 1.012 \\
+SAC & 1.468 & 0.082 & -15.93 \% & 13.28 \% & 141.10 \% & 20.45 \% & 1.284 \\
+Tangency & 1.407 & 0.080 & -14.17 \% & 13.10 \% & 129.50 \% & 19.21 \% & 1.356 \\
+\bottomrule
+\end{tabular}
+\caption{Metrics Table (Transposed)}
+\label{tab:metrics_table_transposed}
+\end{table}
+    \end{document}
+    

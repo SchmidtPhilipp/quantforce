@@ -6,6 +6,36 @@ import torch.nn.functional as F
 from stable_baselines3.common.utils import polyak_update
 import numpy as np
 
+import numpy as np
+from stable_baselines3.common.noise import ActionNoise
+
+class DecayingNormalActionNoise(ActionNoise):
+    def __init__(self, mean, sigma_init, sigma_final, decay_steps):
+        """
+        Gaussian action noise with linear decay over time.
+
+        :param mean: Mean of the noise (usually zeros)
+        :param sigma_init: Initial standard deviation
+        :param sigma_final: Final standard deviation
+        :param decay_steps: Number of steps over which to decay sigma
+        """
+        self.mean = mean
+        self.sigma_init = sigma_init
+        self.sigma_final = sigma_final
+        self.decay_steps = decay_steps
+        self.n_steps = 0
+
+    def __call__(self):
+        # Linearly decaying sigma
+        decay_ratio = min(self.n_steps / self.decay_steps, 1.0)
+        sigma = self.sigma_init * (1 - decay_ratio) + self.sigma_final * decay_ratio
+        self.n_steps += 1
+        return np.random.normal(self.mean, sigma)
+
+    def reset(self):
+        self.n_steps = 0
+
+
 class SACAgent(SB3Agent):
     def __init__(self, env, config=None):
         """
@@ -28,7 +58,11 @@ class SACAgent(SB3Agent):
             "gradient_steps": qf.DEFAULT_SAC_GRADIENT_STEPS,  # Number of gradient steps per training iteration
             "device": qf.DEFAULT_DEVICE,  # Device to run the computations on
             "ent_coef": qf.DEFAULT_SAC_ENT_COEF,  # Automatic entropy coefficient adjustment
-            "verbose": qf.DEFAULT_SAC_VERBOSITY # Verbosity level for logging
+            "verbose": qf.DEFAULT_SAC_VERBOSITY, # Verbosity level for logging
+            "action_noise": qf.DEFAULT_SAC_ACTION_NOISE,  # Action noise for exploration
+            "action_noise_sigma_init": qf.DEFAULT_SAC_ACTION_NOISE_SIGMA_INIT,  # Initial action noise sigma
+            "action_noise_sigma_final": qf.DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL,  # Final action noise sigma
+            "action_noise_decay_steps": qf.DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS  # Decay steps for action noise
         }
 
         # Merge default config with provided config
@@ -48,7 +82,13 @@ class SACAgent(SB3Agent):
             gradient_steps=self.config["gradient_steps"],
             verbose=self.config["verbose"],
             device=self.config["device"],
-            ent_coef=self.config["ent_coef"]
+            ent_coef=self.config["ent_coef"],
+            action_noise=DecayingNormalActionNoise(
+                mean=np.zeros(self.env.action_space.shape[0]),
+                sigma_init=config["action_noise_sigma_init"],
+                sigma_final=config["action_noise_sigma_final"],
+                decay_steps=config["action_noise_decay_steps"]
+            ) if "action_noise" in self.config else None
         )
 
 

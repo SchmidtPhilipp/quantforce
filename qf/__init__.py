@@ -249,6 +249,12 @@ DEFAULT_SAC_TRAIN_FREQ = 1  # Frequency of training steps for SAC
 DEFAULT_SAC_ENT_COEF = "auto_0.1"  # Automatic entropy coefficient adjustment for SAC
 DEFAULT_SAC_VERBOSITY = 1  # Verbosity level for logging
 
+# Action Noise
+DEFAULT_SAC_ACTION_NOISE = True  # Whether to use action noise for exploration
+DEFAULT_SAC_ACTION_NOISE_SIGMA_INIT = 0.2  # Standard deviation of action noise
+DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL = 0   # Final action noise sigma
+DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS = 100_000
+
 DEFAULT_SACAGENT_CONFIG = {
     "policy": "MlpPolicy",  # Default policy architecture
     "learning_rate": DEFAULT_SAC_LR,
@@ -260,18 +266,23 @@ DEFAULT_SACAGENT_CONFIG = {
     "gradient_steps": DEFAULT_SAC_GRADIENT_STEPS,  # Number of gradient steps per training iteration
     "device": DEFAULT_DEVICE,  # Device to run the computations on
     "ent_coef": DEFAULT_SAC_ENT_COEF,  # Automatic entropy coefficient adjustment
-    "verbose": DEFAULT_SAC_VERBOSITY  # Verbosity level for logging
+    "verbose": DEFAULT_SAC_VERBOSITY,  # Verbosity level for logging
+    "action_noise": DEFAULT_SAC_ACTION_NOISE,  # Whether to use action noise for exploration
+    "action_noise_sigma_init": DEFAULT_SAC_ACTION_NOISE_SIGMA_INIT,  # Initial standard deviation of action noise
+    "action_noise_sigma_final": DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL,  # Final standard deviation of action noise
+    "action_noise_decay_steps": DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS  # Number of steps for action noise decay
 }
 
 DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
+    "learning_rate": {"type": "float", "low": 1e-5, "high": 3e-3},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
-    "gradient_steps": {"type": "int", "low": 1, "high": 10},
-    "train_freq": {"type": "int", "low": 1, "high": 10},
-    #"buffer_size": {"type": "int", "low": 100000, "high": 500000},
-    #"batch_size": {"type": "int", "low": 64, "high": 128},
-    "ent_coef": {"type": "categorical", "choices": ["auto", "auto_0.01", "auto_0.1", "auto_1", "auto_10", "auto_100"]},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01}
+    "gradient_steps": {"type": "int", "low": 1, "high": 16},
+    "train_freq": {"type": "int", "low": 1, "high": 16},
+    "ent_coef": {"type": "categorical", "choices": ["auto", "auto_0.01", "auto_0.1", "auto_1", "auto_10", "auto_100", 0.01, 0.1, 1, 10, 100]},
+    "tau": {"type": "float", "low": 0.001, "high": 0.2},
+    "action_noise": {"type": "categorical", "choices": [True, False]},  # Whether to use action noise for exploration
+    "action_noise_sigma_init": {"type": "float", "low": 0.1, "high": 0.5},  # Initial standard deviation of action noise
+    "action_noise_sigma_final": {"type": "float", "low": 0.0, "high": 0.3},  # Final standard deviation of action noise
 }
 
 ##########################################################################################################
