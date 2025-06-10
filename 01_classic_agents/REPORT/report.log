@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.10.10)  9 JUN 2025 19:14
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.10.10)  10 JUN 2025 14:03
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -962,12 +962,12 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <5> on input line 112.
 )
-Overfull \hbox (94.46312pt too wide) in paragraph at lines 10668--58
+Overfull \hbox (94.46312pt too wide) in paragraph at lines 4595--58
  [][] 
  []
 
 (./REPORT/portfolio_value_beamer.pgf)
-Overfull \hbox (94.46312pt too wide) in paragraph at lines 11556--66
+Overfull \hbox (94.46312pt too wide) in paragraph at lines 4990--66
  [][] 
  []
 
@@ -975,11 +975,6 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <12> on input line 72.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <8> on input line 72.
-
-Overfull \hbox (104.08919pt too wide) in paragraph at lines 72--85
- [][] 
- []
-
 [3{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/lo
 cal/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}] [4]
 (REPORT/report.aux)
@@ -989,7 +984,7 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 Here is how much of TeX's memory you used:
  30822 strings out of 476025
  728376 string characters out of 5790016
- 1959388 words of memory out of 5000000
+ 1902388 words of memory out of 5000000
  50744 multiletter control sequences out of 15000+600000
  553779 words of font info for 77 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
@@ -1001,7 +996,7 @@ cal/texlive/2023/texmf-dist/fonts/type1/public/lm/lmmi9.pfb></usr/local/texlive
 /type1/public/lm/lmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/publ
 ic/lm/lmr6.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/lm/lmr9.p
 fb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/lm/lmsy9.pfb>
-Output written on REPORT/report.pdf (4 pages, 278459 bytes).
+Output written on REPORT/report.pdf (4 pages, 219186 bytes).
 PDF statistics:
  78 PDF objects out of 1000 (max. 8388607)
  55 compressed objects within 1 object stream

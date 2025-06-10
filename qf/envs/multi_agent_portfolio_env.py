@@ -285,7 +285,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
             past_portfolio_linear_returns = past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-10) - 1
             past_portfolio_log_returns = torch.log(past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-10))
 
-            past_returns = past_portfolio_linear_returns
+            past_returns = past_portfolio_log_returns
 
             # Calculate the Sharpe ratio
             mean_return = torch.mean(past_returns, dim=-1) # mean of the time dimension

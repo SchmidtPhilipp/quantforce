@@ -83,23 +83,20 @@
 # DONE: Test für den Dataloader
 # DONE: Test für den Preprocessor
 # DONE: Test für den Environment
-# TODO: Test für den DQN Agent
+# DONE: Test für den DQN Agent
 # DONE: Test für den MADDPG Agent
 
 ######################################
 # Künftige Erweiterungen
 
 # Andere Agenten:
-# TODO: PPO Agent
 # TODO: A2C Agent
-# TODO: DDPG Agent
-# TODO: SAC Agent
-# TODO: TD3 Agent
 # TODO: DDPG Agent mit TIPP
-# TODO: Laden der Modelkonfigurationen aus der config datei. 
 # TODO: Ensemble Agenten
 # TODO: Ensemble Agenten mit TIPP
 # TODO: Ensemble Agenten mit CPPI
+
+# Visualisierung der final train balance
 
 
 ###########################################################
@@ -107,3 +104,8 @@
 # Actual Stocks are not mentioned. 
 # Only short train and test time. 
 
+
+
+# Weitere Ideen:
+# TODO Sortiono ratio als reward signal
+# 

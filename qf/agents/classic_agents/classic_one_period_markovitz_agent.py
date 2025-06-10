@@ -8,6 +8,41 @@ from collections import OrderedDict
 import qf
 from pypfopt import expected_returns
 
+value = risk_models.sample_cov
+
+def terminal_statistics(price_df: pd.DataFrame, log_returns: bool = False):
+    """
+    Berechnet terminale Renditen (linear oder log), Kovarianzmatrix und Mittelwert
+    aus einem DataFrame mit Preiszeitreihen für mehrere Assets.
+
+    :param price_df: DataFrame mit shape [T, n_assets], Spalten = Assets
+    :param use_log_returns: Falls True, werden logarithmische statt linearer Renditen berechnet
+    :return: 
+        - terminal_returns: Tensor mit shape [T-1, n_assets]
+        - mean_returns: Tensor mit shape [n_assets]
+        - cov_matrix: Tensor mit shape [n_assets, n_assets]
+    """
+    assert isinstance(price_df, pd.DataFrame), "Input must be a DataFrame"
+    assert price_df.shape[0] > 1, "DataFrame must contain at least two time steps"
+
+    prices = torch.tensor(price_df.values, dtype=torch.float32)  # shape: [T, N]
+    p0 = prices[0] + 1e-8  # Initial prices, shape: [N]
+    pt = prices[1:]        # Later prices, shape: [T-1, N]
+
+    if log_returns:
+        terminal_returns = torch.log(pt) - torch.log(p0)
+    else:
+        terminal_returns = (pt / p0) - 1 # shape: [T-1, N]
+
+    mean_returns = terminal_returns.mean(dim=0)         # shape: [N]
+    cov_matrix = torch.cov(terminal_returns.T)          # shape: [N, N]
+
+    # Convert mean_returns and cov_matrix to pandas Series/DataFrame for compatibility
+    mean_returns = pd.Series(mean_returns.numpy(), index=price_df.columns)
+    cov_matrix = pd.DataFrame(cov_matrix.numpy(), index=price_df.columns, columns=price_df.columns)
+
+    return mean_returns, cov_matrix
+
 
 class ClassicOnePeriodMarkovitzAgent(Agent):
     def __init__(self, env, config=None):
@@ -62,6 +97,17 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
             expected_return, cov_matrix = MultiAssetBrownianMotionLogReturn.estimate_linear_return_expectation_and_covariance(drift, covariance, T=1.0)
             expected_return = pd.Series(expected_return, index=self.historical_data.columns)
 
+        elif self.config["risk_model"] == "terminal_statistics":
+            expected_return, cov_matrix = terminal_statistics(self.historical_data, log_returns=self.config["log_returns"])
+
+        elif self.config["risk_model"] == "stepwise_statistics":
+            expected_return = expected_returns.mean_historical_return(self.historical_data, frequency=365, log_returns=self.config["log_returns"])  # Expected returns
+            cov_matrix = risk_models.risk_matrix(
+                    prices=self.historical_data,
+                    method="sample_cov",  # Use sample covariance for stepwise statistics
+                    log_returns=self.config["log_returns"],
+                    frequency=365  # Default frequency for historical returns
+                )
         else:
             # Compute covariance matrix using the selected risk model
             try:
@@ -70,7 +116,8 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
                 cov_matrix = risk_models.risk_matrix(
                     prices=self.historical_data,
                     method=self.config["risk_model"], 
-                    log_returns=self.config["log_returns"]
+                    log_returns=self.config["log_returns"], 
+                    frequency=365  # Default frequency for historical returns
                 )
             except ValueError:
                 raise ValueError(f"Unsupported risk model: {self.config['risk_model']}")

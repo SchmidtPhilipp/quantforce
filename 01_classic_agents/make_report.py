@@ -24,7 +24,26 @@ if __name__ == "__main__":
                "./runs/2025-06-09_17-52-34_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=True_EVAL_Harper"
                #"./runs/2025-06-09_17-52-56_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=False_EVAL_Zane"
                ]
-
+    
+    #01_classic_agents/runs/2025-06-10_13-08-19_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_TRAIN_Abigail 01_classic_agents/runs/2025-06-10_13-08-19_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_TRAIN_Abigail/events.out.tfevents.1749553699.MacBook-Pro.local.56886.0 01_classic_agents/runs/2025-06-10_13-08-52_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_TRAIN_Yara 01_classic_agents/runs/2025-06-10_13-09-43_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_TRAIN_Katherine 01_classic_agents/runs/2025-06-10_13-10-07_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_TRAIN_Gabriella 01_classic_agents/runs/2025-06-10_13-10-27_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_EVAL_Alice 01_classic_agents/runs/2025-06-10_13-10-35_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=False_TRAIN_Jacob 01_classic_agents/runs/2025-06-10_13-10-37_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=False_EVAL_Yara 01_classic_agents/runs/2025-06-10_13-10-44_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=True_TRAIN_Ethan 01_classic_agents/runs/2025-06-10_13-10-46_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=True_EVAL_Paul 01_classic_agents/runs/2025-06-10_13-10-53_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=False_TRAIN_Gavin 01_classic_agents/runs/2025-06-10_13-10-55_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=False_EVAL_Elliot 01_classic_agents/runs/2025-06-10_13-11-02_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=True_TRAIN_Bella 01_classic_agents/runs/2025-06-10_13-11-04_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=True_EVAL_Lucas 01_classic_agents/runs/2025-06-10_13-11-11_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=False_TRAIN_Steve 01_classic_agents/runs/2025-06-10_13-11-12_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=False_EVAL_Carter
+        
+    folders = [
+               #"runs/2025-06-10_13-10-07_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_TRAIN_Gabriella",
+               "runs/2025-06-10_13-10-27_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=True_EVAL_Alice",
+               #"runs/2025-06-10_13-10-35_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=False_TRAIN_Jacob",
+               #"runs/2025-06-10_13-10-37_ClassicOnePeriodMarkovitzAgent_risk_model=terminal_statistics_log_returns=False_EVAL_Yara",
+               #"runs/2025-06-10_13-10-44_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=True_TRAIN_Ethan",
+               "runs/2025-06-10_13-10-46_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=True_EVAL_Paul",
+               #"runs/2025-06-10_13-10-53_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=False_TRAIN_Gavin",
+               #"runs/2025-06-10_13-10-55_ClassicOnePeriodMarkovitzAgent_risk_model=stepwise_statistics_log_returns=False_EVAL_Elliot",
+               #"runs/2025-06-10_13-11-02_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=True_TRAIN_Bella",
+               "runs/2025-06-10_13-11-04_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=True_EVAL_Lucas",
+               #"runs/2025-06-10_13-11-11_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=False_TRAIN_Steve",
+               #"runs/2025-06-10_13-11-12_ClassicOnePeriodMarkovitzAgent_risk_model=ML_brownian_motion_logreturn_log_returns=False_EVAL_Carter"
+              ]
+        
+        
+        
 
     # Generate short names for the Legend
     names = ["SC", # Sample Covariance, Log Returns
@@ -44,6 +63,9 @@ if __name__ == "__main__":
              "MLBM" # ML Brownian Motion Log Return Model
              #"MLBME" # ML Brownian Motion Price Return Model
             ]
+
+    names = ["TS","SS", "MLBM"]
+
 
     report = qf.EVALReport(output_folder="REPORT")
     report.run(folders, names=names, color='gist_rainbow')

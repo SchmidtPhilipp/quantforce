@@ -6,7 +6,6 @@ VERBOSITY = 0
 DEFAULT_LOG_DIR = 'runs'
 DEFAULT_CACHE_DIR = '../cache'
 DEFAULT_INITIAL_BALANCE = 1000000
-
 DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for training
 
 # Default data configuration
@@ -18,13 +17,11 @@ DEFAULT_EVAL_END = "2020-01-01"
 DEFAULT_TEST_START = "2020-01-01"
 DEFAULT_TEST_END = "2025-01-01"
 
-
 # Default parameters for TimeBasedDataset
 DEFAULT_INTERVAL = "1d"
 DEFAULT_WINDOW_SIZE = 1
 DEFAULT_INDICATORS = ["rsi", "sma", "macd", "atr"]
 DEFAULT_CACHE_DIR = "../cache"
-
 
 # Default environment configuration
 DEFAULT_N_AGENTS = 1
@@ -36,7 +33,6 @@ DEFAULT_REWARD_SCALING = 1  # Scaling factor for the reward function
 DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
 
 DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG"
-
 DEFAULT_DEVICE = "cpu"  # Default device for PyTorch
 
 # Default environment configuration
@@ -135,13 +131,8 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
     "risk_model": {"type": "categorical", "choices": [
-        "sample_cov", 
-        "exp_cov", 
-        "ledoit_wolf", 
-        "ledoit_wolf_constant_variance", 
-        "ledoit_wolf_single_factor", 
-        "ledoit_wolf_constant_correlation",
-        "oracle_approximating",
+        "sample_cov", "exp_cov", "ledoit_wolf", "ledoit_wolf_constant_variance", 
+        "ledoit_wolf_single_factor", "ledoit_wolf_constant_correlation", "oracle_approximating",
         "ML_brownian_motion_logreturn"
     ]},
     "log_returns": {"type": "categorical", "choices": [True, False]}
@@ -460,20 +451,11 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
     "ou_dt": {"type": "float", "low": 1e-3, "high": 1e-2}  # Time step for Ornstein-Uhlenbeck noise
 }
 
-
-
-
 ###########################################################################################################
 
 # Printing and plotting defaults
 DEFAULT_FIGSIZE_BEAMER = (8, 4)  # Standardgröße für Beamer-Präsentationen
 DEFAULT_FIGSIZE_PAPER = (8, 2.5)  # Standardgröße für Papierformate
-
-
-
-
-
-
 
 
 ##########################################################################################################

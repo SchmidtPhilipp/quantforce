@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1749483069 "/Users/PhilippSchmidt/Documents/MA_AI/02_single_agents_default/REPORT/report.tex" "report.pdf" "report" 1749483070 2
-  "/Users/PhilippSchmidt/Documents/MA_AI/02_single_agents_default/REPORT/report.tex" 1749483068 3179 68fac0c9b28f363ffcf304efb8430da4 ""
+["pdflatex"] 1749557016 "/Users/PhilippSchmidt/Documents/MA_AI/02_single_agents_default/REPORT/report.tex" "report.pdf" "report" 1749557017 2
+  "/Users/PhilippSchmidt/Documents/MA_AI/02_single_agents_default/REPORT/report.tex" 1749557014 4094 456b880d5fbe4e72871babe0074ed106 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc" 1202520719 2327 9d6df24f9c4f7368395224341a95523a ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -195,10 +195,10 @@
   "/usr/local/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1696960788 7883464 92554b2fdc8c7bceae232b1f2fbe2de0 ""
   "/usr/local/texlive/2023/texmf.cnf" 1678822455 577 1b2b1af17af2508fb20dd85783af4050 ""
   "REPORT/portfolio_value_paper.pgf" 0 -1 0 ""
-  "report.aux" 1749483070 530 02a7d92a590af7f91cfb482a1e58603d "pdflatex"
-  "report.out" 1749483070 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "report.tex" 1749483068 3179 68fac0c9b28f363ffcf304efb8430da4 ""
-  "report.toc" 1749483070 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "report.aux" 1749557017 1302 1c63c2ffa97d0a40d5fb23abdf72e4b3 "pdflatex"
+  "report.out" 1749557017 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "report.tex" 1749557014 4094 456b880d5fbe4e72871babe0074ed106 ""
+  "report.toc" 1749557017 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
   (generated)
   "report.aux"
   "report.log"

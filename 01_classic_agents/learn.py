@@ -10,7 +10,7 @@ from itertools import product
 
 
 def main():
-    log_dir = "01_classic_agents/runs"
+    log_dir = "runs"
 
     qf.start_tensorboard(logdir=log_dir, port=6001)
     
