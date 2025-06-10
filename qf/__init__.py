@@ -329,6 +329,8 @@ DEFAULT_DDPG_TAU = 0.005  # Target network update rate
 DEFAULT_DDPG_TRAIN_FREQ = 1  # Frequency of training steps
 DEFAULT_DDPG_GRADIENT_STEPS = -1  # Number of gradient steps per training iteration (-1 means auto)
 DEFAULT_DDPG_VERBOSITY = 1  # Verbosity level for logging
+DEFAULT_DDPG_ACTION_NOISE = True,
+DEFAULT_DDPG_ACTION_NOISE_SIGMA = 0.2  # Standard deviation of noise added to actions
 
 DEFAULT_DDPGAGENT_CONFIG = {
     "policy": DEFAULT_DDPG_POLICY,  # Default policy architecture
@@ -340,7 +342,9 @@ DEFAULT_DDPGAGENT_CONFIG = {
     "train_freq": DEFAULT_DDPG_TRAIN_FREQ,  # Frequency of training steps
     "gradient_steps": DEFAULT_DDPG_GRADIENT_STEPS,  # Number of gradient steps per training iteration
     "device": DEFAULT_DEVICE,  # Device to run the computations on
-    "verbose": DEFAULT_DDPG_VERBOSITY  # Verbosity level for logging
+    "verbose": DEFAULT_DDPG_VERBOSITY,  # Verbosity level for logging
+    "action_noise": DEFAULT_DDPG_ACTION_NOISE,  # Action noise for exploration
+    "action_noise_sigma": DEFAULT_DDPG_ACTION_NOISE_SIGMA  # Standard deviation of noise added to actions
 }
 
 DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE = {
@@ -348,7 +352,9 @@ DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE = {
     "tau": {"type": "float", "low": 0.001, "high": 0.01},
     #"batch_size": {"type": "int", "low": 64, "high": 128},
     #"buffer_size": {"type": "int", "low": 100000, "high": 1000000},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99}
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "action_noise_sigma": {"type": "float", "low": 0.1, "high": 0.3},  # Standard deviation of noise added to actions
+    "action_noise": {"type": "categorical", "choices": [True, False]}  # Action noise for exploration
 }
 
 ##########################################################################################################
@@ -444,6 +450,21 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 }
 
 
+
+
+###########################################################################################################
+
+# Printing and plotting defaults
+DEFAULT_FIGSIZE_BEAMER = (8, 4)  # Standardgröße für Beamer-Präsentationen
+DEFAULT_FIGSIZE_PAPER = (8, 2.5)  # Standardgröße für Papierformate
+
+
+
+
+
+
+
+
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
@@ -485,6 +506,8 @@ from qf.utils.tensorboard.safari import focus_tensorboard_tab, refresh_current_s
 from qf.utils.helper_functions import generate_random_name
 from qf.utils.metrics import Metrics
 
-
 # Visualization
 from qf.utils.plot import setup_pgf, reset_pgf
+
+# Reporting
+from qf.report.report import EVALReport

@@ -1,6 +1,7 @@
 import torch
 import os
 import pickle  # For saving and loading data
+import json  # For loading data from JSON files
 
 
 class Tracker:
@@ -47,9 +48,9 @@ class Tracker:
             raise ValueError(f"Number of labels ({len(labels)}) must match the number of dimensions in shape ({len(shape)}).")
 
         # Validate that each label matches the corresponding dimension size
-        for i, (label, dim_size) in enumerate(zip(labels, shape)):
-            if len(label) != dim_size:
-                raise ValueError(f"Label size for dimension {i} ({len(label)}) does not match shape size ({dim_size}).")
+        #for i, (label, dim_size) in enumerate(zip(labels, shape)):
+        #    if len(label) != dim_size:
+        #        raise ValueError(f"Label size for dimension {i} ({len(label)}) does not match shape size ({dim_size}).")
 
         self.tracked_values[name] = {
             "data": [],
@@ -174,6 +175,10 @@ class Tracker:
                 labels = value["labels"]  # Retrieve labels for naming
 
                 if len(dimensions) == 2:  # 2D data (e.g., timesteps x agents)
+
+                    if type(labels[0]) is not list:
+                        labels[0] = [labels[0]]
+
                     for agent_idx, agent_label in enumerate(labels[0]):  # Use agent labels
                         logger.log_scalar(
                             f"{self.tensorboard_prefix}_{name}/Actor_{agent_label}",
@@ -266,49 +271,51 @@ class Tracker:
         # Add all tracked values to the save data
         for name, value in self.tracked_values.items():
             save_data[name] = {
-                "data": [v.cpu() for v in value["data"]],  # Move tensors to CPU for saving
+                "data": [v.tolist() for v in value["data"]],  # Konvertiere Tensoren in Listen
                 "shape": value["shape"],
                 "description": value["description"],
                 "dimensions": value["dimensions"],
                 "labels": value["labels"],
             }
 
-        # Save as a .pt file (Torch format)
-        save_path = os.path.join(run_path, "tracker_data.pt")
-        torch.save(save_data, save_path)
-        #print(f"✅ Tracker data saved to {save_path}.")
+        # Save as a JSON file
+        save_path = os.path.join(run_path, "tracker_data.json")
+        with open(save_path, "w") as f:
+            json.dump(save_data, f, indent=4)
+        print(f"✅ Tracker-Daten wurden in {save_path} gespeichert.")
+
 
     @staticmethod
-    def load(filepath, device="cpu"):
+    def load(filepath):
         """
-        Loads tracker data from a file.
+        Lädt Tracker-Daten aus einer JSON-Datei.
 
         Parameters:
-            filepath (str): Path to the file from which the tracker data will be loaded.
-            device (str): Device to load the data onto ("cpu" or "cuda").
+            filepath (str): Pfad zur Datei, aus der die Tracker-Daten geladen werden sollen.
 
         Returns:
-            Tracker: A Tracker instance with the loaded data.
+            Tracker: Eine Tracker-Instanz mit den geladenen Daten.
         """
-        data = torch.load(filepath, map_location=device)
+        with open(filepath, "r") as f:
+            data = json.load(f)
 
-        # Create a new Tracker instance
-        tracker = Tracker(timesteps=data["timesteps"], tensorboard_prefix=data["tensorboard_prefix"], device=device)
+        # Neue Tracker-Instanz erstellen
+        tracker = Tracker(timesteps=data["timesteps"], tensorboard_prefix=data["tensorboard_prefix"])
         tracker.current_episode = data["current_episode"]
         tracker.current_timestep = data["current_timestep"]
 
-        # Load tracked values
+        # Verfolgte Werte laden
         for name, value in data.items():
             if name not in ["timesteps", "tensorboard_prefix", "current_episode", "current_timestep"]:
                 tracker.tracked_values[name] = {
-                    "data": [v.to(device) for v in value["data"]],
+                    "data": [torch.tensor(v) for v in value["data"]],  # Konvertiere Listen zurück in Tensoren
                     "shape": value["shape"],
                     "description": value["description"],
                     "dimensions": value["dimensions"],
                     "labels": value["labels"],
                 }
 
-        print(f"✅ Tracker data loaded from {filepath}.")
+        print(f"✅ Tracker-Daten wurden aus {filepath} geladen.")
         return tracker
 
     def log_statistics(self, logger, values_to_log=None):
@@ -382,3 +389,131 @@ class Tracker:
                         torch.std(timestep_data),
                         step=timestep
                     )
+
+    def get_df(self, name):
+        """
+        Converts the tracked values for a specific name to a pandas DataFrame.
+
+        Parameters:
+            name (str): Name of the tracked value.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the tracked values for the specified name.
+        """
+        import pandas as pd
+        import numpy as np
+
+        if name not in self.tracked_values:
+            raise ValueError(f"Value '{name}' is not registered.")
+
+        value = self.tracked_values[name]
+        
+        # Extract the data for the current tracking element
+        data = np.array(value["data"])  # Shape: (episodes, timesteps, ...)
+        dimensions = value["dimensions"]
+        labels = value["labels"]
+
+        # Handle "date" separately
+        # Get date from value["data"]
+        dates = self.tracked_values.get("date", None)
+        dates = dates["data"][0] 
+        dates = torch.tensor(dates, dtype=torch.int32).detach().clone()
+        dates = dates[:,0]
+        dates = [pd.Timestamp.fromtimestamp(date.item()) for date in dates]
+        dates = pd.to_datetime(dates)  # Convert to pandas datetime
+            
+
+        # Reshape the data into a 2D form for the DataFrame
+        reshaped_data = data.reshape(-1, *value["shape"])  # Shape: (episodes * timesteps, ...)
+        reshaped_data = reshaped_data.reshape(reshaped_data.shape[0], -1)  # Flatten for DataFrame
+
+        # Create MultiIndex for the columns based on dimensions and labels
+        if len(dimensions) > 1:
+            column_index = pd.MultiIndex.from_product(labels, names=dimensions[1:])
+            # Create DataFrame for the current tracking element
+            df = pd.DataFrame(reshaped_data, columns=column_index)
+
+
+        else:
+            column_index = pd.Index(labels[0], name=name)
+            # Create DataFrame for the current tracking element
+            df = pd.DataFrame(reshaped_data, columns=column_index)
+
+
+
+        # Add timestamps as the index if available
+        if dates is not None:
+            df.index = dates
+            df.index.name = "timestamp"
+
+        return df
+    
+    @staticmethod
+    def get_tracker_files(folders):
+        """
+        Sammelt alle Tracker-Dateien aus den angegebenen Ordnern.
+
+        :param folders: Liste von Ordnern, in denen nach Tracker-Dateien gesucht wird.
+        :return: Liste von Pfaden zu den gefundenen Tracker-Dateien.
+        """
+        import os
+        tracker_files = []
+        for folder in folders:
+            for root, _, files in os.walk(folder):
+                for file in files:
+                    if file.endswith(".json") and "tracker" in file.lower():
+                        tracker_files.append(os.path.join(root, file))
+        return tracker_files
+    
+
+    @staticmethod
+    def get_trackers(folders):
+        """
+        Sammelt alle Tracker-Instanzen aus den angegebenen Ordnern.
+
+        :param folders: Liste von Ordnern, in denen nach Tracker-Dateien gesucht wird.
+        :param names: Optional, Liste von Namen für die Tracker.
+        :return: Liste von Tracker-Instanzen.
+        """
+        import os
+        import pandas as pd
+
+        # Get tracker files from the folders
+        tracker_files = Tracker.get_tracker_files(folders)
+        
+        trackers = []
+        for tracker_file in tracker_files:
+            trackers.append(Tracker.load(tracker_file))
+
+        return trackers
+    
+
+    @staticmethod
+    def get_df_from_trackers(folders, df_request, col_names=None):
+        """
+        Sammelt Daten aus den Trackern in den angegebenen Ordnern und gibt sie als DataFrame zurück.
+        :param folders: Liste von Ordnern, in denen nach Tracker-Dateien gesucht wird.
+        :param names: Optional, Liste von Namen für die Tracker.
+        :return: Dictionary mit DataFrames für "rewards", "balance" und "actions".
+        """
+        trackers = Tracker.get_trackers(folders)
+
+        # Load data from the trackers
+        df = []
+
+        for tracker in trackers:
+            df.append(tracker.get_df(df_request)[df_request])
+
+        import pandas as pd
+        # Combine balance dataframes
+        df = pd.concat(df, axis=1)
+
+        if col_names is not None:
+            # Rename the columns in the balance dataframe
+            df.columns = col_names
+
+        return df
+
+
+
+

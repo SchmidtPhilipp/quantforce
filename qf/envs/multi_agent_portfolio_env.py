@@ -419,12 +419,12 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
 
         # Register tracked values with custom axis labels
-        self.tracker.register_value("rewards", shape=(self.n_agents,), description="Rewards per agent", dimensions=["timesteps", "agents"], labels=[range(self.n_agents)])
-        self.tracker.register_value("actions",shape=(self.n_agents, self.n_assets + 1),description="Actions per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.tickers + ["cash"]])
+        self.tracker.register_value("rewards", shape=(self.n_agents,), description="Rewards per agent", dimensions=["timesteps", "agents"], labels=[f"Actor_{i}" for i in range(self.n_agents)])
+        self.tracker.register_value("actions",shape=(self.n_agents, self.n_assets + 1),description="Actions per agent",dimensions=["timesteps", "agents", "assets"],labels=[[f"Actor_{i}" for i in range(self.n_agents)] , self.tickers + ["cash"]])
         #tracker.register_value("asset_holdings",shape=(self.n_agents, self.n_assets),description="Asset holdings per agent",dimensions=["timesteps", "agents", "assets"],labels=[range(self.n_agents), self.tickers])
         self.tracker.register_value("balance", shape=(1,), description="Environment balance", dimensions=["timesteps"], labels=[["balance"]])
         #tracker.register_value("actor_balance",shape=(self.n_agents,),description="Actor balances",dimensions=["timesteps", "agents"],labels=[range(self.n_agents)])
-        self.tracker.register_value("date", shape=(1,), description="Current date", dimensions=["timesteps"], labels=[["date"]])
+        self.tracker.register_value("date", shape=(1,), description="Current date", dimensions=["timesteps", "Env"], labels=[["date"]])
 
     def record_data(self, action=None, reward=None):
 
@@ -446,7 +446,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         if "balance" in values_to_record:
             values["balance"] = self.get_portfolio_value().unsqueeze(0)
         if "date" in values_to_record:
-            values["date"] = torch.tensor([self.dataset.data.index[self.current_step + self.obs_window_size - 1]], dtype=torch.float32, device=self.device)
+            values["date"] = torch.tensor([((self.dataset.data.index[self.current_step + self.obs_window_size - 2]).timestamp())], dtype=torch.int32, device=self.device)
 
         # Record the values
         self.tracker.record_step(**values)

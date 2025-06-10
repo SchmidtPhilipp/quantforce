@@ -1,6 +1,8 @@
 from stable_baselines3 import DDPG
 from qf.agents.sb3_agents.sb3_agent import SB3Agent
+from stable_baselines3.common.noise import NormalActionNoise
 import qf
+import numpy as np
 
 class DDPGAgent(SB3Agent):
     def __init__(self, env, config=None):
@@ -23,11 +25,20 @@ class DDPGAgent(SB3Agent):
             "train_freq": qf.DEFAULT_DDPG_TRAIN_FREQ,
             "gradient_steps": qf.DEFAULT_DDPG_GRADIENT_STEPS,
             "device": qf.DEFAULT_DEVICE,
-            "verbose": qf.DEFAULT_DDPG_VERBOSITY
+            "verbose": qf.DEFAULT_DDPG_VERBOSITY,
+            "action_noise": qf.DEFAULT_DDPG_ACTION_NOISE,
+            "action_noise_sigma": qf.DEFAULT_DDPG_ACTION_NOISE_SIGMA
         }
 
         # Merge default config with provided config
         self.config = {**default_config, **(config or {})}
+
+        n_actions = self.env.action_space.shape[0]
+        action_noise = NormalActionNoise(
+            mean=np.zeros(n_actions),
+            sigma=self.config["action_noise_sigma"] * np.ones(n_actions)
+        ) if "action_noise_sigma" in self.config else None
+
 
         # Initialize DDPG model
         self.model = DDPG(
@@ -41,11 +52,12 @@ class DDPGAgent(SB3Agent):
             train_freq=self.config["train_freq"],
             gradient_steps=self.config["gradient_steps"],
             verbose=self.config["verbose"],
-            device=self.config["device"]
+            device=self.config["device"],
+            action_noise=action_noise if "action_noise" in self.config else None
         )
 
         from .td3_agent import train_TD3_with_TD_error_logging
-        self.model.train = lambda gradient_steps, batch_size=64: train_TD3_with_TD_error_logging(self.model, gradient_steps, batch_size)
+        #self.model.train = lambda gradient_steps, batch_size=64: train_TD3_with_TD_error_logging(self.model, gradient_steps, batch_size)
 
     @staticmethod
     def get_default_config():

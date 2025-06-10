@@ -1,24 +1,4 @@
-import os
-import subprocess
 
-def render(folder, latex_data, compile_pdf=True):
-    """
-    Generiert ein vollständiges LaTeX-Dokument aus dem gespeicherten LaTeX-Code und kompiliert es optional zu einem PDF.
-    Speichert die Dateien in einem Ordner namens REPORT.
-    
-    :param compile_pdf: Ob die LaTeX-Datei zu einem PDF kompiliert werden soll.
-    """
-    # Erstelle den REPORT-Ordner
-    #report_folder = os.path.join(folder, "REPORT")
-    report_folder = folder  # Verwende den angegebenen Ordner direkt
-    os.makedirs(report_folder, exist_ok=True)
-
-    # Pfad für die .tex-Datei und das PDF
-    tex_file = os.path.join(report_folder, "report.tex")
-    pdf_file = os.path.join(report_folder, "report.pdf")
-
-    # LaTeX-Dokument Header und Footer
-    document_header = r"""
     \documentclass[a4paper,
         fleqn,            % Linksbündige Gleichungen
         12pt,             % Standard-Schriftgröße
@@ -44,10 +24,7 @@ def render(folder, latex_data, compile_pdf=True):
     \pgfplotsset{compat=1.18}  % Setze die Kompatibilitätsversion
     \usepackage{amsmath}    % Für mathematische Formeln
     \usepackage{amssymb}    % Für mathematische Symbole
-    """
-
-    # Add the formattting of the page using the LaTeX package scrlayer-scrpage
-    page_format = r"""
+    
     \usepackage[a4paper, % Setze das Papierformat auf A4
     left=2cm, % Linker Rand
     right=2cm, % Rechter Rand
@@ -66,10 +43,7 @@ def render(folder, latex_data, compile_pdf=True):
     \fancyfoot[LE,RO]{\thepage}
     \fancyhead[LE]{\leftmark} % left even page
     \fancyhead[RO]{\rightmark} % right odd page
-    """
-
-    # document beginning
-    document_beginning = r"""
+    
             \begin{document}
     \title{Report}
     \date{\today}
@@ -77,30 +51,39 @@ def render(folder, latex_data, compile_pdf=True):
     \newpage
     \tableofcontents
     \newpage
-    """
+    
+    \begin{figure}[H]
+        \centering
+        \input{REPORT/portfolio_value_paper.pgf}
+        \caption{}
+        \label{fig:portfolio_value_paper}
+    \end{figure}
+    
 
-    document_footer = r"""
+    \begin{figure}[H]
+        \centering
+        \input{REPORT/portfolio_value_beamer.pgf}
+        \caption{}
+        \label{fig:portfolio_value_beamer}
+    \end{figure}
+    
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccccc}
+\toprule
+Metric & SPQL & PPO & TD3 & DDPG & SAC & Tangency \\
+\midrule
+Sharpe Ratio & 1.056 & 1.226 & 1.051 & 1.349 & 1.316 & 1.407 \\
+Sortino Ratio & 0.063 & 0.069 & 0.060 & 0.075 & 0.072 & 0.080 \\
+Max Drawdown & -28.13 \% & -13.28 \% & -13.00 \% & -18.76 \% & -18.90 \% & -14.17 \% \\
+Annualized Volatility & 0.98 \% & 0.62 \% & 0.61 \% & 0.68 \% & 0.73 \% & 0.69 \% \\
+Cumulative Return & 134.80 \% & 92.55 \% & 72.43 \% & 120.15 \% & 127.25 \% & 129.50 \% \\
+Annualized Return & 19.78 \% & 14.86 \% & 12.21 \% & 18.16 \% & 18.96 \% & 19.21 \% \\
+Calmar Ratio & 0.703 & 1.119 & 0.939 & 0.968 & 1.003 & 1.356 \\
+\bottomrule
+\end{tabular}
+\caption{Metrics Table}
+\label{tab:metrics_table}
+\end{table}
     \end{document}
-    """
-
-    # Kombiniere Header, LaTeX-Code und Footer
-    full_document = document_header + page_format+ document_beginning+ "\n".join(latex_data) + document_footer
-
-    # Schreibe das LaTeX-Dokument in die .tex-Datei
-    with open(tex_file, "w") as f:
-        f.write(full_document)
-
-    print(f"LaTeX-Dokument wurde unter {tex_file} gespeichert.")
-
-    # Kompiliere die LaTeX-Datei zu einem PDF
-    if compile_pdf:
-        try:
-            print(report_folder)
-            subprocess.run(["pdflatex", "-output-directory", report_folder, tex_file], check=True)
-            # We have to run pdflatex twice to get the table of contents right
-            subprocess.run(["pdflatex", "-output-directory", report_folder, tex_file], check=True)
-            print(f"PDF wurde erfolgreich kompiliert: {pdf_file}")
-        except subprocess.CalledProcessError as e:
-            print(f"Fehler beim Kompilieren der LaTeX-Datei: {e}")
-        except FileNotFoundError:
-            print("Fehler: pdflatex ist nicht installiert oder nicht im PATH verfügbar.")
+    

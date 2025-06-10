@@ -32,10 +32,10 @@ def max_drawdown(balances):
     drawdown = (balances - peak) / (peak + 1e-8)   
     return np.min(drawdown)
  
-def volatility(returns):
+def volatility(returns, periods_per_year=365):
     if len(returns) == 0:
-        return 0.0  # Return 0 if no returns are available
-    return np.std(returns)
+        return 0.0
+    return np.std(returns) * np.sqrt(periods_per_year)
 
 def cumulative_return(balances):
     if len(balances) < 2:
@@ -105,6 +105,52 @@ class Metrics:
             }
             for metric, values in self.metrics.items()
         }
+    
+    def formated(self, std_dev=True):
+        """
+        Format the mean and optionally the standard deviation for each metric.
+
+        Parameters:
+            std_dev (bool): Ob die Standardabweichung in der Ausgabe enthalten sein soll.
+
+        Returns:
+            dict: A dictionary with formatted mean (and optionally std) for each metric.
+        """
+        summary = self.mean_and_std()
+        formatted_summary = {}
+        for name, stats in summary.items():
+            if name in ["drawdown", "cumulative", "annualized", "volatility"]:
+
+                # Remap names
+                if name == "drawdown":
+                    name = "Max Drawdown"
+                elif name == "cumulative":
+                    name = "Cumulative Return"
+                elif name == "annualized":
+                    name = "Annualized Return"
+                elif name == "volatility":
+                    name = "Annualized Volatility"
+
+                if std_dev:
+                    formatted_summary[name] = f"{stats['mean'] * 100:.2f} \\% ± {stats['std'] * 100:.2f} \\%"
+                else:
+                    formatted_summary[name] = f"{stats['mean'] * 100:.2f} \\%"
+            else:
+
+                # Remap names
+                if name == "sharpe":
+                    name = "Sharpe Ratio"
+                elif name == "sortino":
+                    name = "Sortino Ratio"
+                elif name == "calmar":
+                    name = "Calmar Ratio"
+
+                if std_dev:
+                    formatted_summary[name] = f"{stats['mean']:.3f} ± {stats['std']:.3f}"
+                else:
+                    formatted_summary[name] = f"{stats['mean']:.3f}"
+        return formatted_summary
+
 
     def print_report(self):
         """
@@ -153,3 +199,37 @@ class Metrics:
             path (str): Path to save the metrics.
         """
         np.savez(path, **self.metrics)
+
+    @staticmethod
+    def load(path):
+        """
+        Load metrics from a file.
+
+        Parameters:
+            path (str): Path to load the metrics from.
+
+        Returns:
+            Metrics: An instance of Metrics with loaded data.
+        """
+        data = np.load(path, allow_pickle=True)
+        metrics = Metrics()
+        metrics.metrics = {key: data[key].tolist() for key in data.files}
+        return metrics
+
+    @staticmethod
+    def get_metrics_files(folders):
+        """
+        Sammelt alle Metrics-Dateien aus den angegebenen Ordnern.
+
+        :param folders: Liste von Ordnern, in denen nach Metrics-Dateien gesucht wird.
+        :return: Liste von Pfaden zu den gefundenen Metrics-Dateien.
+        """
+        import os
+        metrics_files = []
+        for folder in folders:
+            for root, _, files in os.walk(folder):
+                for file in files:
+                    if file.endswith(".npz") and "metrics" in file.lower():
+                        metrics_files.append(os.path.join(root, file))
+        return metrics_files
+

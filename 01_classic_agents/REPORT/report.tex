@@ -1,0 +1,108 @@
+
+    \documentclass[a4paper,
+        fleqn,            % Linksbündige Gleichungen
+        12pt,             % Standard-Schriftgröße
+        ngerman,          % Deutsche Sprache
+        oneside,          % Doppelseitiges Layout
+        chapterentrydots=true,  % Punkte in Inhaltsverzeichnis für Kapitel
+        parskip=half      % Halber Zeilenabstand zwischen Absätzen
+        ]{article}
+    \usepackage{graphicx}   % Für Grafiken
+    \usepackage{float}      % Für die Verwendung von [H] in \begin{figure}
+    \usepackage{hyperref}   % Für Hyperlinks im PDF
+    \hypersetup{
+        colorlinks=true,
+        linkcolor=blue,
+        urlcolor=cyan,
+    }
+    \usepackage{booktabs}   % Für bessere Tabellen
+    \usepackage{pgf}        % Für die Verwendung von .pgf-Dateien
+    \usepackage{pgfplots}   % Für die Verwendung von pgfplots
+    \usepackage{lmodern}    % Verbessert die Schriftart
+    \usepackage{import}     % Importiere die pgf-Datei
+    \def\mathdefault#1{#1}  % Verhindert Fehler bei der Verwendung von \mathdefault
+    \pgfplotsset{compat=1.18}  % Setze die Kompatibilitätsversion
+    \usepackage{amsmath}    % Für mathematische Formeln
+    \usepackage{amssymb}    % Für mathematische Symbole
+    
+    \usepackage[a4paper, % Setze das Papierformat auf A4
+    left=2cm, % Linker Rand
+    right=2cm, % Rechter Rand
+    top=1cm, % Oberer Rand
+    bottom=1cm, % Unterer Rand
+    includehead,  % Kopfzeilen einbeziehen
+    includefoot, % Kopf- und Fußzeilen einbeziehen
+    nomarginpar,% We don't want any margin paragraphs
+    textwidth=10cm,% Set \textwidth to 10cm
+    headheight=10mm,% Set \headheight to 10mm
+    ]{geometry}
+    \usepackage{fancyhdr}
+    \pagestyle{fancy}
+    \fancyhead{} % clear all header fields
+    \fancyfoot{} % clear all footer fields
+    \fancyfoot[LE,RO]{\thepage}
+    \fancyhead[LE]{\leftmark} % left even page
+    \fancyhead[RO]{\rightmark} % right odd page
+    
+            \begin{document}
+    \title{Report}
+    \date{\today}
+    \maketitle
+    \newpage
+    \tableofcontents
+    \newpage
+    
+    \begin{figure}[H]
+        \centering
+        \input{REPORT/portfolio_value_paper.pgf}
+        \caption{}
+        \label{fig:portfolio_value_paper}
+    \end{figure}
+    
+
+    \begin{figure}[H]
+        \centering
+        \input{REPORT/portfolio_value_beamer.pgf}
+        \caption{}
+        \label{fig:portfolio_value_beamer}
+    \end{figure}
+    
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccccccc}
+\toprule
+Metric & SC & EC & LW & LWC & LWSF & LWCC & OA & MLBM \\
+\midrule
+Sharpe Ratio & 1.407 & 1.205 & 1.408 & 1.408 & 1.407 & 1.404 & 1.407 & 1.490 \\
+Sortino Ratio & 0.080 & 0.071 & 0.080 & 0.080 & 0.080 & 0.080 & 0.080 & 0.085 \\
+Max Drawdown & -14.17 \% & -13.47 \% & -14.15 \% & -14.15 \% & -14.14 \% & -14.13 \% & -14.16 \% & -16.38 \% \\
+Annualized Volatility & 13.10 \% & 14.11 \% & 13.09 \% & 13.09 \% & 13.07 \% & 13.07 \% & 13.10 \% & 13.74 \% \\
+Cumulative Return & 129.50 \% & 113.12 \% & 129.45 \% & 129.45 \% & 129.14 \% & 128.68 \% & 129.50 \% & 151.88 \% \\
+Annualized Return & 19.21 \% & 17.35 \% & 19.20 \% & 19.20 \% & 19.17 \% & 19.12 \% & 19.21 \% & 21.57 \% \\
+Calmar Ratio & 1.356 & 1.288 & 1.357 & 1.357 & 1.356 & 1.352 & 1.356 & 1.317 \\
+\bottomrule
+\end{tabular}
+\caption{Metrics Table}
+\label{tab:metrics_table}
+\end{table}
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|c|c|c|c|}
+\toprule
+\rotatebox{90}{Name} & \rotatebox{90}{Sharpe Ratio} & \rotatebox{90}{Sortino Ratio} & \rotatebox{90}{Max Drawdown} & \rotatebox{90}{Annualized Volatility} & \rotatebox{90}{Cumulative Return} & \rotatebox{90}{Annualized Return} & \rotatebox{90}{Calmar Ratio} \\
+\midrule
+SC & 1.407 & 0.080 & -14.17 \% & 13.10 \% & 129.50 \% & 19.21 \% & 1.356 \\
+EC & 1.205 & 0.071 & -13.47 \% & 14.11 \% & 113.12 \% & 17.35 \% & 1.288 \\
+LW & 1.408 & 0.080 & -14.15 \% & 13.09 \% & 129.45 \% & 19.20 \% & 1.357 \\
+LWC & 1.408 & 0.080 & -14.15 \% & 13.09 \% & 129.45 \% & 19.20 \% & 1.357 \\
+LWSF & 1.407 & 0.080 & -14.14 \% & 13.07 \% & 129.14 \% & 19.17 \% & 1.356 \\
+LWCC & 1.404 & 0.080 & -14.13 \% & 13.07 \% & 128.68 \% & 19.12 \% & 1.352 \\
+OA & 1.407 & 0.080 & -14.16 \% & 13.10 \% & 129.50 \% & 19.21 \% & 1.356 \\
+MLBM & 1.490 & 0.085 & -16.38 \% & 13.74 \% & 151.88 \% & 21.57 \% & 1.317 \\
+\bottomrule
+\end{tabular}
+\caption{Metrics Table (Transposed)}
+\label{tab:metrics_table_transposed}
+\end{table}
+    \end{document}
+    
