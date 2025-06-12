@@ -1,7 +1,10 @@
 import yfinance as yf
 from .generate_random_data import generate_random_data
-
-def download_data(start, end, ticker, interval="1d", downloader="simulate", verbosity=0):
+from qf import DEFAULT_INTERVAL, DEFAULT_DOWNLOADER, VERBOSITY, DEFAULT_USE_ADJUSTED_CLOSE, DEFAULT_USE_AUTOREPAIR
+def download_data(start, end, ticker, 
+                  interval=DEFAULT_INTERVAL, 
+                  downloader=DEFAULT_DOWNLOADER, 
+                  verbosity=VERBOSITY):
     """
     Downloads historical financial data using yfinance or a simulated downloader.
 
@@ -20,6 +23,9 @@ def download_data(start, end, ticker, interval="1d", downloader="simulate", verb
     elif downloader == "yfinance":
         from curl_cffi import requests
         session = requests.Session(impersonate="chrome")
-        return yf.download(ticker, start=start, end=end, interval=interval, progress=bool(verbosity), auto_adjust=True) # We use ajusted close prices everytime. 
+        return yf.download(ticker, start=start, end=end, interval=interval, progress=bool(verbosity), 
+                           auto_adjust=DEFAULT_USE_ADJUSTED_CLOSE, session=session,
+                           repair=DEFAULT_USE_AUTOREPAIR
+                           ) # We use ajusted close prices everytime. 
     else:
         raise ValueError("Downloader not supported.")

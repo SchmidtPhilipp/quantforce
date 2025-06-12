@@ -49,13 +49,7 @@
 # TODO: UP Agent
 
 # TODO: Methodik zum weitertrainieren der Agenten implementieren.
-
-##################################################
-# Risk Management
-# TODO:
-# Agent seems to trade too much -> causes a lot of trading costs.
-# Impelment a filter? Or a epsilon region to trade? 
-# Would it make sense to sample many actions at a state and add them to the replay buffer?
+# TODO: Laden der Agenten implementieren.
 
 
 ######################################################
@@ -108,4 +102,3 @@
 
 # Weitere Ideen:
 # TODO Sortiono ratio als reward signal
-# 

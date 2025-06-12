@@ -137,3 +137,30 @@ class Agent:
         """
         return Warning("This method should be implemented by subclasses.")
     
+    @staticmethod
+    def load_agent(path):
+        """
+        Loads an agent from a specified path.
+        Parameters:
+            path (str): Path to the saved agent.
+        Returns:
+            Agent: An instance of the loaded agent.
+        """
+        
+
+
+        # First we gather the env_config.json file fromt he agent folder
+        import json
+        with open(path + "/env_config.json", "r") as f:
+            env_config = json.load(f)
+
+        # TODO make unified agent loader
+
+
+    def save_agent(self, path):
+        """
+        Saves the agent to a specified path.
+        Parameters:
+            path (str): Path to save the agent.
+        """
+        # We need to save all the attributes of the agent to load it later without knowing the class

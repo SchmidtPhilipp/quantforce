@@ -1,12 +1,16 @@
 from qf.data.tickers.tickers import NASDAQ100, DOWJONES, SNP500
 
-### DEFAULTS
+
+#### GENERAL DEFAULTS ####
+
 VERBOSITY = 0
 
 DEFAULT_LOG_DIR = 'runs'
-DEFAULT_CACHE_DIR = '../cache'
 DEFAULT_INITIAL_BALANCE = 1000000
 DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for training
+
+
+#### DATA DEFAULTS ####
 
 # Default data configuration
 DEFAULT_TICKERS = DOWJONES
@@ -16,12 +20,22 @@ DEFAULT_EVAL_START = "2015-01-01"
 DEFAULT_EVAL_END = "2020-01-01"
 DEFAULT_TEST_START = "2020-01-01"
 DEFAULT_TEST_END = "2025-01-01"
-
-# Default parameters for TimeBasedDataset
 DEFAULT_INTERVAL = "1d"
 DEFAULT_WINDOW_SIZE = 1
 DEFAULT_INDICATORS = ["rsi", "sma", "macd", "atr"]
+
+
+### Advanced data defaults
+DEFAULT_DOWNLOADER = "yfinance" # Options: "yfinance" or "simulate"
+DEFAULT_USE_CACHE = True  # Use cache by default, Saves the downloaded data to a local cache directory
 DEFAULT_CACHE_DIR = "../cache"
+
+# yahoo downloader default parameters
+DEFAULT_USE_ADJUSTED_CLOSE = True  # Use adjusted close prices by default
+DEFAULT_USE_AUTOREPAIR = False  # Use auto-adjusted prices by default
+
+
+#### ENVIRONMENT DEFAULTS ####
 
 # Default environment configuration
 DEFAULT_N_AGENTS = 1
@@ -456,6 +470,9 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 # Printing and plotting defaults
 DEFAULT_FIGSIZE_BEAMER = (8, 4)  # Standardgröße für Beamer-Präsentationen
 DEFAULT_FIGSIZE_PAPER = (8, 2.5)  # Standardgröße für Papierformate
+
+DEFAULT_COLORSCHEME = "plasma"  # Default color scheme for plots
+DEFAULT_SINGLE_LINE_COLOR = "black"  # Default color for single line plots
 
 
 ##########################################################################################################

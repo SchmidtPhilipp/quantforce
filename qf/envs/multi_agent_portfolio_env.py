@@ -28,8 +28,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
     def __init__(self, 
                 tensorboard_prefix,
                 config=None):
-        
-        super(MultiAgentPortfolioEnv, self).__init__(device=config.get("device", qf.DEFAULT_DEVICE))
+        super(MultiAgentPortfolioEnv, self).__init__(device=config["device"] if config and "device" in config else qf.DEFAULT_DEVICE)
 
 
         default_config = {
@@ -126,7 +125,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         run_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") 
         name = qf.generate_random_name()
         self.config_name = self.config["config_name"]
-        self.log_dir = config["log_dir"]
+        self.log_dir = self.config["log_dir"]
         self.save_dir = self.log_dir + f"/{run_time}_{self.config_name}_{tensorboard_prefix}_{name}"
         self.logger = Logger(run_name=f"{run_time}_{self.config_name}_{tensorboard_prefix}_{name}", log_dir=self.log_dir)
 
