@@ -1,19 +1,17 @@
-import sys
 import os
+import sys
 
 # Include ../../ to access the get_data and tickers modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from data import get_data
-from utils.plot import plot_lines_grayscale, plot_dual_axis
 
-from data import DOWJONES
-import numpy as np
-import pandas as pd
+import qf
+from qf import DOWJONES
+from qf.data.utils.get_data import get_data
+from qf.utils.plot import plot_dual_axis, plot_lines_grayscale
+
 
 def simulate_bm_prices(p0, drift, sigma, n_steps, dt, random_seed=None):
     """
@@ -35,8 +33,9 @@ def simulate_bm_prices(p0, drift, sigma, n_steps, dt, random_seed=None):
         z = np.random.randn(d)
         # Brownsche Inkremente
         dW = np.sqrt(dt) * z
-        prices[t] = prices[t-1] + drift * dt + chol_sigma @ dW
+        prices[t] = prices[t - 1] + drift * dt + chol_sigma @ dW
     return pd.DataFrame(prices, columns=[f"Asset{i+1}" for i in range(d)])
+
 
 def estimate_bm_drift_and_cov(prices: pd.DataFrame, dt: float = 1.0):
     """
@@ -75,7 +74,9 @@ def estimate_bm_drift_and_cov(prices: pd.DataFrame, dt: float = 1.0):
     # Covariance estimator
     drift_term = drift_hat * dt  # shape (d,)
     centered_increments = delta_prices - drift_term  # shape (n-1, d)
-    sigma_hat = (centered_increments.T @ centered_increments) / (n_increments * dt)  # shape (d, d)
+    sigma_hat = (centered_increments.T @ centered_increments) / (
+        n_increments * dt
+    )  # shape (d, d)
 
     # Mean vector of returns
     mean_vector = (prices[-1] - prices[0]) / prices[0]  # shape (d,)
@@ -86,10 +87,14 @@ def estimate_bm_drift_and_cov(prices: pd.DataFrame, dt: float = 1.0):
 
     return drift_hat, sigma_hat, mean_vector, cov_returns
 
-import pandas as pd
-import numpy as np
 
-def compute_covariance_from_prices(price_df: pd.DataFrame, log_returns: bool = False) -> pd.DataFrame:
+import numpy as np
+import pandas as pd
+
+
+def compute_covariance_from_prices(
+    price_df: pd.DataFrame, log_returns: bool = False
+) -> pd.DataFrame:
     """
     Computes the covariance matrix of asset returns from a DataFrame of prices.
 
@@ -118,31 +123,30 @@ def compute_covariance_from_prices(price_df: pd.DataFrame, log_returns: bool = F
     return np.array(cov_df)
 
 
-
 if __name__ == "__main__":
     # prices: DataFrame mit shape (n_steps, n_assets)
-    
+
     tickers = DOWJONES
     start = "2024-01-01"
     end = "2025-01-01"
 
-    #prices = get_data(tickers, start, end, indicators=("Close",), verbosity=0)
-    #drift, sigma, mean_ret, cov_ret = estimate_bm_drift_and_cov(prices)
+    # prices = get_data(tickers, start, end, indicators=("Close",), verbosity=0)
+    # drift, sigma, mean_ret, cov_ret = estimate_bm_drift_and_cov(prices)
 
     # Beispiel-Parameter
     n_steps = 5000
     dt = 1.0
     p0 = np.array([100, 120, 80])
     drift = np.array([0.2, -0.1, 0.05])
-    sigma = np.array([[1.0, 0.3, 0.2],
-                    [0.3, 2.0, 0.1],
-                    [0.2, 0.1, 1.5]])
+    sigma = np.array([[1.0, 0.3, 0.2], [0.3, 2.0, 0.1], [0.2, 0.1, 1.5]])
 
     # Simuliere Preise
     prices = simulate_bm_prices(p0, drift, sigma, n_steps, dt, random_seed=42)
 
     # Schätze die Parameter
-    drift_hat, sigma_hat, mean_vector, cov_returns = estimate_bm_drift_and_cov(prices, dt=dt)
+    drift_hat, sigma_hat, mean_vector, cov_returns = estimate_bm_drift_and_cov(
+        prices, dt=dt
+    )
 
     cov_returns2 = compute_covariance_from_prices(prices, log_returns=False)
 
@@ -158,15 +162,8 @@ if __name__ == "__main__":
     print("\nDrift-Schätzungsfehler:", drift_error)
     print("Sigma-Schätzungsfehler:", sigma_error)
 
-
     print("#" * 50)
     print("Geschätzter Mittelwert der Returns:", mean_vector)
     print("Geschätzte Kovarianz der Returns:\n", cov_returns)
-    
-    #print("Geschätzte Kovarianz der Returns:\n", cov_returns2)
 
-
-
-
-
-
+    # print("Geschätzte Kovarianz der Returns:\n", cov_returns2)

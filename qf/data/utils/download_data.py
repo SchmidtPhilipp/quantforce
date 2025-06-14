@@ -1,10 +1,30 @@
+"""This module provides a function to download historical financial data using yfinance or a simulated downloader."""
+
+from functools import lru_cache
+
 import yfinance as yf
+from curl_cffi import requests
+
+from qf import (
+    DEFAULT_DOWNLOADER,
+    DEFAULT_INTERVAL,
+    DEFAULT_USE_ADJUSTED_CLOSE,
+    DEFAULT_USE_AUTOREPAIR,
+    VERBOSITY,
+)
+
 from .generate_random_data import generate_random_data
-from qf import DEFAULT_INTERVAL, DEFAULT_DOWNLOADER, VERBOSITY, DEFAULT_USE_ADJUSTED_CLOSE, DEFAULT_USE_AUTOREPAIR
-def download_data(start, end, ticker, 
-                  interval=DEFAULT_INTERVAL, 
-                  downloader=DEFAULT_DOWNLOADER, 
-                  verbosity=VERBOSITY):
+
+
+@lru_cache(maxsize=128)
+def download_data(
+    start,
+    end,
+    ticker,
+    interval=DEFAULT_INTERVAL,
+    downloader=DEFAULT_DOWNLOADER,
+    verbosity=VERBOSITY,
+):
     """
     Downloads historical financial data using yfinance or a simulated downloader.
 
@@ -21,11 +41,18 @@ def download_data(start, end, ticker,
     if downloader == "simulate":
         return generate_random_data(start, end, ticker, interval=interval)
     elif downloader == "yfinance":
-        from curl_cffi import requests
+
         session = requests.Session(impersonate="chrome")
-        return yf.download(ticker, start=start, end=end, interval=interval, progress=bool(verbosity), 
-                           auto_adjust=DEFAULT_USE_ADJUSTED_CLOSE, session=session,
-                           repair=DEFAULT_USE_AUTOREPAIR
-                           ) # We use ajusted close prices everytime. 
+        return yf.download(
+            ticker,
+            start=start,
+            end=end,
+            interval=interval,
+            progress=bool(verbosity),
+            auto_adjust=DEFAULT_USE_ADJUSTED_CLOSE,
+            session=session,
+            repair=DEFAULT_USE_AUTOREPAIR,
+            keepna=True,
+        )  # We use ajusted close prices everytime.
     else:
         raise ValueError("Downloader not supported.")

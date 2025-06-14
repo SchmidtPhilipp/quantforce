@@ -1,103 +1,141 @@
 import os
+import sys
 import pandas as pd
 from datetime import timedelta
-from .cache import load_cache, save_cache, update_cache
-from .download_data import download_data
-from .wait import wait
-from .clean_data import clean_data
+
+import exchange_calendars as ecals
+
+from qf.data.utils.cache import load_cache, save_cache, update_cache
+from qf.data.utils.download_data import download_data
+from qf.data.utils.clean_data import reindex_data
+from qf.data.utils.make_cache_dir import make_cache_dir
+
+
+from qf import DEFAULT_INTERVAL, DEFAULT_USE_CACHE, DEFAULT_CACHE_DIR, VERBOSITY, DEFAULT_DOWNLOADER, DEFAULT_FORCE_DOWNLOAD, DEFAULT_N_TRADING_DAYS
 
 def load_data(
-    tickers, start, end, interval="1d", progress=False, cache_dir="data/cache", verbosity=0, downloader="yfinance"
+    tickers,
+    start,
+    end,
+    interval=DEFAULT_INTERVAL,
+    progress=False,
+    use_cache=DEFAULT_USE_CACHE,
+    cache_dir=DEFAULT_CACHE_DIR,
+    verbosity=VERBOSITY,
+    downloader=DEFAULT_DOWNLOADER,
+    force_download=DEFAULT_FORCE_DOWNLOAD,
+    extend_days=10  
 ):
     """
-    Downloads historical financial data using yfinance or a simulated downloader and performs forward/backward filling.
+    Load historical financial data with optional caching and cleaning.
 
     Parameters:
-        tickers (list[str] or str): A single ticker or a list of ticker symbols (e.g. "AAPL", ["AAPL", "MSFT"]).
-        start (str): Start date in 'YYYY-MM-DD' format.
-        end (str): End date in 'YYYY-MM-DD' format.
-        interval (str): Frequency of data ('1d', '1wk', '1mo', etc.). Default is '1d'.
-        progress (bool): Whether to show download progress. Default is False.
-        cache_dir (str): Directory to cache the downloaded data. Default is 'data_cache'.
-        verbosity (int): Verbosity level for logging.
-        downloader (str): The downloader to use ('yfinance' or 'simulate'). Default is 'simulate'.
+        tickers (str or list): One or multiple ticker symbols.
+        start, end (str): Date strings in 'YYYY-MM-DD' format.
+        interval (str): Data interval, e.g., '1d', '1wk'.
+        progress (bool): Show download progress.
+        use_cache (bool): Whether to use cache or ignore it completely.
+        cache_dir (str or None): Absolute path to cache directory. If None, no caching is done.
+        verbosity (int): Verbosity level.
+        downloader (str): Source for downloading data.
+        force_download (bool): Force redownload of data.
+        extend_days (int): Number of additional days to extend the range when downloading data.
 
     Returns:
-        pd.DataFrame: A multi-indexed DataFrame (ticker, OHLCV) with cleaned historical data.
+        pd.DataFrame: Multi-index DataFrame with (ticker, OHLCV) data.
     """
-    # Ensure tickers is a list
     if isinstance(tickers, str):
         tickers = [tickers]
 
-    # Create cache directory if it doesn't exist
-    os.makedirs(cache_dir, exist_ok=True)
+    start, end = adjust_start_end_dates(start, end)
+
+    cache_dir = make_cache_dir(cache_dir, use_cache)
 
     all_data = []
 
     for ticker in tickers:
-        ticker = ticker.replace("/", "_")  # Replace '/' with '_' for file naming
-        # Generate cache file path for each ticker
-        cache_file = os.path.join(cache_dir, f"{ticker}_{interval}.csv")
+        # Clean ticker symbols
+        ticker = ticker.replace("/", "_") 
 
-        # Load cached data if available
-        cached_data = load_cache(cache_file, verbosity)
+        # Create cache file path for ticker
+        cache_file = os.path.join(cache_dir, f"{ticker}_{interval}.csv") if use_cache and cache_dir else None
 
+        cached_data = pd.DataFrame()
 
-        # Determine missing date ranges
-        if not cached_data.empty:
-            # Extract the start and end dates from the 'Date' level of the MultiIndex
+        if use_cache and cache_file and os.path.exists(cache_file):
+            cached_data = load_cache(cache_file, verbosity)
+
+        if not cached_data.empty and not force_download:
             cached_start = cached_data.index.min()
             cached_end = cached_data.index.max()
 
-            # Check for missing data at the beginning
+            # Check if the cached data is sufficient
             if pd.Timestamp(start) < cached_start:
-                download_start = start
-                download_end = (cached_start - timedelta(days=1)).strftime("%Y-%m-%d")
-                if verbosity > 0:
-                    print(f"Downloading missing data at the beginning for {ticker}: {download_start} to {download_end}")
-                new_data_start = download_data(download_start, download_end, ticker, interval=interval, downloader=downloader, verbosity=verbosity)
-                #wait(10) 
+                # Extend the range by `extend_days`
+                new_start = (pd.Timestamp(start) - pd.Timedelta(days=extend_days)).strftime("%Y-%m-%d")
+                new_data_start = download_data(
+                    new_start, (cached_start - pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                    ticker, interval, downloader, verbosity
+                )
                 cached_data = update_cache(new_data_start, cached_data)
 
-            # Check for missing data at the end
             if pd.Timestamp(end) > cached_end:
-                download_start = (cached_end + timedelta(days=1)).strftime("%Y-%m-%d")
-                download_end = end
-                if verbosity > 0:
-                    print(f"Downloading missing data at the end for {ticker}: {download_start} to {download_end}")
-                new_data_end = download_data(download_start, download_end, ticker, interval=interval, downloader=downloader, verbosity=verbosity)
-                #wait(10) 
+                # Extend the range by `extend_days`
+                new_end = (pd.Timestamp(end) + pd.Timedelta(days=extend_days)).strftime("%Y-%m-%d")
+                new_data_end = download_data(
+                    (cached_end + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                    new_end, ticker, interval, downloader, verbosity
+                )
                 cached_data = update_cache(cached_data, new_data_end)
+
         else:
-            # No cached data, download the full range
             if verbosity > 0:
                 print(f"Downloading full data range for {ticker}: {start} to {end}")
-            new_data = download_data(start, end, ticker, interval=interval, downloader=downloader, verbosity=verbosity)
-            #wait(10) 
+            cached_data = download_data(start, end, ticker, interval, downloader, verbosity)
 
-            cached_data = new_data
-            # Save the new data to cache
+        if use_cache and cache_file:
+            save_cache(cached_data, cache_file, verbosity)  # Save raw, uncleaned data
 
-        # Clean and keep the size        
-        import datetime
-        tmin = min(cached_data.index.min(),pd.Timestamp(start))
-        tmax = max(cached_data.index.max(), pd.Timestamp(end))
-        cached_data = clean_data(cached_data, tmin, tmax)  # Clean the data
-        save_cache(cached_data, cache_file, verbosity)  # Save only the single ticker's data
-
-        # Clean and cut to size
-        cached_data = clean_data(cached_data, start, end)  # Clean the data
-
-        
         all_data.append(cached_data)
 
-    # Combine all ticker data into a single MultiIndex DataFrame
-    all_data = pd.concat(all_data, axis=1)
+    all_data = pd.concat(all_data, axis=1).swaplevel(axis=1).sort_index(axis=1)
 
-    # Flip MultiIndex levels to have 'Ticker' as the first level
-    all_data = all_data.swaplevel(axis=1).sort_index(axis=1)
 
     return all_data
+
+
+def adjust_start_end_dates(start, end, verbosity=VERBOSITY):
+    cal = ecals.get_calendar("XNAS")  # NASDAQ calendar, can be changed to other exchanges
+    start = pd.Timestamp(start)
+    end = pd.Timestamp(end)
+
+    # is session expects a date, so we convert start and end to dates
+    if isinstance(start, pd.Timestamp):
+        start = start.date()
+    if isinstance(end, pd.Timestamp):
+        end = end.date()
+
+    if not cal.is_session(start):
+        # If start is not a trading day, find the previous trading day
+        while not cal.is_session(start):
+            start -= timedelta(days=1)
+        
+    if not cal.is_session(end):
+        while not cal.is_session(end):
+            end -= timedelta(days=1)
+            if end > pd.Timestamp("today").date():
+                while not cal.is_session(end):
+                    end -= timedelta(days=1)
+                break
+
+    # Back to string format
+    start = start.strftime("%Y-%m-%d")
+    end = end.strftime("%Y-%m-%d")
+
+    if verbosity > 0:
+        print(f"Adjusted start date: {start}, end date: {end}")
+
+    return start, end
 
 ################################################################################################
 ################################################################################################
@@ -158,6 +196,9 @@ def test():
     data["GOOGL"]["Close"].plot(title="AAPL Close Price Extended with GOOGL")
     # save the plot
     plt.savefig(cache_dir + "/" + "AAPL_Close_Price_Extended_with_GOOGL.png")
+
+
+
 
 
 

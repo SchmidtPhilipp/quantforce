@@ -1,13 +1,13 @@
-from datetime import datetime
 import numpy as np
 import pandas as pd
 
 
-def generate_random_data(start: str,  # 'YYYY-MM-DD'
-                         end: str,  # 'YYYY-MM-DD'
-                         tickers: list[str],
-                         interval: str = "1d") -> pd.DataFrame:
-                         
+def generate_random_data(
+    start: str,
+    end: str,
+    tickers: list[str],
+    interval: str = "1d",
+) -> pd.DataFrame:
     """
     Generates random financial data with the same structure as yfinance.
 
@@ -18,20 +18,21 @@ def generate_random_data(start: str,  # 'YYYY-MM-DD'
         tickers (list[str]): List of ticker symbols to include in the MultiIndex. Default is ['AAPL', 'MSFT'].
 
     Returns:
-        pd.DataFrame: Randomly generated financial data with a MultiIndex (Ticker, Date) and columns 
+        pd.DataFrame: Randomly generated financial data with a MultiIndex (Ticker, Date) and columns
                       ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'].
 
     Raises:
         ValueError: If any input parameter is invalid or the output is not as expected.
     """
-    # Input validation
     if not isinstance(start, str) or not isinstance(end, str):
         raise ValueError("Start and end dates must be strings in 'YYYY-MM-DD' format.")
     try:
         pd.Timestamp(start)
         pd.Timestamp(end)
-    except ValueError:
-        raise ValueError("Start and end dates must be valid dates in 'YYYY-MM-DD' format.")
+    except ValueError as exc:
+        raise ValueError(
+            "Start and end dates must be valid dates in 'YYYY-MM-DD' format."
+        ) from exc
 
     if pd.Timestamp(start) > pd.Timestamp(end):
         raise ValueError("Start date must be earlier than or equal to the end date.")
@@ -42,7 +43,9 @@ def generate_random_data(start: str,  # 'YYYY-MM-DD'
     if isinstance(tickers, str):
         tickers = [tickers]
 
-    if not isinstance(tickers, list) or not all(isinstance(ticker, str) for ticker in tickers):
+    if not isinstance(tickers, list) or not all(
+        isinstance(ticker, str) for ticker in tickers
+    ):
         raise ValueError("Tickers must be a list of strings.")
 
     if len(tickers) == 0:
@@ -59,7 +62,9 @@ def generate_random_data(start: str,  # 'YYYY-MM-DD'
 
     for ticker in tickers:
         # Generate random walk for the 'Close' price
-        close_prices = np.cumsum(np.random.normal(loc=0, scale=1, size=num_rows)) + 100  # Start at 100
+        close_prices = (
+            np.cumsum(np.random.normal(loc=0, scale=1, size=num_rows)) + 100
+        )  # Start at 100
         high_prices = close_prices + np.random.uniform(1, 5, num_rows)
         low_prices = close_prices - np.random.uniform(1, 5, num_rows)
         open_prices = close_prices + np.random.uniform(-2, 2, num_rows)
@@ -98,7 +103,7 @@ def generate_random_data(start: str,  # 'YYYY-MM-DD'
     for ticker in tickers:
         if not all(col in combined_data[ticker].columns for col in expected_columns):
             raise ValueError(f"Missing expected columns for ticker '{ticker}'.")
-        
+
     # Add column names to the MultiIndex
     combined_data.columns.names = ["Ticker", "Price"]
 
@@ -113,9 +118,11 @@ if __name__ == "__main__":
     try:
         start_date = "2022-01-01"
         end_date = "2022-12-31"
-        random_data = generate_random_data(start_date, end_date, tickers=["AAPL", "MSFT", "GOOG"])
+        random_data = generate_random_data(
+            start_date, end_date, tickers=["AAPL", "MSFT", "GOOG"]
+        )
         print(random_data.head())
-        # Plot 
+        # Plot
         random_data["AAPL"]["Close"].plot()
 
     except ValueError as e:

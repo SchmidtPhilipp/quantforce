@@ -1,11 +1,10 @@
-from qf.data.tickers.tickers import NASDAQ100, DOWJONES, SNP500
-
+from qf.data.tickers.tickers import DOWJONES, NASDAQ100, SNP500
 
 #### GENERAL DEFAULTS ####
 
 VERBOSITY = 0
 
-DEFAULT_LOG_DIR = 'runs'
+DEFAULT_LOG_DIR = "runs"
 DEFAULT_INITIAL_BALANCE = 1000000
 DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for training
 
@@ -14,7 +13,7 @@ DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for train
 
 # Default data configuration
 DEFAULT_TICKERS = DOWJONES
-DEFAULT_TRAIN_START = "1990-01-01"
+DEFAULT_TRAIN_START = "2005-06-30"
 DEFAULT_TRAIN_END = "2015-01-01"
 DEFAULT_EVAL_START = "2015-01-01"
 DEFAULT_EVAL_END = "2020-01-01"
@@ -26,14 +25,18 @@ DEFAULT_INDICATORS = ["rsi", "sma", "macd", "atr"]
 
 
 ### Advanced data defaults
-DEFAULT_DOWNLOADER = "yfinance" # Options: "yfinance" or "simulate"
-DEFAULT_USE_CACHE = True  # Use cache by default, Saves the downloaded data to a local cache directory
+DEFAULT_DOWNLOADER = "yfinance"  # Options: "yfinance" or "simulate"
+DEFAULT_USE_CACHE = (
+    True  # Use cache by default, Saves the downloaded data to a local cache directory
+)
+DEFAULT_FORCE_DOWNLOAD = False  # Force download even if cache exists
 DEFAULT_CACHE_DIR = "../cache"
+DEFAULT_DATA_IMPUTATION_METHOD = "shrinkage"  # Options: "bfill" or "shrinkage"
 
 # yahoo downloader default parameters
 DEFAULT_USE_ADJUSTED_CLOSE = True  # Use adjusted close prices by default
-DEFAULT_USE_AUTOREPAIR = False  # Use auto-adjusted prices by default
-
+DEFAULT_USE_AUTOREPAIR = False  # Use yfinances autorepair feature which tries to detect 100x mixup errors and so on.
+DEFAULT_N_TRADING_DAYS = 252  # Alternative is 365 which casts the data to a yearly frequency, uses ffill to fill the missing values and then uses backfill to fill the remaining missing values.
 
 #### ENVIRONMENT DEFAULTS ####
 
@@ -41,7 +44,7 @@ DEFAULT_USE_AUTOREPAIR = False  # Use auto-adjusted prices by default
 DEFAULT_N_AGENTS = 1
 DEFAULT_TRADE_COST_PERCENT = 0.0
 DEFAULT_TRADE_COST_FIXED = 0
-DEFAULT_REWARD_FUNCTION = "sharpe_ratio_w100" # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
+DEFAULT_REWARD_FUNCTION = "sharpe_ratio_w100"  # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
 
 DEFAULT_REWARD_SCALING = 1  # Scaling factor for the reward function
 DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
@@ -59,7 +62,7 @@ DEFAULT_ENV_CONFIG = {
     "indicators": DEFAULT_INDICATORS,
     "cache_dir": DEFAULT_CACHE_DIR,
     "tickers": DEFAULT_TICKERS,
-    "window_size": DEFAULT_WINDOW_SIZE
+    "window_size": DEFAULT_WINDOW_SIZE,
 }
 
 DEFAULT_TRAIN_ENV_CONFIG = {
@@ -71,19 +74,16 @@ DEFAULT_TRAIN_ENV_CONFIG = {
     "interval": DEFAULT_INTERVAL,
     "indicators": DEFAULT_INDICATORS,
     "cache_dir": DEFAULT_CACHE_DIR,
-
     "initial_balance": DEFAULT_INITIAL_BALANCE,
     "n_agents": DEFAULT_N_AGENTS,
     "trade_cost_percent": DEFAULT_TRADE_COST_PERCENT,
     "trade_cost_fixed": DEFAULT_TRADE_COST_FIXED,
-
     "reward_function": DEFAULT_REWARD_FUNCTION,
     "reward_scaling": DEFAULT_REWARD_SCALING,
-
     "device": DEFAULT_DEVICE,
     "verbosity": VERBOSITY,
     "log_dir": DEFAULT_LOG_DIR,
-    "config_name": DEFUALT_CONFIG_NAME
+    "config_name": DEFUALT_CONFIG_NAME,
 }
 
 DEFAULT_EVAL_ENV_CONFIG = {
@@ -95,19 +95,16 @@ DEFAULT_EVAL_ENV_CONFIG = {
     "interval": DEFAULT_INTERVAL,
     "indicators": DEFAULT_INDICATORS,
     "cache_dir": DEFAULT_CACHE_DIR,
-
     "initial_balance": DEFAULT_INITIAL_BALANCE,
     "n_agents": DEFAULT_N_AGENTS,
     "trade_cost_percent": DEFAULT_TRADE_COST_PERCENT,
     "trade_cost_fixed": DEFAULT_TRADE_COST_FIXED,
-
     "reward_function": DEFAULT_REWARD_FUNCTION,
     "reward_scaling": DEFAULT_REWARD_SCALING,
-
     "device": DEFAULT_DEVICE,
     "verbosity": VERBOSITY,
     "log_dir": DEFAULT_LOG_DIR,
-    "config_name": DEFUALT_CONFIG_NAME
+    "config_name": DEFUALT_CONFIG_NAME,
 }
 
 
@@ -131,10 +128,18 @@ DEFAULT_EVAL_ENV_CONFIG = {
 ##########################################################################################################
 
 # Classic One Period Markovitz Agent configurations
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = True  # Use log returns for calculations
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET = "Tangency"  # Optimization target: Tangency, MaxExpReturn, MinVariance
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_MODEL = "sample_cov"  # Risk model: sample, exp_weighted
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_FREE_RATE = 0.0  # Risk-free rate for Tangency optimization
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = (
+    True  # Use log returns for calculations
+)
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET = (
+    "Tangency"  # Optimization target: Tangency, MaxExpReturn, MinVariance
+)
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_MODEL = (
+    "sample_cov"  # Risk model: sample, exp_weighted
+)
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_RISK_FREE_RATE = (
+    0.0  # Risk-free rate for Tangency optimization
+)
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
     "target": DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET,  # Optimization target
@@ -144,12 +149,20 @@ DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_CONFIG = {
 }
 
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZ_HYPERPARAMETER_SPACE = {
-    "risk_model": {"type": "categorical", "choices": [
-        "sample_cov", "exp_cov", "ledoit_wolf", "ledoit_wolf_constant_variance", 
-        "ledoit_wolf_single_factor", "ledoit_wolf_constant_correlation", "oracle_approximating",
-        "ML_brownian_motion_logreturn"
-    ]},
-    "log_returns": {"type": "categorical", "choices": [True, False]}
+    "risk_model": {
+        "type": "categorical",
+        "choices": [
+            "sample_cov",
+            "exp_cov",
+            "ledoit_wolf",
+            "ledoit_wolf_constant_variance",
+            "ledoit_wolf_single_factor",
+            "ledoit_wolf_constant_correlation",
+            "oracle_approximating",
+            "ML_brownian_motion_logreturn",
+        ],
+    },
+    "log_returns": {"type": "categorical", "choices": [True, False]},
 }
 
 ##########################################################################################################
@@ -170,8 +183,10 @@ DEFAULT_DQN_GAMMA = 0.99
 DEFAULT_DQN_BATCH_SIZE = 32
 DEFAULT_DQN_BUFFER_MAX_SIZE = 100000
 DEFAULT_DQN_EPSILON_START = 0.4
-DEFAULT_DQN_TARGET_MODE = "soft-bellman"  # Options: "hard-bellman" - uses the greedy next q-value, 
-    #  "soft-bellman" - uses the soft Bellman update
+DEFAULT_DQN_TARGET_MODE = (
+    "soft-bellman"  # Options: "hard-bellman" - uses the greedy next q-value,
+)
+#  "soft-bellman" - uses the soft Bellman update
 DEFAULT_DQNAGENT_CONFIG = {
     "actor_config": None,  # Use default architecture
     "lr": DEFAULT_DQN_LR,
@@ -180,15 +195,15 @@ DEFAULT_DQNAGENT_CONFIG = {
     "buffer_max_size": DEFAULT_DQN_BUFFER_MAX_SIZE,
     "device": DEFAULT_DEVICE,
     "epsilon_start": DEFAULT_DQN_EPSILON_START,
-    "target_mode": DEFAULT_DQN_TARGET_MODE  # Default target mode
+    "target_mode": DEFAULT_DQN_TARGET_MODE,  # Default target mode
 }
 
 DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2},
-    #"batch_size": {"type": "int", "low": 32, "high": 128},
+    # "batch_size": {"type": "int", "low": 32, "high": 128},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
     "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
-    #"buffer_max_size": {"type": "int", "low": 10000, "high": 100000}
+    # "buffer_max_size": {"type": "int", "low": 10000, "high": 100000}
 }
 
 ##########################################################################################################
@@ -214,7 +229,7 @@ DEFAULT_SPQLAGENT_CONFIG = {
     "device": DEFAULT_DEVICE,
     "epsilon_start": DEFAULT_SPQL_EPSILON_START,
     "tau": DEFAULT_SPQL_TAU,  # Target network update rate
-    "temperature": DEFAULT_SPQL_TEMPERATURE  # Temperature parameter for soft updates
+    "temperature": DEFAULT_SPQL_TEMPERATURE,  # Temperature parameter for soft updates
 }
 
 DEFAULT_SPQLAGENT_CONFIG_OPTIMIZED = {
@@ -226,7 +241,7 @@ DEFAULT_SPQLAGENT_CONFIG_OPTIMIZED = {
     "device": DEFAULT_DEVICE,
     "epsilon_start": 0.4140285477731602,
     "temperature": 0.0022636670850494545,  # Target network update rate
-    "tau": DEFAULT_SPQL_TAU  # Target network update rate
+    "tau": DEFAULT_SPQL_TAU,  # Target network update rate
 }
 
 DEFAULT_SPQLAGENT_HYPERPARAMETER_SPACE = {
@@ -249,7 +264,9 @@ DEFAULT_SAC_BATCH_SIZE = 128
 DEFAULT_SAC_BUFFER_MAX_SIZE = 100000
 DEFAULT_SAC_POLICY = "MlpPolicy"  # Default policy architecture for SAC
 DEFAULT_SAC_TAU = 0.005  # Target network update rate for SAC
-DEFAULT_SAC_GRADIENT_STEPS = 1  # Number of gradient steps per training iteration for SAC
+DEFAULT_SAC_GRADIENT_STEPS = (
+    1  # Number of gradient steps per training iteration for SAC
+)
 DEFAULT_SAC_TRAIN_FREQ = 1  # Frequency of training steps for SAC
 DEFAULT_SAC_ENT_COEF = "auto_0.1"  # Automatic entropy coefficient adjustment for SAC
 DEFAULT_SAC_VERBOSITY = 1  # Verbosity level for logging
@@ -257,7 +274,7 @@ DEFAULT_SAC_VERBOSITY = 1  # Verbosity level for logging
 # Action Noise
 DEFAULT_SAC_ACTION_NOISE = True  # Whether to use action noise for exploration
 DEFAULT_SAC_ACTION_NOISE_SIGMA_INIT = 0.2  # Standard deviation of action noise
-DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL = 0   # Final action noise sigma
+DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL = 0  # Final action noise sigma
 DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS = 100_000
 
 DEFAULT_SACAGENT_CONFIG = {
@@ -275,7 +292,7 @@ DEFAULT_SACAGENT_CONFIG = {
     "action_noise": DEFAULT_SAC_ACTION_NOISE,  # Whether to use action noise for exploration
     "action_noise_sigma_init": DEFAULT_SAC_ACTION_NOISE_SIGMA_INIT,  # Initial standard deviation of action noise
     "action_noise_sigma_final": DEFAULT_SAC_ACTION_NOISE_SIGMA_FINAL,  # Final standard deviation of action noise
-    "action_noise_decay_steps": DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS  # Number of steps for action noise decay
+    "action_noise_decay_steps": DEFAULT_SAC_ACTION_NOISE_DECAY_STEPS,  # Number of steps for action noise decay
 }
 
 DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
@@ -283,11 +300,37 @@ DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
     "gradient_steps": {"type": "int", "low": 1, "high": 16},
     "train_freq": {"type": "int", "low": 1, "high": 16},
-    "ent_coef": {"type": "categorical", "choices": ["auto", "auto_0.01", "auto_0.1", "auto_1", "auto_10", "auto_100", 0.01, 0.1, 1, 10, 100]},
+    "ent_coef": {
+        "type": "categorical",
+        "choices": [
+            "auto",
+            "auto_0.01",
+            "auto_0.1",
+            "auto_1",
+            "auto_10",
+            "auto_100",
+            0.01,
+            0.1,
+            1,
+            10,
+            100,
+        ],
+    },
     "tau": {"type": "float", "low": 0.001, "high": 0.2},
-    "action_noise": {"type": "categorical", "choices": [True, False]},  # Whether to use action noise for exploration
-    "action_noise_sigma_init": {"type": "float", "low": 0.1, "high": 0.5},  # Initial standard deviation of action noise
-    "action_noise_sigma_final": {"type": "float", "low": 0.0, "high": 0.3},  # Final standard deviation of action noise
+    "action_noise": {
+        "type": "categorical",
+        "choices": [True, False],
+    },  # Whether to use action noise for exploration
+    "action_noise_sigma_init": {
+        "type": "float",
+        "low": 0.1,
+        "high": 0.5,
+    },  # Initial standard deviation of action noise
+    "action_noise_sigma_final": {
+        "type": "float",
+        "low": 0.0,
+        "high": 0.3,
+    },  # Final standard deviation of action noise
 }
 
 ##########################################################################################################
@@ -302,7 +345,9 @@ DEFAULT_TD3_BATCH_SIZE = 100  # Batch size
 DEFAULT_TD3_BUFFER_MAX_SIZE = 1000000  # Replay buffer size
 DEFAULT_TD3_POLICY = "MlpPolicy"  # Default policy architecture for TD3
 DEFAULT_TD3_TAU = 0.005  # Target network update rate
-DEFAULT_TD3_GRADIENT_STEPS = -1  # Number of gradient steps per training iteration (-1 means auto)
+DEFAULT_TD3_GRADIENT_STEPS = (
+    -1
+)  # Number of gradient steps per training iteration (-1 means auto)
 DEFAULT_TD3_TRAIN_FREQ = 1  # Frequency of training steps
 DEFAULT_TD3_NOISE_STD = 0.2  # Standard deviation of noise added to actions
 DEFAULT_TD3_NOISE_CLIP = 0.5  # Clipping range for noise
@@ -318,14 +363,14 @@ DEFAULT_TD3AGENT_CONFIG = {
     "gradient_steps": DEFAULT_TD3_GRADIENT_STEPS,  # Number of gradient steps per training iteration
     "device": DEFAULT_DEVICE,  # Device to run the computations on
     "noise_std": DEFAULT_TD3_NOISE_STD,  # Standard deviation of noise added to actions
-    "noise_clip": DEFAULT_TD3_NOISE_CLIP  # Clipping range for noise
+    "noise_clip": DEFAULT_TD3_NOISE_CLIP,  # Clipping range for noise
 }
 
 DEFAULT_TD3AGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
     "noise_std": {"type": "float", "low": 0.1, "high": 0.3},
     "noise_clip": {"type": "float", "low": 0.3, "high": 0.5},
-    #"batch_size": {"type": "int", "low": 64, "high": 128},
+    # "batch_size": {"type": "int", "low": 64, "high": 128},
     "tau": {"type": "float", "low": 0.001, "high": 0.01},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
 }
@@ -343,9 +388,11 @@ DEFAULT_DDPG_BUFFER_MAX_SIZE = 1000000  # Replay buffer size
 DEFAULT_DDPG_POLICY = "MlpPolicy"  # Default policy architecture for DDPG
 DEFAULT_DDPG_TAU = 0.005  # Target network update rate
 DEFAULT_DDPG_TRAIN_FREQ = 1  # Frequency of training steps
-DEFAULT_DDPG_GRADIENT_STEPS = -1  # Number of gradient steps per training iteration (-1 means auto)
+DEFAULT_DDPG_GRADIENT_STEPS = (
+    -1
+)  # Number of gradient steps per training iteration (-1 means auto)
 DEFAULT_DDPG_VERBOSITY = 1  # Verbosity level for logging
-DEFAULT_DDPG_ACTION_NOISE = True,
+DEFAULT_DDPG_ACTION_NOISE = (True,)
 DEFAULT_DDPG_ACTION_NOISE_SIGMA = 0.2  # Standard deviation of noise added to actions
 
 DEFAULT_DDPGAGENT_CONFIG = {
@@ -360,17 +407,24 @@ DEFAULT_DDPGAGENT_CONFIG = {
     "device": DEFAULT_DEVICE,  # Device to run the computations on
     "verbose": DEFAULT_DDPG_VERBOSITY,  # Verbosity level for logging
     "action_noise": DEFAULT_DDPG_ACTION_NOISE,  # Action noise for exploration
-    "action_noise_sigma": DEFAULT_DDPG_ACTION_NOISE_SIGMA  # Standard deviation of noise added to actions
+    "action_noise_sigma": DEFAULT_DDPG_ACTION_NOISE_SIGMA,  # Standard deviation of noise added to actions
 }
 
 DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
     "tau": {"type": "float", "low": 0.001, "high": 0.01},
-    #"batch_size": {"type": "int", "low": 64, "high": 128},
-    #"buffer_size": {"type": "int", "low": 100000, "high": 1000000},
+    # "batch_size": {"type": "int", "low": 64, "high": 128},
+    # "buffer_size": {"type": "int", "low": 100000, "high": 1000000},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
-    "action_noise_sigma": {"type": "float", "low": 0.1, "high": 0.3},  # Standard deviation of noise added to actions
-    "action_noise": {"type": "categorical", "choices": [True, False]}  # Action noise for exploration
+    "action_noise_sigma": {
+        "type": "float",
+        "low": 0.1,
+        "high": 0.3,
+    },  # Standard deviation of noise added to actions
+    "action_noise": {
+        "type": "categorical",
+        "choices": [True, False],
+    },  # Action noise for exploration
 }
 
 ##########################################################################################################
@@ -397,15 +451,15 @@ DEFAULT_PPOAGENT_CONFIG = {
     "gae_lambda": DEFAULT_PPO_GAE_LAMBDA,  # GAE lambda parameter
     "clip_range": DEFAULT_PPO_CLIP_RANGE,  # Clipping range for PPO
     "device": DEFAULT_DEVICE,  # Device to run the computations on
-    "verbose": DEFAULT_PPO_VERBOSITY  # Verbosity level for logging
+    "verbose": DEFAULT_PPO_VERBOSITY,  # Verbosity level for logging
 }
 
 DEFAULT_PPO_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
     "clip_range": {"type": "float", "low": 0.1, "high": 0.3},
     "gae_lambda": {"type": "float", "low": 0.9, "high": 0.99},
-    #"batch_size": {"type": "int", "low": 32, "high": 128},
-    "n_steps": {"type": "int", "low": 512, "high": 2048}
+    # "batch_size": {"type": "int", "low": 32, "high": 128},
+    "n_steps": {"type": "int", "low": 512, "high": 2048},
 }
 
 ##########################################################################################################
@@ -413,7 +467,7 @@ DEFAULT_PPO_HYPERPARAMETER_SPACE = {
 ##########################################################################################################
 ##########################################################################################################
 
-# Default Multi-Agent configurations 
+# Default Multi-Agent configurations
 
 ##########################################################################################################
 ##########################################################################################################
@@ -427,7 +481,7 @@ DEFAULT_MADDPG_BATCH_SIZE = 64  # Batch size
 DEFAULT_MADDPG_BUFFER_MAX_SIZE = 1000000  # Replay buffer size
 DEFAULT_MADDPG_TAU = 0.005  # Target network update rate
 DEFAULT_MADDPG_VERBOSITY = 0  # Verbosity level for logging
-DEFAULT_MADDPG_LAMBDA = 1  # lambda parameter for weighting the loss function. 
+DEFAULT_MADDPG_LAMBDA = 1  # lambda parameter for weighting the loss function.
 DEFAULT_MADDPG_LOSS_FN = "mse"  # "MSE" or "weighted_correlation_loss"
 
 DEFAULT_MADDPG_OU_MU = 0.0  # Mean for Ornstein-Uhlenbeck noise
@@ -449,20 +503,36 @@ DEFAULT_MADDPGAGENT_CONFIG = {
     "ou_mu": DEFAULT_MADDPG_OU_MU,  # Mean for Ornstein-Uhlenbeck noise
     "ou_theta": DEFAULT_MADDPG_OU_THETA,  # Theta for Ornstein-Uhlenbeck noise
     "ou_sigma": DEFAULT_MADDPG_OU_SIGMA,  # Sigma for Ornstein-Uhlenbeck noise
-    "ou_dt": DEFAULT_MADDPG_OU_DT  # Time step for Ornstein-Uhlenbeck noise
+    "ou_dt": DEFAULT_MADDPG_OU_DT,  # Time step for Ornstein-Uhlenbeck noise
 }
 
 DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
     "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
     "lambda_": {"type": "float", "low": 0.9, "high": 0.95},
     "loss_fn": {"type": "categorical", "choices": ["mse", "weighted_correlation_loss"]},
-    #"batch_size": {"type": "int", "low": 64, "high": 128},
+    # "batch_size": {"type": "int", "low": 64, "high": 128},
     "tau": {"type": "float", "low": 0.001, "high": 0.01},
     "gamma": {"type": "float", "low": 0.8, "high": 0.99},
-    "ou_mu": {"type": "float", "low": -0.1, "high": 0.1},  # Mean for Ornstein-Uhlenbeck noise
-    "ou_theta": {"type": "float", "low": 0.1, "high": 0.2},  # Theta for Ornstein-Uhlenbeck noise
-    "ou_sigma": {"type": "float", "low": 0.1, "high": 0.3},  # Sigma for Ornstein-Uhlenbeck noise
-    "ou_dt": {"type": "float", "low": 1e-3, "high": 1e-2}  # Time step for Ornstein-Uhlenbeck noise
+    "ou_mu": {
+        "type": "float",
+        "low": -0.1,
+        "high": 0.1,
+    },  # Mean for Ornstein-Uhlenbeck noise
+    "ou_theta": {
+        "type": "float",
+        "low": 0.1,
+        "high": 0.2,
+    },  # Theta for Ornstein-Uhlenbeck noise
+    "ou_sigma": {
+        "type": "float",
+        "low": 0.1,
+        "high": 0.3,
+    },  # Sigma for Ornstein-Uhlenbeck noise
+    "ou_dt": {
+        "type": "float",
+        "low": 1e-3,
+        "high": 1e-2,
+    },  # Time step for Ornstein-Uhlenbeck noise
 }
 
 ###########################################################################################################
@@ -471,53 +541,81 @@ DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
 DEFAULT_FIGSIZE_BEAMER = (8, 4)  # Standardgröße für Beamer-Präsentationen
 DEFAULT_FIGSIZE_PAPER = (8, 2.5)  # Standardgröße für Papierformate
 
-DEFAULT_COLORSCHEME = "plasma"  # Default color scheme for plots
-DEFAULT_SINGLE_LINE_COLOR = "black"  # Default color for single line plots
-
+DEFAULT_COLORSCHEME = "viridis"  # Default color scheme for plots
+DEFAULT_SINGLE_LINE_COLORS = [
+    "black",
+    "red",
+    "green",
+    "blue",
+    "orange",
+    "purple",
+    "brown",
+    "pink",
+]  # Default colors for single lines in plots
 
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
 ##########################################################################################################
-
-# Hyperparameter search configuration
-from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer 
-
-# Environments
-from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
-
-# Data
-from qf.data.tickers.tickers import NASDAQ100, DOWJONES, SNP500
-from qf.data.dataset import TimeBasedDataset
-from qf.data.utils.get_data import get_data
-
-# Custom Agents
-from qf.agents.tensor_agents.dqn_agent import DQNAgent
-from qf.agents.tensor_agents.spql_agent import SPQLAgent
 
 # Classic Agents
-from qf.agents.classic_agents.classic_one_period_markovitz_agent import ClassicOnePeriodMarkovitzAgent
+from qf.agents.classic_agents.classic_one_period_markovitz_agent import (
+    ClassicOnePeriodMarkovitzAgent,
+)
+from qf.agents.classic_agents.utils.calculate_covariance_of_return import (
+    calculate_covariance_of_return,
+)
+
+# Risk and Expectation calculations
+from qf.agents.classic_agents.utils.calculate_expected_return import (
+    calculate_expected_return,
+)
+from qf.agents.sb3_agents.a2c_agent import A2CAgent
+from qf.agents.sb3_agents.ddpg_agent import DDPGAgent
+from qf.agents.sb3_agents.ppo_agent import PPOAgent
 
 # Stable Baselines3 Agents
 from qf.agents.sb3_agents.sac_agent import SACAgent
 from qf.agents.sb3_agents.td3_agent import TD3Agent
-from qf.agents.sb3_agents.ddpg_agent import DDPGAgent
-from qf.agents.sb3_agents.ppo_agent import PPOAgent
-from qf.agents.buffers.a2c_agent import A2CAgent
+
+# Custom Agents
+from qf.agents.tensor_agents.dqn_agent import DQNAgent
 
 # Multi-Agent Agents
 from qf.agents.tensor_agents.maddpg_agent import MADDPGAgent
+from qf.agents.tensor_agents.spql_agent import SPQLAgent
+from qf.data.dataset import TimeBasedDataset
 
-# General utilities
-from qf.utils.tensorboard.start_tensorboard import start_tensorboard
-from qf.utils.tensorboard.safari import focus_tensorboard_tab, refresh_current_safari_window
+# Data
+from qf.data.tickers.tickers import DOWJONES, NASDAQ100, SNP500
+from qf.data.utils.get_data import get_data
+
+# Environments
+from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
+
+# Hyperparameter search configuration
+from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer
+
+# Reporting
+from qf.report.report import EVALReport
 
 # Helper functions
 from qf.utils.helper_functions import generate_random_name
 from qf.utils.metrics import Metrics
 
 # Visualization
-from qf.utils.plot import setup_pgf, reset_pgf
+from qf.utils.plot import (
+    plot_grid,
+    plot_hist_grid,
+    plot_hist_grid_compare,
+    plot_risk_matrix,
+    reset_pgf,
+    setup_pgf,
+)
+from qf.utils.tensorboard.safari import (
+    focus_tensorboard_tab,
+    refresh_current_safari_window,
+)
 
-# Reporting
-from qf.report.report import EVALReport
+# General utilities
+from qf.utils.tensorboard.start_tensorboard import start_tensorboard

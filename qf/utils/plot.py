@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.dates as mdates
 import matplotlib
+from typing import Tuple, Optional
 import qf
 
 def setup_pgf():
@@ -371,3 +372,233 @@ def round_up_to_nearest(value, base=10):
         float: Der aufgerundete Wert.
     """
     return base * np.ceil(value / base)
+
+
+import pandas as pd
+def plot_risk_matrix(expected_returns: pd.DataFrame,
+                    expected_covariance: pd.DataFrame, 
+                     colorscheme: str = qf.DEFAULT_COLORSCHEME,
+                     figsize: tuple[float, float] = (10, 8),
+                     fontsize: int = 8, 
+                     save_path: str = None, 
+                     title: str = "Risk Matrix"):
+    
+    tickers = expected_returns.index.tolist()  # Get the tickers from the index of expected returns
+    
+    # if tickers are a list of tuples we have a multi-index DataFrame
+    if isinstance(tickers[0], tuple):
+        # then we want a list of the first elements of the tuples
+        tickers = [ticker[0] for ticker in tickers]
+    
+    # and make them unique
+    tickers = list(dict.fromkeys(tickers))
+
+    # Extend the matrix with mean returns
+    extended_matrix = expected_covariance.copy()
+    extended_matrix["E[R]"] = expected_returns  # Add a column for mean returns
+    
+    # Visualize the extended matrix with matplotlib
+    fig, ax = plt.subplots(figsize=figsize)  # Larger plot window for additional row
+    
+
+    # Axis ticks and labels (using LaTeX for labels)
+    latex_tickers = [r"$\\textbf{" + ticker + r"}$" for ticker in tickers]
+    latex_tickers = [r"{" + ticker + r"}" for ticker in tickers]
+    ax.set_xticks(range(len(tickers) + 1))  # Additional column for mean returns
+    ax.set_yticks(range(len(tickers)))  # Additional row for mean returns
+   # ax.set_xticklabels(latex_tickers + [r"$\\mathbf{E[R]}$"], rotation=45, ha="right", fontsize=fontsize)
+    ax.set_yticklabels(latex_tickers, fontsize=8)
+
+    # Write numbers into the matrix (rounded to one decimal place)
+    for i in range(len(tickers)):
+        for j in range(len(tickers)):
+            value = expected_covariance.iloc[i, j]
+            color = "white" if value > 0 else "black"  # White for values > 0, black for values <= 0
+            ax.text(j, i, f"{value:.1f}", ha="center", va="center", color=color, fontsize=fontsize)
+
+    # Write mean returns into the last column
+    for j in range(len(tickers)):
+        mean_value = expected_returns.iloc[j]
+        value = mean_value
+        color = "white" if value > 0 else "black"  # White for values > 0, black for values <= 0
+        ax.text(len(tickers), j, f"{mean_value:.2%}", ha="center", va="center", color=color, fontsize=fontsize)
+
+    cax = ax.matshow(extended_matrix, cmap=colorscheme)  # Grayscale representation with limited color scale
+    fig.colorbar(cax, ax=ax, fraction=0.04, pad=0.03)  # Add a color bar
+    if title:
+        ax.set_title(title, fontsize=fontsize + 2, pad=20)
+
+    # Remove the title and save the plot
+    plt.tight_layout()
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+
+def plot_hist_grid(
+    data: pd.DataFrame,
+    n_cols: int = 3,
+    bins: int = 50,
+    figsize: Tuple[float, float] = (6, 2),
+    log_y_scale: bool = False,
+    ylim: Optional[Tuple[float, float]] = None,
+    hist_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[0],
+    kde_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[1]
+) -> None:
+    """
+    Plots a grid of histogram and KDE plots for each unique first-level column label in a MultiIndex DataFrame.
+
+    Args:
+        data (pd.DataFrame): MultiIndex DataFrame with two-level column index (e.g., (ticker, attribute)).
+        n_cols (int): Number of columns in the plot grid.
+        bins (int): Number of bins for the histogram.
+        figsize (Tuple[float, float]): Size of each subplot (width, height).
+        log_y_scale (bool): Whether to use a logarithmic scale for the y-axis.
+        ylim (Optional[Tuple[float, float]]): Y-axis limits. If None, defaults to matplotlib's auto-scaling.
+        hist_color (str): Color for histogram bars.
+        kde_color (str): Color for KDE curve.
+    """
+    # Extract unique tickers from the first level of the MultiIndex
+    tickers = sorted(set(col[0] for col in data.columns))
+    n_rows = int(np.ceil(len(tickers) / n_cols))
+
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows))
+    axes = np.atleast_1d(axes).flatten()
+
+    for i, ticker in enumerate(tickers):
+        ax = axes[i]
+
+        # Plot histogram and KDE for all attributes under this ticker
+        data[ticker].plot.hist(bins=bins, density=True, ax=ax, color=hist_color, alpha=0.7)
+        data[ticker].plot.kde(ax=ax, color=kde_color)
+
+        ax.set_title(ticker)
+        ax.set_ylabel("Density")
+        ax.set_xlabel("Return")
+        ax.grid(True)
+        ax.set_xlim(-0.1, 0.1)
+
+        if log_y_scale:
+            ax.set_yscale('log')
+        if ylim is not None:
+            ax.set_ylim(ylim)
+
+        ax.legend(["Histogram", "KDE"], loc='upper right')
+
+    # Hide unused subplots
+    for j in range(i + 1, len(axes)):
+        axes[j].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_hist_grid_compare(
+    data1: pd.DataFrame,
+    data2: pd.DataFrame,
+    n_cols: int = 3,
+    bins: int = 50,
+    figsize: Tuple[float, float] = (6, 2),
+    log_y_scale: bool = False,
+    ylim: Optional[Tuple[float, float]] = None,
+    hist_colors: Tuple[str, str] = (qf.DEFAULT_SINGLE_LINE_COLORS[0], qf.DEFAULT_SINGLE_LINE_COLORS[1]),
+    kde_colors: Tuple[str, str] = (qf.DEFAULT_SINGLE_LINE_COLORS[2], qf.DEFAULT_SINGLE_LINE_COLORS[3])
+) -> None:
+    """
+    Plots a grid of histogram and KDE plots for each unique first-level column label in two MultiIndex DataFrames.
+
+    Args:
+        data1 (pd.DataFrame): First MultiIndex DataFrame with two-level column index (e.g., (ticker, attribute)).
+        data2 (pd.DataFrame): Second MultiIndex DataFrame with two-level column index (e.g., (ticker, attribute)).
+        n_cols (int): Number of columns in the plot grid.
+        bins (int): Number of bins for the histogram.
+        figsize (Tuple[float, float]): Size of each subplot (width, height).
+        log_y_scale (bool): Whether to use a logarithmic scale for the y-axis.
+        ylim (Optional[Tuple[float, float]]): Y-axis limits. If None, defaults to matplotlib's auto-scaling.
+        hist_colors (Tuple[str, str]): Colors for histogram bars for data1 and data2.
+        kde_colors (Tuple[str, str]): Colors for KDE curves for data1 and data2.
+    """
+    # Extract unique tickers from the first level of the MultiIndex
+    tickers = sorted(set(col[0] for col in data1.columns).intersection(set(col[0] for col in data2.columns)))
+    n_rows = int(np.ceil(len(tickers) / n_cols))
+
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows))
+    axes = np.atleast_1d(axes).flatten()
+
+    for i, ticker in enumerate(tickers):
+        ax = axes[i]
+
+        # Plot histogram and KDE for all attributes under this ticker
+        if ticker in data1.columns.get_level_values(0):
+            data1[ticker].plot.hist(bins=bins, density=True, ax=ax, color=hist_colors[0], alpha=0.5, label=f"{ticker} (Data1)")
+            data1[ticker].plot.kde(ax=ax, color=kde_colors[0], linestyle="--", label=f"{ticker} KDE (Data1)")
+
+        if ticker in data2.columns.get_level_values(0):
+            data2[ticker].plot.hist(bins=bins, density=True, ax=ax, color=hist_colors[1], alpha=0.5, label=f"{ticker} (Data2)")
+            data2[ticker].plot.kde(ax=ax, color=kde_colors[1], linestyle="-.", label=f"{ticker} KDE (Data2)")
+
+        ax.set_title(ticker)
+        ax.set_ylabel("Density")
+        ax.set_xlabel("Return")
+        ax.grid(True)
+        ax.set_xlim(-0.1, 0.1)
+
+        if log_y_scale:
+            ax.set_yscale('log')
+        if ylim is not None:
+            ax.set_ylim(ylim)
+
+        ax.legend(loc='upper right')
+
+    # Hide unused subplots
+    for j in range(i + 1, len(axes)):
+        axes[j].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_grid(
+    data: pd.DataFrame,
+    n_cols: int = 3,
+    figsize: Tuple[float, float] = (6, 2),
+    ylim: Optional[Tuple[float, float]] = None,
+    line_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[0]
+) -> None:
+    """
+    Plots a grid of time series plots for each unique first-level column label in a MultiIndex DataFrame.
+
+    Args:
+        data (pd.DataFrame): MultiIndex DataFrame with column format (ticker, attribute).
+        n_cols (int): Number of columns in the grid layout.
+        figsize (Tuple[float, float]): Size of each subplot (width, height).
+        ylim (Optional[Tuple[float, float]]): Optional y-axis limits.
+        line_color (str): Color of the time series line.
+    """
+    # Extract unique tickers from the first level of the MultiIndex
+    tickers = sorted(set(col[0] for col in data.columns))
+    n_rows = int(np.ceil(len(tickers) / n_cols))
+
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows))
+    axes = np.atleast_2d(axes)
+
+    for i, ticker in enumerate(tickers):
+        row, col = divmod(i, n_cols)
+        ax = axes[row, col]
+
+        # Plot the time series for the ticker
+        data[ticker].plot(ax=ax, title=ticker, ylabel="Price", xlabel="Date", grid=True, color=line_color)
+        ax.legend().remove()
+
+        if ylim is not None:
+            ax.set_ylim(ylim)
+
+    # Hide unused axes
+    total_plots = n_rows * n_cols
+    for j in range(len(tickers), total_plots):
+        row, col = divmod(j, n_cols)
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+    plt.show()

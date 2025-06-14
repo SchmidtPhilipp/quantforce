@@ -1,5 +1,7 @@
 import time
+
 from tqdm import tqdm
+
 
 def wait(seconds, progress=True):
     """

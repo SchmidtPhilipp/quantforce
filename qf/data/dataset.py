@@ -1,21 +1,26 @@
 import torch
 from torch.utils.data import Dataset
-from .utils.get_data import get_data
+
 import qf as qf
+
+from .utils.get_data import get_data
+
 
 class TimeBasedDataset(Dataset):
     """
     A PyTorch Dataset for time-based financial data with a sliding window of size t.
     """
 
-    def __init__(self, 
-                 tickers, 
-                 start_date, 
-                 end_date, 
-                 interval=qf.DEFAULT_INTERVAL, 
-                 window_size=qf.DEFAULT_WINDOW_SIZE, 
-                 cache_dir=qf.DEFAULT_CACHE_DIR, 
-                 indicators=qf.DEFAULT_INDICATORS):
+    def __init__(
+        self,
+        tickers,
+        start_date,
+        end_date,
+        interval=qf.DEFAULT_INTERVAL,
+        window_size=qf.DEFAULT_WINDOW_SIZE,
+        cache_dir=qf.DEFAULT_CACHE_DIR,
+        indicators=qf.DEFAULT_INDICATORS,
+    ):
         """
         Initializes the dataset.
 
@@ -38,7 +43,7 @@ class TimeBasedDataset(Dataset):
 
         # Download and preprocess data using get_data
         self.data = get_data(tickers, start_date, end_date, indicators=indicators)
-        
+
         # Some tickers may not have data so we need to remove them attention multiindex
         self.tickers = self.data.columns.levels[0].tolist()
 
@@ -66,21 +71,19 @@ class TimeBasedDataset(Dataset):
         """
         if idx < 0 or idx >= len(self):
             raise IndexError("Index out of range")
-        return self.data_tensor[idx:idx + self.window_size]
-    
+        return self.data_tensor[idx : idx + self.window_size]
+
     def get_width(self):
         """
         Returns the width of the dataset, which is the number of features (tickers).
         """
         return len(self.data.columns)
-    
 
     def get_data(self):
         """
         Returns the raw data as a pandas DataFrame.
         """
         return self.data
-    
 
     def get_dataloader(self):
         """

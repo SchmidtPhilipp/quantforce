@@ -8,10 +8,9 @@ import matplotlib.pyplot as plt
 from pypfopt import expected_returns, risk_models
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt.plotting import plot_efficient_frontier
-from data import get_data
-from utils.plot import setup_pgf, reset_pgf
 
-from data import DOWJONES, NASDAQ100, SNP500
+from qf import get_data
+from qf.utils.plot import setup_pgf, reset_pgf
 
 # Get folder of this script
 import os

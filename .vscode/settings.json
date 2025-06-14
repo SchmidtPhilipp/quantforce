@@ -1,13 +1,46 @@
 {
-    "python.defaultInterpreterPath": "/Users/PhilippSchmidt/miniconda3/envs/finMARL/bin/python",
-    "python.testing.unittestArgs": [
-      "-v",
-      "-s",
-      "./tests",
-      "-p",
-      "test_*.py"
-    ],
-    "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true,
-    "python.testing.nosetestsEnabled": false
+  // Sets the Python interpreter (virtual environment) used by VS Code
+  "python.defaultInterpreterPath": "/Users/PhilippSchmidt/miniforge3/envs/finrl-env/bin/python",
+  // Explicitly sets the language server (Pylance is fast, feature-rich, and officially recommended)
+  "python.languageServer": "Pylance",
+  // Arguments passed to the unittest discovery (verbose mode, folder, and test file pattern)
+  "python.testing.unittestArgs": [
+    "-v", // verbose output
+    "-s",
+    "./tests", // search in ./tests directory
+    "-p",
+    "test_*.py" // match files like test_foo.py
+  ],
+  // Disable pytest framework
+  "python.testing.pytestEnabled": false,
+  // Enable unittest as the test framework
+  "python.testing.unittestEnabled": true,
+  // Disable nosetests framework
+  "python.testing.nosetestsEnabled": false,
+  // Automatically re-discover tests when files are saved
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  // Enable linting globally
+  "python.linting.enabled": true,
+  // Enable pylint as the linter
+  "python.linting.pylintEnabled": true,
+  // Enable mypy for type checking
+  "python.linting.mypyEnabled": true,
+  // Enable strict type checking (closer to mypy strict mode)
+  "python.analysis.typeCheckingMode": "basic", // 
+  // Suggest and auto-insert missing imports
+  "python.analysis.autoImportCompletions": true,
+  // Show inline hints for variable types
+  "python.analysis.inlayHints.variableTypes": true,
+  // Show inline hints for function return types
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  // Use Black as the formatter (opinionated and widely adopted)
+  "python.formatting.provider": "black",
+  // Automatically format code on save
+  "editor.formatOnSave": true,
+  // Automatically organize imports on save (sorts and removes unused)
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "always"
+  },
+  // Use Google style for generated docstrings (also supports "numpy")
+  "autoDocstring.docstringFormat": "google"
 }

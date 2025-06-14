@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def clean_data(data, start, end):
+def reindex_data(data, start, end):
     """
     Cleans and reindexes the data to ensure consistency.
 
@@ -16,7 +16,9 @@ def clean_data(data, start, end):
     # Generate a complete date range
     date_range = pd.date_range(start=start, end=end, freq="D")
     data = data.reindex(date_range)  # Reindex to ensure all dates are present
-    data = data.ffill().bfill()  # Fill any remaining missing values
+    data = (
+        data.ffill()
+    )  # Fill any remaining missing values so the weekend data is the same as the last trading day
     return data
 
 

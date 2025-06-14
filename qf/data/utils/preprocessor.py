@@ -1,40 +1,55 @@
-import pandas as pd
-from ta.momentum import RSIIndicator
-from ta.trend import MACD, SMAIndicator, EMAIndicator, ADXIndicator
-from ta.volatility import BollingerBands, AverageTrueRange
-from ta.volume import OnBalanceVolumeIndicator
 import numpy as np
+import pandas as pd
 
 # Import Series
 from pandas import Series
+from ta.momentum import RSIIndicator
+from ta.trend import MACD, ADXIndicator, EMAIndicator, SMAIndicator
+from ta.volatility import AverageTrueRange, BollingerBands
+from ta.volume import OnBalanceVolumeIndicator
+
 
 def compute_sma(series, window=14):
     return SMAIndicator(series, window=window).sma_indicator()
 
+
 def compute_rsi(series, window=14):
     return RSIIndicator(series, window=window).rsi()
+
 
 def compute_macd(series, fast=12, slow=26, signal=9):
     macd = MACD(series, window_fast=fast, window_slow=slow, window_sign=signal)
     return macd.macd_diff()
 
+
 def compute_ema(series, window=14):
     return EMAIndicator(series, window=window).ema_indicator()
 
+
 def compute_adx(high, low, close, window=14):
     return ADXIndicator(high=high, low=low, close=close, window=window).adx()
+
 
 def compute_bollinger_bands(series, window=20):
     bb = BollingerBands(series, window=window)
     return bb.bollinger_hband(), bb.bollinger_lband()
 
+
 def compute_atr(high, low, close, window=14):
-    return AverageTrueRange(high=high, low=low, close=close, window=window).average_true_range()
+    return AverageTrueRange(
+        high=high, low=low, close=close, window=window
+    ).average_true_range()
+
 
 def compute_obv(close, volume):
     return OnBalanceVolumeIndicator(close=close, volume=volume).on_balance_volume()
 
-def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"), verbosity=0):
+
+def add_technical_indicators(
+    data,
+    indicators=("sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"),
+    verbosity=0,
+):
     """
     Adds technical indicators to OHLCV data with MultiIndex columns (ticker, field).
 
@@ -53,12 +68,20 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
     selected_indicators = set(indicators).intersection(valid_indicators)
 
     # Check for indicators with specific window sizes (e.g., "sma50", "ema20", "adx14", "bb20", "atr14")
-    windowed_indicators = [ind for ind in indicators if any(ind.startswith(prefix) and ind[len(prefix):].isdigit() 
-                                                            for prefix in ["sma", "ema", "adx", "bb", "atr"])]
+    windowed_indicators = [
+        ind
+        for ind in indicators
+        if any(
+            ind.startswith(prefix) and ind[len(prefix) :].isdigit()
+            for prefix in ["sma", "ema", "adx", "bb", "atr"]
+        )
+    ]
 
     if not selected_indicators and not windowed_indicators:
         if verbosity > 0:
-            print("No valid indicators found in the provided list. Returning the original data.")
+            print(
+                "No valid indicators found in the provided list. Returning the original data."
+            )
         return data
 
     enriched = {}
@@ -88,7 +111,9 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
             enriched[(ticker, "adx")] = compute_adx(high, low, close)
 
         if "bb" in selected_indicators:
-            enriched[(ticker, "bb_upper")], enriched[(ticker, "bb_lower")] = compute_bollinger_bands(close)
+            enriched[(ticker, "bb_upper")], enriched[(ticker, "bb_lower")] = (
+                compute_bollinger_bands(close)
+            )
 
         if "atr" in selected_indicators:
             enriched[(ticker, "atr")] = compute_atr(high, low, close)
@@ -106,13 +131,20 @@ def add_technical_indicators(data, indicators=("sma", "rsi", "macd", "ema", "adx
                 enriched[(ticker, f"ema{window}")] = compute_ema(close, window=window)
             elif indicator.startswith("adx"):
                 window = int(indicator[3:])
-                enriched[(ticker, f"adx{window}")] = compute_adx(high, low, close, window=window)
+                enriched[(ticker, f"adx{window}")] = compute_adx(
+                    high, low, close, window=window
+                )
             elif indicator.startswith("bb"):
                 window = int(indicator[2:])
-                enriched[(ticker, f"bb_upper{window}"), enriched[(ticker, f"bb_lower{window}")]] = compute_bollinger_bands(close, window=window)
+                enriched[
+                    (ticker, f"bb_upper{window}"),
+                    enriched[(ticker, f"bb_lower{window}")],
+                ] = compute_bollinger_bands(close, window=window)
             elif indicator.startswith("atr"):
                 window = int(indicator[3:])
-                enriched[(ticker, f"atr{window}")] = compute_atr(high, low, close, window=window)
+                enriched[(ticker, f"atr{window}")] = compute_atr(
+                    high, low, close, window=window
+                )
 
     if not enriched:
         print("No indicators were computed. Returning the original data.")
