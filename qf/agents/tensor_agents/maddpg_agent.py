@@ -1,24 +1,27 @@
-import numpy as np
+import os
 import random
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 from collections import deque
 
-from ..utils.model_builder import ModelBuilder
-from qf.utils.loss_functions.loss_functions import weighted_mse_correlation_loss
-from qf.utils.correlation import compute_correlation
-
-import qf 
-from qf.agents.agent import Agent
-
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 from tqdm import tqdm
+
+import qf
+from qf.agents.agent import Agent
+from qf.utils.correlation import compute_correlation
+from qf.utils.loss_functions.loss_functions import weighted_mse_correlation_loss
+
+from ..utils.model_builder import ModelBuilder
+
 
 class MADDPGAgent(Agent):
     """
     Multi-Agent Deep Deterministic Policy Gradient (MADDPG) agent with support for custom loss functions.
     """
+
     def __init__(self, env, config=None):
         """
         Initialize the MADDPG agent.
@@ -76,19 +79,40 @@ class MADDPGAgent(Agent):
         elif self.loss_function == "mse":
             self.loss_function = nn.MSELoss()
         elif not callable(self.loss_function):
-            raise ValueError(f"Unsupported loss function: {self.loss_function}. Must be a callable or 'weighted_mse_correlation' or 'mse'.")
+            raise ValueError(
+                f"Unsupported loss function: {self.loss_function}. Must be a callable or 'weighted_mse_correlation' or 'mse'."
+            )
 
         # Dynamically generate the default actor and critic configs based on obs_dim and act_dim
         default_actor_config = [
-            {"type": "Linear", "params": {"in_features": obs_dim, "out_features": 128}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 128, "out_features": 64}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 64, "out_features": act_dim}}
+            {
+                "type": "Linear",
+                "params": {"in_features": obs_dim, "out_features": 128},
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 128, "out_features": 64},
+                "activation": "ReLU",
+            },
+            {"type": "Linear", "params": {"in_features": 64, "out_features": act_dim}},
         ]
 
         default_critic_config = [
-            {"type": "Linear", "params": {"in_features": obs_dim * n_agents + act_dim * n_agents, "out_features": 128}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 128, "out_features": 64}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 64, "out_features": 1}}
+            {
+                "type": "Linear",
+                "params": {
+                    "in_features": obs_dim * n_agents + act_dim * n_agents,
+                    "out_features": 128,
+                },
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 128, "out_features": 64},
+                "activation": "ReLU",
+            },
+            {"type": "Linear", "params": {"in_features": 64, "out_features": 1}},
         ]
 
         # Use the default configs if no custom configs are provided
@@ -97,24 +121,32 @@ class MADDPGAgent(Agent):
 
         # We need to append a cliping and a softmax layer to the actor config
         # This is done to ensure that the actions are in the range [0, 1]
-        #actor_config.append({"type": "clip", "params": {"min": -10, "max": 10}})
-        #actor_config.append({"type": "softmax", "params": {}})
+        # actor_config.append({"type": "clip", "params": {"min": -10, "max": 10}})
+        # actor_config.append({"type": "softmax", "params": {}})
 
         # Dynamically replace placeholders in the network architecture
-        #actor_config = self._replace_placeholders(actor_config, obs_dim, act_dim, n_agents)
-        #critic_config = self._replace_placeholders(critic_config, obs_dim, act_dim, n_agents)
+        # actor_config = self._replace_placeholders(actor_config, obs_dim, act_dim, n_agents)
+        # critic_config = self._replace_placeholders(critic_config, obs_dim, act_dim, n_agents)
 
         # Create actor and critic networks
         self.actors = [ModelBuilder(actor_config).build() for _ in range(n_agents)]
         self.critics = [ModelBuilder(critic_config).build() for _ in range(n_agents)]
 
         # Create target networks
-        self.target_actors = [ModelBuilder(actor_config).build() for _ in range(n_agents)]
-        self.target_critics = [ModelBuilder(critic_config).build() for _ in range(n_agents)]
+        self.target_actors = [
+            ModelBuilder(actor_config).build() for _ in range(n_agents)
+        ]
+        self.target_critics = [
+            ModelBuilder(critic_config).build() for _ in range(n_agents)
+        ]
 
         # Optimizers
-        self.actor_optimizers = [optim.Adam(actor.parameters(), lr=self.lr) for actor in self.actors]
-        self.critic_optimizers = [optim.Adam(critic.parameters(), lr=self.lr) for critic in self.critics]
+        self.actor_optimizers = [
+            optim.Adam(actor.parameters(), lr=self.lr) for actor in self.actors
+        ]
+        self.critic_optimizers = [
+            optim.Adam(critic.parameters(), lr=self.lr) for critic in self.critics
+        ]
 
         # Initialize replay memory using deque for efficient operations
         self.memory = deque(maxlen=self.buffer_max_size)
@@ -125,17 +157,25 @@ class MADDPGAgent(Agent):
             self.target_critics[i].load_state_dict(self.critics[i].state_dict())
 
         # Initialize Ornstein-Uhlenbeck noise for each agent
-        self.ou_noises = [OrnsteinUhlenbeckNoise(size=act_dim, mu=self.config.get("ou_mu", 0.0),
-                                                    theta=self.config.get("ou_theta", 0.15),
-                                                    sigma=self.config.get("ou_sigma", 0.2),
-                                                    dt=self.config.get("ou_dt", 1e-2)) for _ in range(n_agents)]
+        self.ou_noises = [
+            OrnsteinUhlenbeckNoise(
+                size=act_dim,
+                mu=self.config.get("ou_mu", 0.0),
+                theta=self.config.get("ou_theta", 0.15),
+                sigma=self.config.get("ou_sigma", 0.2),
+                dt=self.config.get("ou_dt", 1e-2),
+            )
+            for _ in range(n_agents)
+        ]
 
         if self.verbosity > 0:
-            print(f"MADDPGAgent initialized with {self.n_agents} agents and replay memory size {self.buffer_max_size}.")
+            print(
+                f"MADDPGAgent initialized with {self.n_agents} agents and replay memory size {self.buffer_max_size}."
+            )
 
-
-
-    def act(self, states: torch.Tensor, epsilon: float = 0.0, use_ou_noise=False) -> torch.Tensor:
+    def act(
+        self, states: torch.Tensor, epsilon: float = 0.0, use_ou_noise=False
+    ) -> torch.Tensor:
         """
         Select actions for each agent based on the current policy (actor network) with optional OU noise.
 
@@ -160,7 +200,9 @@ class MADDPGAgent(Agent):
                     noise = torch.FloatTensor(self.ou_noises[i].sample())  # OU noise
                 else:
                     act_dim = logits.shape[0]
-                    noise = torch.FloatTensor(act_dim).normal_(-epsilon, epsilon)  # Epsilon-decaying noise
+                    noise = torch.FloatTensor(act_dim).normal_(
+                        -epsilon, epsilon
+                    )  # Epsilon-decaying noise
 
                 noisy_logits = logits + noise
                 action = F.softmax(noisy_logits, dim=-1)
@@ -184,49 +226,84 @@ class MADDPGAgent(Agent):
         if self.verbosity > 1:
             print(f"Stored transition. Memory size: {len(self.memory)}")
 
-    def train(self, total_timesteps=5000, use_tqdm=True):
+    def train(
+        self,
+        total_timesteps=5000,
+        use_tqdm=True,
+        eval_env=None,
+        n_eval_steps=None,
+        save_best=True,
+    ):
         """
         Train the MADDPG agent for a specified number of timesteps.
 
         Parameters:
             total_timesteps (int): Total number of timesteps to train the agent.
             use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print training summaries.
+            eval_env: Optional environment for evaluation during training.
+            n_eval_steps (int): Number of training steps between evaluations. If None, no evaluation is performed.
+            save_best (bool): If True, saves the best performing agent based on evaluation.
         """
-        progress = tqdm(range(total_timesteps), desc="Training MADDPGAgent") if use_tqdm else range(total_timesteps)
+        progress = (
+            tqdm(range(total_timesteps), desc="Training MADDPGAgent")
+            if use_tqdm
+            else range(total_timesteps)
+        )
 
         state, _ = self.env.reset()
-        self.reset_noise()  # Reset OU noise
+        self.reset_noise()
         total_reward = 0
         timestep = 0
 
+        # Evaluation tracking
+        best_eval_reward = float("-inf")
+        last_eval_step = 0
+        temp_save_dir = os.path.join(self.env.get_save_dir(), "temp_checkpoints")
+        os.makedirs(temp_save_dir, exist_ok=True)
+
         for _ in progress:
-            # Select actions for each agent
             actions = self.act(state, use_ou_noise=True)
-
-            # Step the environment
             next_state, rewards, done, _ = self.env.step(actions)
-
-            # Store transition in replay memory
             self.store((state, actions, rewards, next_state, done))
-
             state = next_state
             total_reward += sum(rewards)
             timestep += 1
 
-            # Train the agents
             td_error = self._train()
 
-            # Reset environment if done
             if done:
                 state, _ = self.env.reset()
-                self.reset_noise()  # Reset OU noise
+                self.reset_noise()
                 total_reward = 0
 
-            # Report the td_error in the env logger
+            # Evaluation during training
+            if (
+                eval_env is not None
+                and n_eval_steps is not None
+                and timestep - last_eval_step >= n_eval_steps
+            ):
+                eval_reward = self._evaluate_during_training(eval_env)
+                last_eval_step = timestep
+
+                if save_best and eval_reward > best_eval_reward:
+                    best_eval_reward = eval_reward
+                    self.save(os.path.join(temp_save_dir, "best_model"))
+
+                if use_tqdm:
+                    progress.set_postfix(
+                        {
+                            "Eval Reward": f"{eval_reward:.2f}",
+                            "Best Eval": f"{best_eval_reward:.2f}",
+                        }
+                    )
+
             if td_error is not None:
                 for i in range(self.n_agents):
-                    self.env.logger.log_scalar("TRAIN_TD_Error/10*log(TD_Error)", 10*np.log10(np.clip(td_error[i], min=1e-5)), timestep)
-
+                    self.env.logger.log_scalar(
+                        "TRAIN_TD_Error/10*log(TD_Error)",
+                        10 * np.log10(np.clip(td_error[i], min=1e-5)),
+                        timestep,
+                    )
 
                 td_error = np.mean(td_error) if td_error is not None else "N/A"
                 text = f"Timestep: {timestep:010d}, Last Reward: {rewards.mean().item():+015.2f}, TD Error: {td_error:+015.2f}"
@@ -236,8 +313,20 @@ class MADDPGAgent(Agent):
             if use_tqdm:
                 progress.set_postfix(text=text)
             else:
-                print(f"Timestep: {timestep}, Last Reward: {rewards} TD Error: {td_error if td_error else 'N/A'}")
+                print(
+                    f"Timestep: {timestep}, Last Reward: {rewards} TD Error: {td_error if td_error else 'N/A'}"
+                )
 
+        # If we have a best model, copy it to the final location
+        if save_best and os.path.exists(os.path.join(temp_save_dir, "best_model")):
+            import shutil
+
+            shutil.copytree(
+                os.path.join(temp_save_dir, "best_model"),
+                os.path.join(self.env.get_save_dir(), "best_model"),
+                dirs_exist_ok=True,
+            )
+            shutil.rmtree(temp_save_dir)
 
     def _train(self):
         """
@@ -252,34 +341,53 @@ class MADDPGAgent(Agent):
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        states = torch.FloatTensor(np.array(states))            # shape: [batch_size, n_agents, obs_dim]
-        actions = torch.FloatTensor(np.array(actions))          # shape: [batch_size, n_agents, act_dim]
-        rewards = torch.FloatTensor(np.array(rewards))          # shape: [batch_size, n_agents]
-        next_states = torch.FloatTensor(np.array(next_states))  # shape: [batch_size, n_agents, obs_dim]
+        states = torch.FloatTensor(
+            np.array(states)
+        )  # shape: [batch_size, n_agents, obs_dim]
+        actions = torch.FloatTensor(
+            np.array(actions)
+        )  # shape: [batch_size, n_agents, act_dim]
+        rewards = torch.FloatTensor(np.array(rewards))  # shape: [batch_size, n_agents]
+        next_states = torch.FloatTensor(
+            np.array(next_states)
+        )  # shape: [batch_size, n_agents, obs_dim]
 
         td_errors = []  # List to store TD errors for each agent
 
         with torch.no_grad():
             # Get the actions for the next states from the target actors
-            next_actions = [self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)] # shape: [batch_size, n_agents, act_dim]
+            next_actions = [
+                self.target_actors[j](next_states[:, j, :])
+                for j in range(self.n_agents)
+            ]  # shape: [batch_size, n_agents, act_dim]
 
             # Normalize each agent's actions
             next_actions = [F.softmax(action, dim=-1) for action in next_actions]
 
             # Concatenate normalized actions -> Important removes the list
-            next_actions = torch.cat(next_actions, dim=-1) # shape: [batch_size, n_agents * act_dim]
+            next_actions = torch.cat(
+                next_actions, dim=-1
+            )  # shape: [batch_size, n_agents * act_dim]
 
             # Concatenate next_states and next_actions
-            next_inputs = torch.cat([next_states.view(self.batch_size, -1), next_actions], dim=-1)  # shape: [batch_size, n_agents * obs_dim + n_agents * act_dim]
+            next_inputs = torch.cat(
+                [next_states.view(self.batch_size, -1), next_actions], dim=-1
+            )  # shape: [batch_size, n_agents * obs_dim + n_agents * act_dim]
 
         for i in range(self.n_agents):
             # Update critic
             with torch.no_grad():
                 # Compute the target Q value
-                target_q = rewards[:, i] + self.gamma * self.target_critics[i](next_inputs).squeeze()  # shape: [batch_size]
+                target_q = (
+                    rewards[:, i]
+                    + self.gamma * self.target_critics[i](next_inputs).squeeze()
+                )  # shape: [batch_size]
 
             # Concatenate states and actions for the current Q value
-            current_inputs = torch.cat([states.view(self.batch_size, -1), actions.view(self.batch_size, -1)], dim=-1)  # shape: [batch_size, n_agents * obs_dim + n_agents * act_dim]
+            current_inputs = torch.cat(
+                [states.view(self.batch_size, -1), actions.view(self.batch_size, -1)],
+                dim=-1,
+            )  # shape: [batch_size, n_agents * obs_dim + n_agents * act_dim]
 
             # Compute the current Q value
             current_q = self.critics[i](current_inputs).squeeze()  # shape: [batch_size]
@@ -289,10 +397,15 @@ class MADDPGAgent(Agent):
                 correlation_penality = 0.0
                 for j in range(self.n_agents):
                     if j != i:
-                        correlation_penality += compute_correlation(actions[:, i], actions[:, j])
+                        correlation_penality += compute_correlation(
+                            actions[:, i], actions[:, j]
+                        )
 
             # Compute the critic loss using the custom loss function
-            critic_loss = self.lambda_ * self.loss_function(current_q, target_q) + (1 - self.lambda_) * correlation_penality
+            critic_loss = (
+                self.lambda_ * self.loss_function(current_q, target_q)
+                + (1 - self.lambda_) * correlation_penality
+            )
 
             # Optimize the critic
             self.critic_optimizers[i].zero_grad()
@@ -307,11 +420,16 @@ class MADDPGAgent(Agent):
             td_errors.append(td_error)
 
             # Update actor
-            current_actions = [self.actors[j](states[:, j, :]) if j == i else actions[:, j, :] for j in range(self.n_agents)]
+            current_actions = [
+                self.actors[j](states[:, j, :]) if j == i else actions[:, j, :]
+                for j in range(self.n_agents)
+            ]
             current_actions = torch.cat(current_actions, dim=1)
 
             # Concatenate states and current actions
-            actor_inputs = torch.cat([states.view(self.batch_size, -1), current_actions], dim=-1)
+            actor_inputs = torch.cat(
+                [states.view(self.batch_size, -1), current_actions], dim=-1
+            )
 
             # Compute the actor loss
             actor_loss = -self.critics[i](actor_inputs).mean()
@@ -325,52 +443,87 @@ class MADDPGAgent(Agent):
                 print(f"Agent {i} actor loss: {actor_loss.item()}")
 
             # Update target networks
-            for target_param, param in zip(self.target_actors[i].parameters(), self.actors[i].parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            for target_param, param in zip(
+                self.target_actors[i].parameters(), self.actors[i].parameters()
+            ):
+                target_param.data.copy_(
+                    self.tau * param.data + (1 - self.tau) * target_param.data
+                )
 
-            for target_param, param in zip(self.target_critics[i].parameters(), self.critics[i].parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            for target_param, param in zip(
+                self.target_critics[i].parameters(), self.critics[i].parameters()
+            ):
+                target_param.data.copy_(
+                    self.tau * param.data + (1 - self.tau) * target_param.data
+                )
 
             if self.verbosity > 0:
                 print(f"Agent {i} target networks updated.")
 
         return np.array(td_errors)
 
-    def save(self, save_path):
+    def _save_impl(self, path):
         """
-        Save the MADDPG agent's actor and critic networks to the specified path.
-
+        Implementation-specific save method for MADDPG agent.
         Parameters:
-            save_path (str): Path to save the model files.
+            path (str): Path to save the agent's state.
         """
+        import os
+
+        import torch
+
+        # Save model state
+        model_path = os.path.join(path, "model.pt")
         save_data = {
             "actors": [actor.state_dict() for actor in self.actors],
             "critics": [critic.state_dict() for critic in self.critics],
-            "target_actors": [target_actor.state_dict() for target_actor in self.target_actors],
-            "target_critics": [target_critic.state_dict() for target_critic in self.target_critics],
-            "actor_optimizers": [optimizer.state_dict() for optimizer in self.actor_optimizers],
-            "critic_optimizers": [optimizer.state_dict() for optimizer in self.critic_optimizers],
+            "target_actors": [
+                target_actor.state_dict() for target_actor in self.target_actors
+            ],
+            "target_critics": [
+                target_critic.state_dict() for target_critic in self.target_critics
+            ],
+            "actor_optimizers": [
+                optimizer.state_dict() for optimizer in self.actor_optimizers
+            ],
+            "critic_optimizers": [
+                optimizer.state_dict() for optimizer in self.critic_optimizers
+            ],
+            "config": self.config,
+            "verbosity": self.verbosity,
+            "tau": self.tau,
+            "gamma": self.gamma,
+            "batch_size": self.batch_size,
+            "loss_fn": (
+                self.loss_function.__name__
+                if hasattr(self.loss_function, "__name__")
+                else str(self.loss_function)
+            ),
         }
-        torch.save(save_data, save_path)
-        if self.verbosity > 0:
-            print(f"MADDPG agent saved to {save_path}")
+        torch.save(save_data, model_path)
 
-    def load(self, load_path):
+    def _load_impl(self, path):
         """
-        Load the MADDPG agent's actor and critic networks from the specified path.
-
+        Implementation-specific load method for MADDPG agent.
         Parameters:
-            load_path (str): Path to the saved model file.
+            path (str): Path to load the agent's state from.
         """
-        checkpoint = torch.load(load_path)
+        import os
 
-        # Load actor and critic networks
+        import torch
+
+        # Load model state
+        model_path = os.path.join(path, "model.pt")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found at {model_path}")
+
+        checkpoint = torch.load(model_path)
+
+        # Load model states
         for i, actor in enumerate(self.actors):
             actor.load_state_dict(checkpoint["actors"][i])
         for i, critic in enumerate(self.critics):
             critic.load_state_dict(checkpoint["critics"][i])
-
-        # Load target actor and critic networks
         for i, target_actor in enumerate(self.target_actors):
             target_actor.load_state_dict(checkpoint["target_actors"][i])
         for i, target_critic in enumerate(self.target_critics):
@@ -382,8 +535,29 @@ class MADDPGAgent(Agent):
         for i, optimizer in enumerate(self.critic_optimizers):
             optimizer.load_state_dict(checkpoint["critic_optimizers"][i])
 
-        if self.verbosity > 0:
-            print(f"MADDPG agent loaded from {load_path}")
+        # Load other parameters
+        self.config = checkpoint["config"]
+        self.verbosity = checkpoint["verbosity"]
+        self.tau = checkpoint["tau"]
+        self.gamma = checkpoint["gamma"]
+        self.batch_size = checkpoint["batch_size"]
+
+        # Restore loss function
+        loss_fn_name = checkpoint["loss_fn"]
+        if loss_fn_name == "weighted_mse_correlation_loss":
+            self.loss_function = weighted_mse_correlation_loss
+        else:
+            self.loss_function = torch.nn.MSELoss()
+
+        # Move models to device
+        for actor in self.actors:
+            actor.to(self.device)
+        for critic in self.critics:
+            critic.to(self.device)
+        for target_actor in self.target_actors:
+            target_actor.to(self.device)
+        for target_critic in self.target_critics:
+            target_critic.to(self.device)
 
     def reset_noise(self):
         """
@@ -391,6 +565,7 @@ class MADDPGAgent(Agent):
         """
         for noise in self.ou_noises:
             noise.reset()
+
 
 class OrnsteinUhlenbeckNoise:
     def __init__(self, size, mu=0.0, theta=0.15, sigma=0.2, dt=1e-2, x0=None):
@@ -419,8 +594,10 @@ class OrnsteinUhlenbeckNoise:
 
     def sample(self):
         """Generate a sample of OU noise."""
-        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.size)
+        x = (
+            self.x_prev
+            + self.theta * (self.mu - self.x_prev) * self.dt
+            + self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.size)
+        )
         self.x_prev = x
         return x
-
-

@@ -74,13 +74,21 @@ class HyperparameterOptimizer:
         agent_hyperparameters = {}
         for param_name, param_space in agent_class.get_hyperparameter_space().items():
             if param_space["type"] == "float":
-                agent_hyperparameters[param_name] = trial.suggest_float(
+                value = trial.suggest_float(
                     param_name, param_space["low"], param_space["high"]
                 )
+                # Round float values if specified
+                if "round" in param_space:
+                    value = round(value, param_space["round"])
+                agent_hyperparameters[param_name] = value
             elif param_space["type"] == "int":
-                agent_hyperparameters[param_name] = trial.suggest_int(
+                value = trial.suggest_int(
                     param_name, param_space["low"], param_space["high"]
                 )
+                # Round int values if specified
+                if "round" in param_space:
+                    value = round(value / param_space["round"]) * param_space["round"]
+                agent_hyperparameters[param_name] = value
             elif param_space["type"] == "categorical":
                 agent_hyperparameters[param_name] = trial.suggest_categorical(
                     param_name, param_space["choices"]
@@ -92,13 +100,21 @@ class HyperparameterOptimizer:
         env_hyperparameters = {}
         for param_name, param_space in self.env_hyperparameter_space.items():
             if param_space["type"] == "float":
-                env_hyperparameters[param_name] = trial.suggest_float(
+                value = trial.suggest_float(
                     param_name, param_space["low"], param_space["high"]
                 )
+                # Round float values if specified
+                if "round" in param_space:
+                    value = round(value, param_space["round"])
+                env_hyperparameters[param_name] = value
             elif param_space["type"] == "int":
-                env_hyperparameters[param_name] = trial.suggest_int(
+                value = trial.suggest_int(
                     param_name, param_space["low"], param_space["high"]
                 )
+                # Round int values if specified
+                if "round" in param_space:
+                    value = round(value / param_space["round"]) * param_space["round"]
+                env_hyperparameters[param_name] = value
             elif param_space["type"] == "categorical":
                 env_hyperparameters[param_name] = trial.suggest_categorical(
                     param_name, param_space["choices"]

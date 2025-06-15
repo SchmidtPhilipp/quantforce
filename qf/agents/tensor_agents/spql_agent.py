@@ -1,28 +1,31 @@
+import os
+import random
+
+import numpy as np
 import torch
 import torch.optim as optim
-import numpy as np
-import random
 from tqdm import tqdm
-from qf.agents.utils.model_builder import ModelBuilder
-from qf.agents.buffers.replay_buffer import ReplayBuffer
-from qf.agents.agent import Agent
+
 import qf as qf
+from qf.agents.agent import Agent
+from qf.agents.buffers.replay_buffer import ReplayBuffer
+from qf.agents.utils.model_builder import ModelBuilder
 
 
 # Attention this is Soft-SPQL
 class SPQLAgent(Agent):
     def __init__(self, env, config=None):
         super().__init__(env=env)
-        
+
         default_config = {
-                "learning_rate": qf.DEFAULT_SPQL_LR,
-                "gamma": qf.DEFAULT_SPQL_GAMMA,
-                "batch_size": qf.DEFAULT_SPQL_BATCH_SIZE,
-                "buffer_max_size": qf.DEFAULT_SPQL_BUFFER_MAX_SIZE,
-                "device": qf.DEFAULT_DEVICE,
-                "epsilon_start": qf.DEFAULT_SPQL_EPSILON_START,
-                "tau": qf.DEFAULT_SPQL_TAU,
-                "temperature": qf.DEFAULT_SPQL_TEMPERATURE,
+            "learning_rate": qf.DEFAULT_SPQL_LR,
+            "gamma": qf.DEFAULT_SPQL_GAMMA,
+            "batch_size": qf.DEFAULT_SPQL_BATCH_SIZE,
+            "buffer_max_size": qf.DEFAULT_SPQL_BUFFER_MAX_SIZE,
+            "device": qf.DEFAULT_DEVICE,
+            "epsilon_start": qf.DEFAULT_SPQL_EPSILON_START,
+            "tau": qf.DEFAULT_SPQL_TAU,
+            "temperature": qf.DEFAULT_SPQL_TEMPERATURE,
         }
 
         # Merge default config with provided config
@@ -30,34 +33,63 @@ class SPQLAgent(Agent):
 
         # Use the provided network architecture or a default one
         default_architecture = [
-            {"type": "Linear", "params": {"in_features": self.obs_dim, "out_features": 256}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 256, "out_features": 256}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 256, "out_features": 512}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 512, "out_features": 256}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 256, "out_features": 128}, "activation": "ReLU"},
-            {"type": "Linear", "params": {"in_features": 128, "out_features": self.act_dim}}
+            {
+                "type": "Linear",
+                "params": {"in_features": self.obs_dim, "out_features": 256},
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 256, "out_features": 256},
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 256, "out_features": 512},
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 512, "out_features": 256},
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 256, "out_features": 128},
+                "activation": "ReLU",
+            },
+            {
+                "type": "Linear",
+                "params": {"in_features": 128, "out_features": self.act_dim},
+            },
         ]
-        #actor_config = actor_config or default_architecture
+        # actor_config = actor_config or default_architecture
         actor_config = default_architecture
 
         # Single-agent environment setup
         self.n_agents = 1
         # Check if the environment agent settings are compatible
-        if hasattr(env, 'n_agents') and env.n_agents != self.n_agents:
-            raise ValueError(f"Environment is configured for {env.n_agents} agents, but SPQLAgent is set up for {self.n_agents} agents.")
+        if hasattr(env, "n_agents") and env.n_agents != self.n_agents:
+            raise ValueError(
+                f"Environment is configured for {env.n_agents} agents, but SPQLAgent is set up for {self.n_agents} agents."
+            )
 
         self.device = self.config["device"]
         # Use ModelBuilder to create the models
         self.model = ModelBuilder(actor_config).build().to(self.device)
         self.target_model = ModelBuilder(actor_config).build().to(self.device)
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config["learning_rate"])
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=self.config["learning_rate"]
+        )
         self.gamma = self.config["gamma"]
         self.batch_size = self.config["batch_size"]
         self.buffer_max_size = self.config["buffer_max_size"]
         self.epsilon_start = self.config["epsilon_start"]
         self.loss_fn = torch.nn.MSELoss()
-        self.memory = ReplayBuffer(capacity=self.buffer_max_size)  # Initialize the replay buffer
+        self.memory = ReplayBuffer(
+            capacity=self.buffer_max_size
+        )  # Initialize the replay buffer
         self.tau = self.config["tau"]
         self.temperature = self.config["temperature"]
 
@@ -78,22 +110,46 @@ class SPQLAgent(Agent):
     def store(self, transition):
         self.memory.store(transition)
 
-    def train(self, total_timesteps=500_000, use_tqdm=True, patience=10_000, min_delta=1e-3):
+    def train(
+        self,
+        total_timesteps=500_000,
+        use_tqdm=True,
+        patience=10_000,
+        min_delta=1e-3,
+        eval_env=None,
+        n_eval_steps=None,
+        save_best=True,
+    ):
         """
         Trains the agent for a specified number of timesteps.
         Parameters:
             total_timesteps (int): Total number of timesteps to train the agent.
             use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print training summaries.
+            patience (int): Number of steps to wait for improvement before early stopping.
+            min_delta (float): Minimum change in TD error to be considered an improvement.
+            eval_env: Optional environment for evaluation during training.
+            n_eval_steps (int): Number of training steps between evaluations. If None, no evaluation is performed.
+            save_best (bool): If True, saves the best performing agent based on evaluation.
         """
-        progress = tqdm(range(total_timesteps), desc="Training SPQLAgent") if use_tqdm else range(total_timesteps)
+        progress = (
+            tqdm(range(total_timesteps), desc="Training SPQLAgent")
+            if use_tqdm
+            else range(total_timesteps)
+        )
 
         state, info = self.env.reset()
         total_reward = 0
-        epsilon = self.epsilon_start  # Initial epsilon for exploration
+        epsilon = self.epsilon_start
         timestep = 0
 
-        best_td_error = float('inf')  # Best TD error observed
-        no_improvement_steps = 0  # Counter for steps without improvement
+        best_td_error = float("inf")
+        no_improvement_steps = 0
+
+        # Evaluation tracking
+        best_eval_reward = float("-inf")
+        last_eval_step = 0
+        temp_save_dir = os.path.join(self.env.get_save_dir(), "temp_checkpoints")
+        os.makedirs(temp_save_dir, exist_ok=True)
 
         for _ in progress:
             # Linear epsilon decay
@@ -117,19 +173,42 @@ class SPQLAgent(Agent):
                 state, info = self.env.reset()
                 total_reward = 0
 
+            # Evaluation during training
+            if (
+                eval_env is not None
+                and n_eval_steps is not None
+                and timestep - last_eval_step >= n_eval_steps
+            ):
+                eval_reward = self._evaluate_during_training(eval_env)
+                last_eval_step = timestep
+
+                if save_best and eval_reward > best_eval_reward:
+                    best_eval_reward = eval_reward
+                    self.save(os.path.join(temp_save_dir, "best_model"))
+
+                if use_tqdm:
+                    progress.set_postfix(
+                        {
+                            "Eval Reward": f"{eval_reward:.2f}",
+                            "Best Eval": f"{best_eval_reward:.2f}",
+                        }
+                    )
+
             # Report the td_error in the env logger
             if td_error is not None:
-                
-                # Check for early stopping based on TD error
                 if td_error < best_td_error - min_delta:
                     best_td_error = td_error
-                    no_improvement_steps = 0  # Reset patience counter
+                    no_improvement_steps = 0
                 else:
                     no_improvement_steps += 1
 
                 # Log TD error for each agent
                 for i in range(self.n_agents):
-                    self.env.logger.log_scalar("TRAIN_model_loss/10*log(TD_Error)", 10*np.log10(np.clip(td_error, min=1e-5)), timestep)
+                    self.env.logger.log_scalar(
+                        "TRAIN_model_loss/10*log(TD_Error)",
+                        10 * np.log10(np.clip(td_error, min=1e-5)),
+                        timestep,
+                    )
 
                 td_error = np.mean(td_error) if td_error is not None else "N/A"
                 text = f"Timestep: {timestep:010d}, Last Reward: {reward.mean().item():+015.2f}, TD Error: {td_error:+015.2f}"
@@ -139,11 +218,23 @@ class SPQLAgent(Agent):
             if use_tqdm:
                 progress.set_postfix(text=text)
             else:
-                print(f"Timestep: {timestep}, Last Reward: {reward} TD Error: {td_error if td_error else 'N/A'}")
+                print(
+                    f"Timestep: {timestep}, Last Reward: {reward} TD Error: {td_error if td_error else 'N/A'}"
+                )
 
-
-        # End of training save data
+        # Save final model
         self.env.save_data()
+
+        # If we have a best model, copy it to the final location
+        if save_best and os.path.exists(os.path.join(temp_save_dir, "best_model")):
+            import shutil
+
+            shutil.copytree(
+                os.path.join(temp_save_dir, "best_model"),
+                os.path.join(self.env.get_save_dir(), "best_model"),
+                dirs_exist_ok=True,
+            )
+            shutil.rmtree(temp_save_dir)
 
         return True
 
@@ -179,7 +270,9 @@ class SPQLAgent(Agent):
         with torch.no_grad():
             # Compute target Q-values using the target model
             next_q = self.target_model(next_states)  # shape: [batch_size, act_dim]
-            logsumexp_next_q = self.temperature * torch.logsumexp(next_q / self.temperature, dim=-1)  # shape: [batch_size]
+            logsumexp_next_q = self.temperature * torch.logsumexp(
+                next_q / self.temperature, dim=-1
+            )  # shape: [batch_size]
             target = rewards + self.gamma * logsumexp_next_q  # shape: [batch_size]
 
         # Compute TD error
@@ -189,57 +282,87 @@ class SPQLAgent(Agent):
         loss = self.loss_fn(q_values_selected, target)
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=10.0) # Max norm 5-10
+        torch.nn.utils.clip_grad_norm_(
+            self.model.parameters(), max_norm=10.0
+        )  # Max norm 5-10
         self.optimizer.step()
 
         self.soft_update()
 
         return td_error
-    
+
     def soft_update(self):
-        for target_param, param in zip(self.target_model.parameters(), self.model.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+        for target_param, param in zip(
+            self.target_model.parameters(), self.model.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1.0 - self.tau) * target_param.data
+            )
 
-    def save(self, path):
+    def _save_impl(self, path):
         """
-        Saves the agent's model to a file.
+        Implementation-specific save method for SPQL agent.
         Parameters:
-            path (str): Path to save the model.
+            path (str): Path to save the agent's state.
         """
-        if path.endswith('.pt'):
-            path = path
-        else:
-            path = path + '/SPQL_Agent.pt'
+        # Save model state
+        model_path = os.path.join(path, "model.pt")
+        torch.save(
+            {
+                "model_state_dict": self.model.state_dict(),
+                "target_model_state_dict": self.target_model.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+                "memory": self.memory,
+                "epsilon": self.epsilon_start,
+                "gamma": self.gamma,
+                "batch_size": self.batch_size,
+                "buffer_max_size": self.buffer_max_size,
+                "tau": self.tau,
+                "temperature": self.temperature,
+            },
+            model_path,
+        )
 
-        # Speichern des Modells und Target-Modells
-        torch.save(self.model.state_dict(), path)
-        torch.save(self.target_model.state_dict(), path.replace('.pt', '_target.pt'))
-        print(f"Model saved to {path} and target model to {path.replace('.pt', '_target.pt')}")
-
-    def load(self, path):
+    def _load_impl(self, path):
         """
-        Loads the agent's model from a file.
+        Implementation-specific load method for SPQL agent.
         Parameters:
-            path (str): Path to load the model from.
+            path (str): Path to load the agent's state from.
         """
-        # Laden des Modells und Target-Modells
-        if path.endswith('.pt'):
-            path = path
-        else:
-            path = path + '/SPQL_Agent.pt'
-        self.model.load_state_dict(torch.load(path, map_location=self.device))
-        self.target_model.load_state_dict(torch.load(path.replace('.pt', '_target.pt'), map_location=self.device))
-        print(f"Model loaded from {path} and target model from {path.replace('.pt', '_target.pt')}")
+        # Load model state
+        model_path = os.path.join(path, "model.pt")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found at {model_path}")
 
-    @staticmethod   
+        checkpoint = torch.load(model_path, map_location=self.device)
+
+        # Load model states
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.target_model.load_state_dict(checkpoint["target_model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+        # Load other parameters
+        self.memory = checkpoint["memory"]
+        self.epsilon_start = checkpoint["epsilon"]
+        self.gamma = checkpoint["gamma"]
+        self.batch_size = checkpoint["batch_size"]
+        self.buffer_max_size = checkpoint["buffer_max_size"]
+        self.tau = checkpoint["tau"]
+        self.temperature = checkpoint["temperature"]
+
+        # Move models to device
+        self.model.to(self.device)
+        self.target_model.to(self.device)
+
+    @staticmethod
     def get_hyperparameter_space():
-        """ 
-        Returns the hyperparameter space for the SPQL agent. 
+        """
+        Returns the hyperparameter space for the SPQL agent.
         Returns:
             dict: Hyperparameter space for the SPQL agent.
         """
         return qf.DEFAULT_SPQLAGENT_HYPERPARAMETER_SPACE
-    
+
     @staticmethod
     def get_default_config():
         """
@@ -248,4 +371,3 @@ class SPQLAgent(Agent):
             dict: Default configuration for the SPQL agent.
         """
         return qf.DEFAULT_SPQLAGENT_CONFIG
-

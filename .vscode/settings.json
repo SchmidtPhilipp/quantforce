@@ -26,13 +26,13 @@
   // Enable mypy for type checking
   "python.linting.mypyEnabled": true,
   // Enable strict type checking (closer to mypy strict mode)
-  "python.analysis.typeCheckingMode": "basic", // 
+  //"python.analysis.typeCheckingMode": "basic", // 
   // Suggest and auto-insert missing imports
   "python.analysis.autoImportCompletions": true,
   // Show inline hints for variable types
   "python.analysis.inlayHints.variableTypes": true,
   // Show inline hints for function return types
-  "python.analysis.inlayHints.functionReturnTypes": true,
+  //"python.analysis.inlayHints.functionReturnTypes": true,
   // Use Black as the formatter (opinionated and widely adopted)
   "python.formatting.provider": "black",
   // Automatically format code on save

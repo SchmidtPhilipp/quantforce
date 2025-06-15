@@ -1,13 +1,16 @@
-from qf.envs.tensor_env import TensorEnv
 import gymnasium as gym
 import numpy as np
 import torch
 
+from qf.envs.tensor_env import TensorEnv
+
+
 class SB3Wrapper(gym.Env):
     def __init__(self, env: TensorEnv):
-        self.env = env
+        self.env: TensorEnv = env
         self.observation_space = env.get_observation_space()
         self.action_space = env.get_action_space()
+        self.device: str = env.device
 
     def step(self, actions: np.ndarray) -> tuple:
         """
@@ -24,7 +27,7 @@ class SB3Wrapper(gym.Env):
             info (dict): Additional information from the environment.
         """
         # Konvertiere die Aktionen in einen Tensor
-        tensor_actions = torch.tensor(actions, dtype=torch.float32)
+        tensor_actions: torch.Tensor = torch.tensor(actions, dtype=torch.float32)
 
         # If missing the agent dimension, add it
         if tensor_actions.ndim == 1:
@@ -44,7 +47,7 @@ class SB3Wrapper(gym.Env):
     def reset(self, *, seed: int = None, options: dict = None) -> np.ndarray:
         obs, _ = self.env.reset()
         return obs.squeeze(0).numpy(), {}
-    
+
     def print_metrics(self):
         """
         Prints the metrics of the environment.
@@ -64,7 +67,7 @@ class SB3Wrapper(gym.Env):
         Returns the save directory of the environment.
         """
         return self.env.save_dir
-    
+
     def save_data(self):
         """
         Saves the environment data to the specified path.

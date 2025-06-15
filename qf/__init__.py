@@ -31,9 +31,7 @@ DEFAULT_DOWNLOADER = "yfinance"  # Options: "yfinance" or "simulate"
 DEFAULT_USE_CACHE = True  # Saves the downloaded data to a local cache
 DEFAULT_FORCE_DOWNLOAD = False  # Force download even if cache exists
 DEFAULT_CACHE_DIR = "../cache"
-DEFAULT_DATA_IMPUTATION_METHOD = (
-    "shrinkage"  # Options: "bfill" or "shrinkage" or "remove"
-)
+DEFAULT_DATA_IMPUTATION_METHOD = "bfill"  # Options: "bfill" or "shrinkage" or "remove"
 
 # yahoo downloader default parameters
 DEFAULT_USE_ADJUSTED_CLOSE = True  # Use adjusted close prices by default
@@ -46,7 +44,7 @@ DEFAULT_N_TRADING_DAYS = 252  # Alternative is 365 which casts the data to a yea
 DEFAULT_N_AGENTS = 1
 DEFAULT_TRADE_COST_PERCENT = 0.0
 DEFAULT_TRADE_COST_FIXED = 0
-DEFAULT_REWARD_FUNCTION = "sharpe_ratio_w100"  # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
+DEFAULT_REWARD_FUNCTION = "log_return"  # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
 
 DEFAULT_REWARD_SCALING = 1  # Scaling factor for the reward function
 DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
@@ -59,14 +57,14 @@ ALL_INDICATORS = [
     "rsi",
     "macd",
     "ema",
-    "adx",
-    "bb",
-    "atr",
-    "obv",
-    "open",
-    "high",
-    "low",
-    "volume",
+    # "adx",
+    # "bb",
+    # "atr",
+    # "obv",
+    # "open",
+    # "high",
+    # "low",
+    # "volume",
 ]
 
 # Default environment configuration
@@ -124,6 +122,19 @@ DEFAULT_EVAL_ENV_CONFIG = {
     "config_name": DEFUALT_CONFIG_NAME,
 }
 
+
+# Generate all possible combinations of indicators
+indicator_combinations = []
+
+# Generate combinations for each subset size
+for subset_size in range(1, len(ALL_INDICATORS) + 1):
+    # Get all combinations of current size
+    current_combinations = combinations(ALL_INDICATORS, subset_size)
+    # Convert each combination to a list and add to our results
+    for combo in current_combinations:
+        indicator_combinations.append(list(combo))
+
+
 DEFAULT_ENVIRONMENT_HYPERPARAMETER_SPACE_SINGLE_AGENT = {
     "reward_function": {
         "type": "categorical",
@@ -138,16 +149,7 @@ DEFAULT_ENVIRONMENT_HYPERPARAMETER_SPACE_SINGLE_AGENT = {
     "window_size": {"type": "int", "low": 1, "high": 100},
     "indicators": {
         "type": "categorical",
-        "choices": [
-            list(subset)
-            for subset in list(
-                chain.from_iterable(
-                    combinations(ALL_INDICATORS, r)
-                    for r in range(len(ALL_INDICATORS) + 1)
-                )
-            )
-            if subset
-        ],
+        "choices": indicator_combinations,
     },
 }
 
@@ -241,10 +243,10 @@ DEFAULT_DQNAGENT_CONFIG = {
 }
 
 DEFAULT_DQNAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2},
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2, "round": 8},
     # "batch_size": {"type": "int", "low": 32, "high": 128},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
-    "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
+    "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0, "round": 2},
     # "buffer_max_size": {"type": "int", "low": 10000, "high": 100000}
 }
 
@@ -287,11 +289,11 @@ DEFAULT_SPQLAGENT_CONFIG_OPTIMIZED = {
 }
 
 DEFAULT_SPQLAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
-    "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0},
-    "tau": {"type": "float", "low": 0.001, "high": 0.05},
-    "temperature": {"type": "float", "low": 0.001, "high": 1},
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-2, "round": 8},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
+    "epsilon_start": {"type": "float", "low": 0.1, "high": 1.0, "round": 2},
+    "tau": {"type": "float", "low": 0.001, "high": 0.05, "round": 4},
+    "temperature": {"type": "float", "low": 0.001, "high": 1, "round": 4},
 }
 
 ##########################################################################################################
@@ -338,8 +340,8 @@ DEFAULT_SACAGENT_CONFIG = {
 }
 
 DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-5, "high": 3e-3},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "learning_rate": {"type": "float", "low": 1e-5, "high": 3e-3, "round": 8},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
     "gradient_steps": {"type": "int", "low": 1, "high": 16},
     "train_freq": {"type": "int", "low": 1, "high": 16},
     "ent_coef": {
@@ -358,7 +360,7 @@ DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
             100,
         ],
     },
-    "tau": {"type": "float", "low": 0.001, "high": 0.2},
+    "tau": {"type": "float", "low": 0.001, "high": 0.2, "round": 4},
     "action_noise": {
         "type": "categorical",
         "choices": [True, False],
@@ -367,11 +369,13 @@ DEFAULT_SACAGENT_HYPERPARAMETER_SPACE = {
         "type": "float",
         "low": 0.1,
         "high": 0.5,
+        "round": 2,
     },  # Initial standard deviation of action noise
     "action_noise_sigma_final": {
         "type": "float",
         "low": 0.0,
         "high": 0.3,
+        "round": 2,
     },  # Final standard deviation of action noise
 }
 
@@ -453,15 +457,16 @@ DEFAULT_DDPGAGENT_CONFIG = {
 }
 
 DEFAULT_DDPGAGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01},
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3, "round": 8},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01, "round": 4},
     # "batch_size": {"type": "int", "low": 64, "high": 128},
     # "buffer_size": {"type": "int", "low": 100000, "high": 1000000},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
     "action_noise_sigma": {
         "type": "float",
         "low": 0.1,
         "high": 0.3,
+        "round": 2,
     },  # Standard deviation of noise added to actions
     "action_noise": {
         "type": "categorical",
@@ -497,9 +502,9 @@ DEFAULT_PPOAGENT_CONFIG = {
 }
 
 DEFAULT_PPO_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
-    "clip_range": {"type": "float", "low": 0.1, "high": 0.3},
-    "gae_lambda": {"type": "float", "low": 0.9, "high": 0.99},
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4, "round": 8},
+    "clip_range": {"type": "float", "low": 0.1, "high": 0.3, "round": 2},
+    "gae_lambda": {"type": "float", "low": 0.9, "high": 0.99, "round": 2},
     # "batch_size": {"type": "int", "low": 32, "high": 128},
     "n_steps": {"type": "int", "low": 512, "high": 2048},
 }
@@ -549,31 +554,35 @@ DEFAULT_MADDPGAGENT_CONFIG = {
 }
 
 DEFAULT_MADDPG_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3},
-    "lambda_": {"type": "float", "low": 0.9, "high": 0.95},
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3, "round": 8},
+    "lambda_": {"type": "float", "low": 0.9, "high": 0.95, "round": 2},
     "loss_fn": {"type": "categorical", "choices": ["mse", "weighted_correlation_loss"]},
     # "batch_size": {"type": "int", "low": 64, "high": 128},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01, "round": 4},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
     "ou_mu": {
         "type": "float",
         "low": -0.1,
         "high": 0.1,
+        "round": 2,
     },  # Mean for Ornstein-Uhlenbeck noise
     "ou_theta": {
         "type": "float",
         "low": 0.1,
         "high": 0.2,
+        "round": 2,
     },  # Theta for Ornstein-Uhlenbeck noise
     "ou_sigma": {
         "type": "float",
         "low": 0.1,
         "high": 0.3,
+        "round": 2,
     },  # Sigma for Ornstein-Uhlenbeck noise
     "ou_dt": {
         "type": "float",
         "low": 1e-3,
         "high": 1e-2,
+        "round": 2,
     },  # Time step for Ornstein-Uhlenbeck noise
 }
 

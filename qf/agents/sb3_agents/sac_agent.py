@@ -93,9 +93,9 @@ class SACAgent(SB3Agent):
             action_noise=(
                 DecayingNormalActionNoise(
                     mean=np.zeros(self.env.action_space.shape[0]),
-                    sigma_init=config["action_noise_sigma_init"],
-                    sigma_final=config["action_noise_sigma_final"],
-                    decay_steps=config["action_noise_decay_steps"],
+                    sigma_init=self.config["action_noise_sigma_init"],
+                    sigma_final=self.config["action_noise_sigma_final"],
+                    decay_steps=self.config["action_noise_decay_steps"],
                 )
                 if "action_noise" in self.config
                 else None
