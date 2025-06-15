@@ -17,7 +17,7 @@
 # DONE: Datamanger implementieren. Sollte alle daten laden können. Vorhandene Daten ergänzen können. etc...
 # TODO: Survival bias umgehen.
 
-# DONE: Überprüfe die Daten auf Aktiensplits. 
+# DONE: Überprüfe die Daten auf Aktiensplits.
 # - Aktiensplits und Dividenden werden automatisch im adjusted Close Preis berücksichtigt. -> wir verwenden yfiance auto adjusted Close Preis.
 
 ##################################################
@@ -30,11 +30,9 @@
 # DONE: Single Agent Portfolio Environment
 # DONE: Multi Agent Portfolio Environment mit Shared Observation
 # DONE: Multi Agent Portfolio Environment mit Shared Observation und Shared Action
-# DONE: Option implementieren für Agenten welche nicht nur den aktuellen State 
+# DONE: Option implementieren für Agenten welche nicht nur den aktuellen State
 # sondern auch die Historie betrachten
 # DONE: Im paper werden auch aktionen und cash als observations hinzugefügt.
-
-# TODO: Balance wird nicht mehr berechnet, daher verbleibt ein eintrag mit 0 .
 
 
 ####################################################
@@ -43,7 +41,7 @@
 # DONE: MADDPG Agent
 # DONE: Model Builder implementiert
 # DONE: Loss function for MADDPG Agent
-    # DONE: 2 It seems like all agents are learning the same thing. Maybe we somewhere loose the gradients? 
+# DONE: 2 It seems like all agents are learning the same thing. Maybe we somewhere loose the gradients?
 # TODO: MADDPG Agenten mit TIPP
 # TODO: MADDPG Agenten mit CPPI
 # TODO: UP Agent
@@ -65,11 +63,11 @@
 # DONE: Tensorboard Gewichtungen scheinen nicht zu funktionieren.
 # DONE: CUDA, MPS, GPU Support
 # DONE: Alles von listen und arrays auf tensors umstellen.
-# DONE: Visualisierung Stock Preis und Anteil in einem Plot damit man 
+# DONE: Visualisierung Stock Preis und Anteil in einem Plot damit man
 # sieht wann der Agent genau kauft bzw verkauft.
 # TODO: Hyperparameter Tuning
 # TODO: Visualisierungen erstellen.
-# TODO: Tracken der besten implementierungen. 
+# TODO: Tracken der besten implementierungen.
 # TODO: Trainieren bis der total reward nicht mehr steigt.
 
 ##################################################
@@ -95,9 +93,8 @@
 
 ###########################################################
 # Critics about the Paper
-# Actual Stocks are not mentioned. 
-# Only short train and test time. 
-
+# Actual Stocks are not mentioned.
+# Only short train and test time.
 
 
 # Weitere Ideen:

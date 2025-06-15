@@ -566,7 +566,7 @@ check-str-concat-over-line-jumps=no
 # Max line length for which to sill emit suggestions. Used to prevent optional
 # suggestions which would get split by a code formatter (e.g., black). Will
 # default to the setting for ``max-line-length``.
-max-line-length-suggestions=150
+max-line-length-suggestions=200
 
 
 [TYPECHECK]

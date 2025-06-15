@@ -1,48 +1,59 @@
 import os
-import pandas as pd
+from typing import Optional, Tuple
+
+import matplotlib
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.dates as mdates
-import matplotlib
-from typing import Tuple, Optional
+import pandas as pd
+
 import qf
 
-def setup_pgf():
+
+def setup_pgf() -> None:
     """
     Set up PGF backend for matplotlib to export figures in LaTeX-compatible format.
     """
     # Use PGF backend
-    matplotlib.use('pgf')
+    matplotlib.use("pgf")
 
     # PGF export for LaTeX
-    plt.rcParams.update({
-        "pgf.texsystem": "pdflatex",
-        "figure.figsize": [6.6, 2.3],
-        "font.family": "helvet",
-        "text.usetex": True,
-        "pgf.rcfonts": False,
-        "axes.formatter.use_mathtext": True,  
-        "pgf.preamble": "\n".join([
-            r"\usepackage{amsmath}",
-            r"\usepackage{amssymb}",
-            r"\usepackage{mathpazo}"  # Mathpazo als Schriftart
-        ]),
-        "font.size": 12,  # Allgemeine Schriftgröße
-        "axes.titlesize": 14,  # Titel der Achsen
-        "axes.labelsize": 12,  # Beschriftung der Achsen
-        "xtick.labelsize": 9,  # Schriftgröße der X-Achsenticks
-        "ytick.labelsize": 9,  # Schriftgröße der Y-Achsenticks
-        "legend.fontsize": 10,  # Schriftgröße der Legend"
-        "axes.grid": True,  # Gitterlinien aktivieren
-        "grid.alpha": 0.5,  # Transparenz der Gitterlinien
-        "grid.linestyle": "--",  # Linienstil der Gitterlinien
-        #"grid.linewidth": 0.5,  # Linienstärke der Gitterlinien
-    })
-    plt.rcParams['text.latex.preamble'] = r'\newcommand{\mathdefault}[1][]{}' # Setze den Befehl für mathdefault
+    plt.rcParams.update(
+        {
+            "pgf.texsystem": "pdflatex",
+            "figure.figsize": [6.6, 2.3],
+            "font.family": "helvet",
+            "text.usetex": True,
+            "pgf.rcfonts": False,
+            "axes.formatter.use_mathtext": True,
+            "pgf.preamble": "\n".join(
+                [
+                    r"\usepackage{amsmath}",
+                    r"\usepackage{amssymb}",
+                    r"\usepackage{mathpazo}",  # Mathpazo als Schriftart
+                ]
+            ),
+            "font.size": 12,  # Allgemeine Schriftgröße
+            "axes.titlesize": 14,  # Titel der Achsen
+            "axes.labelsize": 12,  # Beschriftung der Achsen
+            "xtick.labelsize": 9,  # Schriftgröße der X-Achsenticks
+            "ytick.labelsize": 9,  # Schriftgröße der Y-Achsenticks
+            "legend.fontsize": 10,  # Schriftgröße der Legend"
+            "axes.grid": True,  # Gitterlinien aktivieren
+            "grid.alpha": 0.5,  # Transparenz der Gitterlinien
+            "grid.linestyle": "--",  # Linienstil der Gitterlinien
+            # "grid.linewidth": 0.5,  # Linienstärke der Gitterlinien
+        }
+    )
+    plt.rcParams["text.latex.preamble"] = (
+        r"\newcommand{\mathdefault}[1][]{}"  # Setze den Befehl für mathdefault
+    )
 
-def reset_pgf():
+
+def reset_pgf() -> None:
     plt.rcdefaults()  # Standardwerte für rcParams
-    matplotlib.use('macosx')  # Setzt das Backend auf das Standard-Backend zurück
+    matplotlib.use("macosx")  # Setzt das Backend auf das Standard-Backend zurück
+
 
 def plot_lines_grayscale(
     df: pd.DataFrame,
@@ -54,8 +65,8 @@ def plot_lines_grayscale(
     max_xticks: int = 12,
     y_limits: tuple[float, float] | None = None,
     figsize: tuple[float, float] = (10, 2.5),
-    linewidth: float = 2.0
-):
+    linewidth: float = 2.0,
+) -> None:
     """
     Plot multiple lines from a DataFrame in grayscale with maximally spaced intensities.
     Detects time-based x-axis and formats accordingly.
@@ -66,7 +77,7 @@ def plot_lines_grayscale(
     setup_pgf()  # Set up PGF backend for LaTeX compatibility
     os.makedirs(save_dir, exist_ok=True)
 
-    n_lines = len(df.columns)
+    n_lines: int = len(df.columns)
     x = df.index
 
     # Ensure the index is datetime if it looks like dates
@@ -110,7 +121,7 @@ def plot_lines_grayscale(
 
     # X-Limits: set to min and max of x
     ax.set_xlim(x.min(), x.max())
-    ax.set_xticks(x[::max(1, len(x) // max_xticks)])  # Set x-ticks to max_xticks
+    ax.set_xticks(x[:: max(1, len(x) // max_xticks)])  # Set x-ticks to max_xticks
 
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False)
     plt.tight_layout(rect=[0, 0, 0.85, 1])
@@ -124,6 +135,7 @@ def plot_lines_grayscale(
     reset_pgf()  # Reset PGF settings to default
     print(f"✅ Plot saved to {pgf_path} and {png_path}")
 
+
 def plot_lines(
     df: pd.DataFrame,
     xlabel: str = "Date",
@@ -136,7 +148,7 @@ def plot_lines(
     figsize: tuple[float, float] = qf.DEFAULT_FIGSIZE_PAPER,
     linewidth: float = 2.0,
     colorscheme: str = "jet",
-    linestyles: bool = True
+    linestyles: bool = True,
 ):
     """
     Plot multiple lines from a DataFrame in grayscale with maximally spaced intensities.
@@ -159,7 +171,6 @@ def plot_lines(
         except Exception as e:
             raise ValueError("Index is not datetime and cannot be converted.") from e
 
-
     if colorscheme == "gray":
         grays = np.linspace(0.25, 1.0, n_lines)
         colors = [str(1 - g) for g in grays]
@@ -171,15 +182,21 @@ def plot_lines(
     elif colorscheme == "viridis":
         # Use Viridis colors
         viridis_colors = plt.cm.viridis(np.linspace(0, 1, n_lines))
-        colors = [matplotlib.colors.rgb2hex(viridis_color) for viridis_color in viridis_colors]
+        colors = [
+            matplotlib.colors.rgb2hex(viridis_color) for viridis_color in viridis_colors
+        ]
     elif colorscheme == "plasma":
         # Use Plasma colors
         plasma_colors = plt.cm.plasma(np.linspace(0, 1, n_lines))
-        colors = [matplotlib.colors.rgb2hex(plasma_color) for plasma_color in plasma_colors]
+        colors = [
+            matplotlib.colors.rgb2hex(plasma_color) for plasma_color in plasma_colors
+        ]
     elif colorscheme == "cividis":
         # Use Cividis colors
         cividis_colors = plt.cm.cividis(np.linspace(0, 1, n_lines))
-        colors = [matplotlib.colors.rgb2hex(cividis_color) for cividis_color in cividis_colors]
+        colors = [
+            matplotlib.colors.rgb2hex(cividis_color) for cividis_color in cividis_colors
+        ]
     elif colorscheme == "jet":
         # Use Jet colors
         jet_colors = plt.cm.jet(np.linspace(0, 1, n_lines))
@@ -187,24 +204,34 @@ def plot_lines(
     elif colorscheme == "gist_rainbow":
         # Use Gist Rainbow colors
         gist_rainbow_colors = plt.cm.gist_rainbow(np.linspace(0, 1, n_lines))
-        colors = [matplotlib.colors.rgb2hex(gist_rainbow_color) for gist_rainbow_color in gist_rainbow_colors]
+        colors = [
+            matplotlib.colors.rgb2hex(gist_rainbow_color)
+            for gist_rainbow_color in gist_rainbow_colors
+        ]
 
     else:
-        raise ValueError(f"Unsupported colorscheme: {colorscheme}. Supported schemes are: 'gray', 'hsv', 'viridis', 'plasma', 'cividis', 'jet', 'gist_rainbow'.")
-
+        raise ValueError(
+            f"Unsupported colorscheme: {colorscheme}. Supported schemes are: 'gray', 'hsv', 'viridis', 'plasma', 'cividis', 'jet', 'gist_rainbow'."
+        )
 
     # If linestyles is True then we cylce thorugh different linestyles
     if linestyles:
-        linestyles = ['-', '--', '-.'] * (n_lines // 4 + 1)
+        linestyle_list = ["-", "--", "-."] * (n_lines // 4 + 1)
     else:
-        linestyles = ['-'] * n_lines
-
+        linestyle_list = ["-"] * n_lines
 
     fig, ax = plt.subplots(figsize=figsize)
 
     for i, column in enumerate(df.columns):
         label = str(column).replace("_", " ").upper()
-        ax.plot(df.index, df[column], label=label, color=colors[i], linewidth=linewidth, linestyle=linestyles[i % len(linestyles)])
+        ax.plot(
+            df.index,
+            df[column],
+            label=label,
+            color=colors[i],
+            linewidth=linewidth,
+            linestyle=linestyle_list[i % len(linestyle_list)],
+        )
 
     # Handle time-based x-axis
     ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=max_xticks))
@@ -230,7 +257,7 @@ def plot_lines(
 
     # X-Limits: set to min and max of x
     ax.set_xlim(x.min(), x.max())
-    ax.set_xticks(x[::max(1, len(x) // max_xticks)])  # Set x-ticks to max_xticks
+    ax.set_xticks(x[:: max(1, len(x) // max_xticks)])  # Set x-ticks to max_xticks
 
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False)
     plt.tight_layout(rect=[0, 0, 0.85, 1])
@@ -260,7 +287,7 @@ def plot_dual_axis(
     round_base: int = 100,  # Basis für das Runden der Achsenlimits
     verbosity: int = 0,
     y_limits_left: tuple[float, float] = None,
-    y_limits_right: tuple[float, float] = None
+    y_limits_right: tuple[float, float] = None,
 ):
     """
     Plot two lines from a DataFrame using left and right Y-axes.
@@ -269,7 +296,9 @@ def plot_dual_axis(
     """
     setup_pgf()  # Set up PGF backend for LaTeX compatibility
     if len(df.columns) != 2:
-        raise ValueError("The DataFrame must contain exactly two columns for dual-axis plotting.")
+        raise ValueError(
+            "The DataFrame must contain exactly two columns for dual-axis plotting."
+        )
 
     os.makedirs(save_dir, exist_ok=True)
 
@@ -284,18 +313,34 @@ def plot_dual_axis(
     fig, ax_left = plt.subplots()
 
     # Plot the first line on the left Y-axis
-    ax_left.plot(x, df[left_label], label=left_label.replace("_", " ").upper(), color="black", linewidth=linewidth)
+    ax_left.plot(
+        x,
+        df[left_label],
+        label=left_label.replace("_", " ").upper(),
+        color="black",
+        linewidth=linewidth,
+    )
     ax_left.set_ylabel(ylabel_left)
     ax_left.tick_params(axis="y", labelcolor="black")
 
     # Create the right Y-axis
     ax_right = ax_left.twinx()
-    ax_right.plot(x, df[right_label], label=right_label.replace("_", " ").upper(), color="gray", linewidth=linewidth)
+    ax_right.plot(
+        x,
+        df[right_label],
+        label=right_label.replace("_", " ").upper(),
+        color="gray",
+        linewidth=linewidth,
+    )
     ax_right.set_ylabel(ylabel_right)
     ax_right.tick_params(axis="y", labelcolor="gray")
     # Set the right Y-axis label and color
-    ax_right.set_ylabel(ylabel_right, color="gray")  # Text in der gleichen Farbe wie die Linie
-    ax_right.tick_params(axis="y", labelcolor="gray")  # Achsenticks in der gleichen Farbe
+    ax_right.set_ylabel(
+        ylabel_right, color="gray"
+    )  # Text in der gleichen Farbe wie die Linie
+    ax_right.tick_params(
+        axis="y", labelcolor="gray"
+    )  # Achsenticks in der gleichen Farbe
 
     # Handle time-based x-axis
     is_time = pd.api.types.is_datetime64_any_dtype(df.index)
@@ -346,7 +391,7 @@ def plot_dual_axis(
 
     plt.tight_layout()
     plt.grid(True)
-    plt.grid(which='both', linestyle='--', linewidth=0.5)
+    plt.grid(which="both", linestyle="--", linewidth=0.5)
 
     # Save the plot
     pgf_path = os.path.join(save_dir, f"{filename}.pgf")
@@ -374,56 +419,80 @@ def round_up_to_nearest(value, base=10):
     return base * np.ceil(value / base)
 
 
-import pandas as pd
-def plot_risk_matrix(expected_returns: pd.DataFrame,
-                    expected_covariance: pd.DataFrame, 
-                     colorscheme: str = qf.DEFAULT_COLORSCHEME,
-                     figsize: tuple[float, float] = (10, 8),
-                     fontsize: int = 8, 
-                     save_path: str = None, 
-                     title: str = "Risk Matrix"):
-    
-    tickers = expected_returns.index.tolist()  # Get the tickers from the index of expected returns
-    
+def plot_risk_matrix(
+    expected_returns: pd.DataFrame,
+    expected_covariance: pd.DataFrame,
+    colorscheme: str = qf.DEFAULT_COLORSCHEME,
+    figsize: tuple[float, float] = (10, 8),
+    fontsize: int = 8,
+    save_path: Optional[str] = None,
+    title: str = "Risk Matrix",
+):
+
+    tickers = (
+        expected_returns.index.tolist()
+    )  # Get the tickers from the index of expected returns
+
     # if tickers are a list of tuples we have a multi-index DataFrame
     if isinstance(tickers[0], tuple):
         # then we want a list of the first elements of the tuples
         tickers = [ticker[0] for ticker in tickers]
-    
+
     # and make them unique
     tickers = list(dict.fromkeys(tickers))
 
     # Extend the matrix with mean returns
     extended_matrix = expected_covariance.copy()
     extended_matrix["E[R]"] = expected_returns  # Add a column for mean returns
-    
+
     # Visualize the extended matrix with matplotlib
     fig, ax = plt.subplots(figsize=figsize)  # Larger plot window for additional row
-    
 
     # Axis ticks and labels (using LaTeX for labels)
     latex_tickers = [r"$\\textbf{" + ticker + r"}$" for ticker in tickers]
     latex_tickers = [r"{" + ticker + r"}" for ticker in tickers]
     ax.set_xticks(range(len(tickers) + 1))  # Additional column for mean returns
     ax.set_yticks(range(len(tickers)))  # Additional row for mean returns
-   # ax.set_xticklabels(latex_tickers + [r"$\\mathbf{E[R]}$"], rotation=45, ha="right", fontsize=fontsize)
+    # ax.set_xticklabels(latex_tickers + [r"$\\mathbf{E[R]}$"], rotation=45, ha="right", fontsize=fontsize)
     ax.set_yticklabels(latex_tickers, fontsize=8)
 
     # Write numbers into the matrix (rounded to one decimal place)
     for i in range(len(tickers)):
         for j in range(len(tickers)):
             value = expected_covariance.iloc[i, j]
-            color = "white" if value > 0 else "black"  # White for values > 0, black for values <= 0
-            ax.text(j, i, f"{value:.1f}", ha="center", va="center", color=color, fontsize=fontsize)
+            color = (
+                "white" if value > 0 else "black"
+            )  # White for values > 0, black for values <= 0
+            ax.text(
+                j,
+                i,
+                f"{value:.1f}",
+                ha="center",
+                va="center",
+                color=color,
+                fontsize=fontsize,
+            )
 
     # Write mean returns into the last column
     for j in range(len(tickers)):
         mean_value = expected_returns.iloc[j]
         value = mean_value
-        color = "white" if value > 0 else "black"  # White for values > 0, black for values <= 0
-        ax.text(len(tickers), j, f"{mean_value:.2%}", ha="center", va="center", color=color, fontsize=fontsize)
+        color = (
+            "white" if value > 0 else "black"
+        )  # White for values > 0, black for values <= 0
+        ax.text(
+            len(tickers),
+            j,
+            f"{mean_value:.2%}",
+            ha="center",
+            va="center",
+            color=color,
+            fontsize=fontsize,
+        )
 
-    cax = ax.matshow(extended_matrix, cmap=colorscheme)  # Grayscale representation with limited color scale
+    cax = ax.matshow(
+        extended_matrix, cmap=colorscheme
+    )  # Grayscale representation with limited color scale
     fig.colorbar(cax, ax=ax, fraction=0.04, pad=0.03)  # Add a color bar
     if title:
         ax.set_title(title, fontsize=fontsize + 2, pad=20)
@@ -431,9 +500,8 @@ def plot_risk_matrix(expected_returns: pd.DataFrame,
     # Remove the title and save the plot
     plt.tight_layout()
     if save_path is not None:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
-
 
 
 def plot_hist_grid(
@@ -444,7 +512,7 @@ def plot_hist_grid(
     log_y_scale: bool = False,
     ylim: Optional[Tuple[float, float]] = None,
     hist_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[0],
-    kde_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[1]
+    kde_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[1],
 ) -> None:
     """
     Plots a grid of histogram and KDE plots for each unique first-level column label in a MultiIndex DataFrame.
@@ -463,14 +531,18 @@ def plot_hist_grid(
     tickers = sorted(set(col[0] for col in data.columns))
     n_rows = int(np.ceil(len(tickers) / n_cols))
 
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows))
+    fig, axes = plt.subplots(
+        nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows)
+    )
     axes = np.atleast_1d(axes).flatten()
 
     for i, ticker in enumerate(tickers):
         ax = axes[i]
 
         # Plot histogram and KDE for all attributes under this ticker
-        data[ticker].plot.hist(bins=bins, density=True, ax=ax, color=hist_color, alpha=0.7)
+        data[ticker].plot.hist(
+            bins=bins, density=True, ax=ax, color=hist_color, alpha=0.7
+        )
         data[ticker].plot.kde(ax=ax, color=kde_color)
 
         ax.set_title(ticker)
@@ -480,15 +552,15 @@ def plot_hist_grid(
         ax.set_xlim(-0.1, 0.1)
 
         if log_y_scale:
-            ax.set_yscale('log')
+            ax.set_yscale("log")
         if ylim is not None:
             ax.set_ylim(ylim)
 
-        ax.legend(["Histogram", "KDE"], loc='upper right')
+        ax.legend(["Histogram", "KDE"], loc="upper right")
 
     # Hide unused subplots
     for j in range(i + 1, len(axes)):
-        axes[j].axis('off')
+        axes[j].axis("off")
 
     plt.tight_layout()
     plt.show()
@@ -502,8 +574,14 @@ def plot_hist_grid_compare(
     figsize: Tuple[float, float] = (6, 2),
     log_y_scale: bool = False,
     ylim: Optional[Tuple[float, float]] = None,
-    hist_colors: Tuple[str, str] = (qf.DEFAULT_SINGLE_LINE_COLORS[0], qf.DEFAULT_SINGLE_LINE_COLORS[1]),
-    kde_colors: Tuple[str, str] = (qf.DEFAULT_SINGLE_LINE_COLORS[2], qf.DEFAULT_SINGLE_LINE_COLORS[3])
+    hist_colors: Tuple[str, str] = (
+        qf.DEFAULT_SINGLE_LINE_COLORS[0],
+        qf.DEFAULT_SINGLE_LINE_COLORS[1],
+    ),
+    kde_colors: Tuple[str, str] = (
+        qf.DEFAULT_SINGLE_LINE_COLORS[2],
+        qf.DEFAULT_SINGLE_LINE_COLORS[3],
+    ),
 ) -> None:
     """
     Plots a grid of histogram and KDE plots for each unique first-level column label in two MultiIndex DataFrames.
@@ -520,10 +598,16 @@ def plot_hist_grid_compare(
         kde_colors (Tuple[str, str]): Colors for KDE curves for data1 and data2.
     """
     # Extract unique tickers from the first level of the MultiIndex
-    tickers = sorted(set(col[0] for col in data1.columns).intersection(set(col[0] for col in data2.columns)))
+    tickers = sorted(
+        set(col[0] for col in data1.columns).intersection(
+            set(col[0] for col in data2.columns)
+        )
+    )
     n_rows = int(np.ceil(len(tickers) / n_cols))
 
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows))
+    fig, axes = plt.subplots(
+        nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows)
+    )
     axes = np.atleast_1d(axes).flatten()
 
     for i, ticker in enumerate(tickers):
@@ -531,12 +615,36 @@ def plot_hist_grid_compare(
 
         # Plot histogram and KDE for all attributes under this ticker
         if ticker in data1.columns.get_level_values(0):
-            data1[ticker].plot.hist(bins=bins, density=True, ax=ax, color=hist_colors[0], alpha=0.5, label=f"{ticker} (Data1)")
-            data1[ticker].plot.kde(ax=ax, color=kde_colors[0], linestyle="--", label=f"{ticker} KDE (Data1)")
+            data1[ticker].plot.hist(
+                bins=bins,
+                density=True,
+                ax=ax,
+                color=hist_colors[0],
+                alpha=0.5,
+                label=f"{ticker} (Data1)",
+            )
+            data1[ticker].plot.kde(
+                ax=ax,
+                color=kde_colors[0],
+                linestyle="--",
+                label=f"{ticker} KDE (Data1)",
+            )
 
         if ticker in data2.columns.get_level_values(0):
-            data2[ticker].plot.hist(bins=bins, density=True, ax=ax, color=hist_colors[1], alpha=0.5, label=f"{ticker} (Data2)")
-            data2[ticker].plot.kde(ax=ax, color=kde_colors[1], linestyle="-.", label=f"{ticker} KDE (Data2)")
+            data2[ticker].plot.hist(
+                bins=bins,
+                density=True,
+                ax=ax,
+                color=hist_colors[1],
+                alpha=0.5,
+                label=f"{ticker} (Data2)",
+            )
+            data2[ticker].plot.kde(
+                ax=ax,
+                color=kde_colors[1],
+                linestyle="-.",
+                label=f"{ticker} KDE (Data2)",
+            )
 
         ax.set_title(ticker)
         ax.set_ylabel("Density")
@@ -545,15 +653,23 @@ def plot_hist_grid_compare(
         ax.set_xlim(-0.1, 0.1)
 
         if log_y_scale:
-            ax.set_yscale('log')
+            ax.set_yscale("log")
         if ylim is not None:
             ax.set_ylim(ylim)
 
-        ax.legend(loc='upper right')
+        ax.legend(
+            [
+                f"{ticker} (Data1)",
+                f"{ticker} (Data2)",
+                f"{ticker} KDE (Data1)",
+                f"{ticker} KDE (Data2)",
+            ],
+            loc="upper right",
+        )
 
     # Hide unused subplots
     for j in range(i + 1, len(axes)):
-        axes[j].axis('off')
+        axes[j].axis("off")
 
     plt.tight_layout()
     plt.show()
@@ -564,7 +680,7 @@ def plot_grid(
     n_cols: int = 3,
     figsize: Tuple[float, float] = (6, 2),
     ylim: Optional[Tuple[float, float]] = None,
-    line_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[0]
+    line_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[0],
 ) -> None:
     """
     Plots a grid of time series plots for each unique first-level column label in a MultiIndex DataFrame.
@@ -580,7 +696,9 @@ def plot_grid(
     tickers = sorted(set(col[0] for col in data.columns))
     n_rows = int(np.ceil(len(tickers) / n_cols))
 
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows))
+    fig, axes = plt.subplots(
+        nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows)
+    )
     axes = np.atleast_2d(axes)
 
     for i, ticker in enumerate(tickers):
@@ -588,7 +706,14 @@ def plot_grid(
         ax = axes[row, col]
 
         # Plot the time series for the ticker
-        data[ticker].plot(ax=ax, title=ticker, ylabel="Price", xlabel="Date", grid=True, color=line_color)
+        data[ticker].plot(
+            ax=ax,
+            title=ticker,
+            ylabel="Price",
+            xlabel="Date",
+            grid=True,
+            color=line_color,
+        )
         ax.legend().remove()
 
         if ylim is not None:
@@ -598,7 +723,7 @@ def plot_grid(
     total_plots = n_rows * n_cols
     for j in range(len(tickers), total_plots):
         row, col = divmod(j, n_cols)
-        axes[row, col].axis('off')
+        axes[row, col].axis("off")
 
     plt.tight_layout()
     plt.show()

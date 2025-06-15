@@ -24,7 +24,7 @@ def get_data(
     tickers,
     start,
     end,
-    indicators: List[str] = None,
+    indicators: List[str] | str = DEFAULT_INDICATORS,
     verbosity: int = VERBOSITY,
     cache_dir: str = DEFAULT_CACHE_DIR,
     downloader: str = DEFAULT_DOWNLOADER,
@@ -34,6 +34,9 @@ def get_data(
     """
     Downloads historical financial data and adds technical indicators.
     """
+    if isinstance(tickers, str):
+        tickers = [tickers]
+
     # Set default indicators if none are provided
     if indicators is None:
         indicators = DEFAULT_INDICATORS
@@ -72,6 +75,9 @@ def get_data(
     elif imputation_method == "shrinkage":
         # In shrinkage we cut the rows where any data is missing.
         data = data.dropna()
+    elif imputation_method == "removal":
+        # if we find a ticker that has missing values, we remove it from the dataframe
+        data = data.dropna(axis=1, how="any")
     else:
         raise ValueError(
             f"Unknown imputation method: {imputation_method}. Use 'bfill' or 'shrinkage'."

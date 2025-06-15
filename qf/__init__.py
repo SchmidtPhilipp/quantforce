@@ -1,3 +1,5 @@
+from itertools import chain, combinations
+
 from qf.data.tickers.tickers import DOWJONES, NASDAQ100, SNP500
 
 #### GENERAL DEFAULTS ####
@@ -12,7 +14,7 @@ DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for train
 #### DATA DEFAULTS ####
 
 # Default data configuration
-DEFAULT_TICKERS = DOWJONES
+DEFAULT_TICKERS: list[str] = DOWJONES
 DEFAULT_TRAIN_START = "2005-06-30"
 DEFAULT_TRAIN_END = "2015-01-01"
 DEFAULT_EVAL_START = "2015-01-01"
@@ -21,17 +23,17 @@ DEFAULT_TEST_START = "2020-01-01"
 DEFAULT_TEST_END = "2025-01-01"
 DEFAULT_INTERVAL = "1d"
 DEFAULT_WINDOW_SIZE = 1
-DEFAULT_INDICATORS = ["rsi", "sma", "macd", "atr"]
+DEFAULT_INDICATORS: list[str] = ["rsi", "sma", "macd", "atr"]
 
 
 ### Advanced data defaults
 DEFAULT_DOWNLOADER = "yfinance"  # Options: "yfinance" or "simulate"
-DEFAULT_USE_CACHE = (
-    True  # Use cache by default, Saves the downloaded data to a local cache directory
-)
+DEFAULT_USE_CACHE = True  # Saves the downloaded data to a local cache
 DEFAULT_FORCE_DOWNLOAD = False  # Force download even if cache exists
 DEFAULT_CACHE_DIR = "../cache"
-DEFAULT_DATA_IMPUTATION_METHOD = "shrinkage"  # Options: "bfill" or "shrinkage"
+DEFAULT_DATA_IMPUTATION_METHOD = (
+    "shrinkage"  # Options: "bfill" or "shrinkage" or "remove"
+)
 
 # yahoo downloader default parameters
 DEFAULT_USE_ADJUSTED_CLOSE = True  # Use adjusted close prices by default
@@ -51,6 +53,21 @@ DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
 
 DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG"
 DEFAULT_DEVICE = "cpu"  # Default device for PyTorch
+
+ALL_INDICATORS = [
+    "sma",
+    "rsi",
+    "macd",
+    "ema",
+    "adx",
+    "bb",
+    "atr",
+    "obv",
+    "open",
+    "high",
+    "low",
+    "volume",
+]
 
 # Default environment configuration
 DEFAULT_ENV_CONFIG = {
@@ -107,6 +124,33 @@ DEFAULT_EVAL_ENV_CONFIG = {
     "config_name": DEFUALT_CONFIG_NAME,
 }
 
+DEFAULT_ENVIRONMENT_HYPERPARAMETER_SPACE_SINGLE_AGENT = {
+    "reward_function": {
+        "type": "categorical",
+        "choices": [
+            "sharpe_ratio_w100",
+            "sharpe_ratio_w50",
+            "sharpe_ratio_w20",
+            "sharpe_ratio_w10",
+            "sharpe_ratio_w5",
+        ],
+    },
+    "window_size": {"type": "int", "low": 1, "high": 100},
+    "indicators": {
+        "type": "categorical",
+        "choices": [
+            list(subset)
+            for subset in list(
+                chain.from_iterable(
+                    combinations(ALL_INDICATORS, r)
+                    for r in range(len(ALL_INDICATORS) + 1)
+                )
+            )
+            if subset
+        ],
+    },
+}
+
 
 ##########################################################################################################
 ##########################################################################################################
@@ -128,9 +172,7 @@ DEFAULT_EVAL_ENV_CONFIG = {
 ##########################################################################################################
 
 # Classic One Period Markovitz Agent configurations
-DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = (
-    True  # Use log returns for calculations
-)
+DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_LOG_RETURNS = True  # Use log returns for calc
 DEFAULT_CLASSIC_ONE_PERIOD_MARKOVITZAGENT_TARGET = (
     "Tangency"  # Optimization target: Tangency, MaxExpReturn, MinVariance
 )

@@ -1,100 +1,145 @@
-import optuna
 import numpy as np
-import qf
+import optuna
 from optuna.visualization import plot_optimization_history, plot_param_importances
+
+import qf
 
 
 class HyperparameterOptimizer:
-    def __init__(self, agent_classes, optim_config=None, env_class=None, train_env_config=None, eval_env_config=None, agent_config=None):
+    def __init__(
+        self,
+        agent_classes,
+        optim_config=None,
+        env_class=None,
+        train_env_config=None,
+        eval_env_config=None,
+        agent_config=None,
+        env_hyperparameter_space=None,  # New: Optional hyperparameter space for the environment
+    ):
         """
-        Initialisiert die Hyperparameter-Optimierung.
+        Initializes the HyperparameterOptimizer.
 
         Parameters:
-            agent_classes (list): Liste der Agent-Klassen, die optimiert werden sollen.
-            train_env_config (dict): Konfiguration für die Trainingsumgebung.
-            eval_train_env_config (dict): Konfiguration für die Evaluierungsumgebung.
-            optim_config (dict, optional): Konfiguration für die Optimierung, z.B. Zielmetrik.
+            agent_classes (list): List of agent classes to optimize.
+            optim_config (dict, optional): Optimization configuration, e.g., objective metric.
+            env_class (class, optional): Environment class to use.
+            train_env_config (dict, optional): Default training environment configuration.
+            eval_env_config (dict, optional): Default evaluation environment configuration.
+            agent_config (list, optional): List of agent configurations.
+            env_hyperparameter_space (dict, optional): Hyperparameter space for the environment.
         """
         self.agent_classes = agent_classes
         self.env_class = env_class or qf.MultiAgentPortfolioEnv
         self.train_env_config = train_env_config or qf.DEFAULT_TRAIN_ENV_CONFIG
         self.eval_env_config = eval_env_config or qf.DEFAULT_EVAL_ENV_CONFIG
-        self.optim_config = optim_config or {"objective": "avg_reward"}  # Standard-Zielmetrik: Durchschnittliche Belohnung
-
+        self.optim_config = optim_config or {"objective": "avg_reward"}
         self.agent_config = agent_config
+        self.env_hyperparameter_space = env_hyperparameter_space or {}
 
-        # check if agent_config is provided, otherwise use default
+        # Validate agent_config
         if agent_config is None:
-            agent_config = []
-            for agent_class in self.agent_classes:
-                agent_config.append(agent_class.get_default_config())
-            
-            self.agent_config = agent_config
-
+            self.agent_config = [
+                agent_class.get_default_config() for agent_class in self.agent_classes
+            ]
         elif isinstance(self.agent_config, list):
-            # check the length of agent_config matches the number of agent_classes
             if len(self.agent_config) != len(self.agent_classes):
-                raise ValueError("agent_config should be a list of dictionaries, one for each agent class.")
-            # check if each item in agent_config is a dictionary
+                raise ValueError(
+                    "agent_config should be a list of dictionaries, one for each agent class."
+                )
             for config in self.agent_config:
                 if not isinstance(config, dict):
-                    raise ValueError("Each item in agent_config should be a dictionary for the corresponding agent class.")
-
-        elif isinstance(self.agent_config, dict):
-            raise ValueError("agent_config should be a list of dictionaries, one for each agent class.")
-        elif not isinstance(self.agent_config, list):
-            raise ValueError("agent_config should be a list of dictionaries, one for each agent class.")
-        
-
+                    raise ValueError(
+                        "Each item in agent_config should be a dictionary for the corresponding agent class."
+                    )
+        else:
+            raise ValueError(
+                "agent_config should be a list of dictionaries, one for each agent class."
+            )
 
         self.best_study = None
         self.all_studies = None
 
-    def _objective(self, trial, agent_class, agent_config, use_tqdm=True):
+    def _objective(self, trial, agent_class, agent_config):
         """
-        Objective-Funktion für Optuna.
+        Objective function for Optuna.
 
         Parameters:
-            trial (optuna.Trial): Optuna-Trial-Objekt für die Hyperparameter-Suche.
-            agent_class (class): Die Agent-Klasse, die optimiert wird.
+            trial (optuna.Trial): Optuna trial object for hyperparameter search.
+            agent_class (class): The agent class being optimized.
 
         Returns:
-            float: Zielmetrik, die optimiert wird.
+            float: The objective metric to optimize.
         """
-        # Hyperparameter-Sampling
-        hyperparameters = {}
+        # Sample agent hyperparameters
+        agent_hyperparameters = {}
         for param_name, param_space in agent_class.get_hyperparameter_space().items():
             if param_space["type"] == "float":
-                hyperparameters[param_name] = trial.suggest_float(param_name, param_space["low"], param_space["high"])
+                agent_hyperparameters[param_name] = trial.suggest_float(
+                    param_name, param_space["low"], param_space["high"]
+                )
             elif param_space["type"] == "int":
-                hyperparameters[param_name] = trial.suggest_int(param_name, param_space["low"], param_space["high"])
+                agent_hyperparameters[param_name] = trial.suggest_int(
+                    param_name, param_space["low"], param_space["high"]
+                )
             elif param_space["type"] == "categorical":
-                hyperparameters[param_name] = trial.suggest_categorical(param_name, param_space["choices"])
+                agent_hyperparameters[param_name] = trial.suggest_categorical(
+                    param_name, param_space["choices"]
+                )
             else:
                 raise ValueError(f"Unsupported parameter type: {param_space['type']}")
 
-        # Agent-Konfiguration erstellen
-        default_config = agent_config.copy()
-        merged_config = {**default_config, **hyperparameters}
+        # Sample environment hyperparameters (if provided)
+        env_hyperparameters = {}
+        for param_name, param_space in self.env_hyperparameter_space.items():
+            if param_space["type"] == "float":
+                env_hyperparameters[param_name] = trial.suggest_float(
+                    param_name, param_space["low"], param_space["high"]
+                )
+            elif param_space["type"] == "int":
+                env_hyperparameters[param_name] = trial.suggest_int(
+                    param_name, param_space["low"], param_space["high"]
+                )
+            elif param_space["type"] == "categorical":
+                env_hyperparameters[param_name] = trial.suggest_categorical(
+                    param_name, param_space["choices"]
+                )
+            else:
+                raise ValueError(f"Unsupported parameter type: {param_space['type']}")
+
+        # Merge configurations
+        merged_agent_config = {**agent_config, **agent_hyperparameters}
+        merged_env_config = {**self.train_env_config, **env_hyperparameters}
 
         # Set the environment's config_name to reflect the current hyperparameter sweep
-        self.train_env_config["config_name"] = f"{agent_class.__name__}{'_'.join([f'{k}_{v}' for k, v in hyperparameters.items()])}"
-        self.eval_env_config["config_name"] = self.train_env_config["config_name"]
+        merged_env_config["config_name"] = f"{agent_class.__name__}_" + "_".join(
+            [
+                f"{k}_{v}"
+                for k, v in {**agent_hyperparameters, **env_hyperparameters}.items()
+            ]
+        )
+        self.eval_env_config["config_name"] = merged_env_config["config_name"]
 
-        env = self.env_class(tensorboard_prefix="TRAIN", config=self.train_env_config)
-        agent = agent_class(env, config=merged_config)
+        # Create environment and agent
+        env = self.env_class(tensorboard_prefix="TRAIN", config=merged_env_config)
+        agent = agent_class(env, config=merged_agent_config)
 
-        # Agent trainieren
-        agent.train(total_timesteps=self.optim_config.get("max_timesteps", qf.DEFAULT_MAX_TIMESTEPS), use_tqdm=use_tqdm)
+        # Train the agent
+        agent.train(
+            total_timesteps=self.optim_config.get(
+                "max_timesteps", qf.DEFAULT_MAX_TIMESTEPS
+            ),
+            use_tqdm=self.optim_config.get("use_tqdm", True),
+        )
 
-        # Agent evaluieren
-        eval_env = self.env_class(tensorboard_prefix="EVAL", config=self.eval_env_config)
-        rewards = agent.evaluate(eval_env, episodes=self.optim_config.get("episodes", 10), use_tqdm=use_tqdm) #shape (n_episodes, n_steps, n_agents)
+        # Evaluate the agent
+        eval_env = self.env_class(
+            tensorboard_prefix="EVAL", config=self.eval_env_config
+        )
+        rewards = agent.evaluate(
+            eval_env, episodes=self.optim_config.get("episodes", 10)
+        )
 
-        # Flatten the rewards to a 1D array for easier processing
-        
-
-        # Zielmetrik berechnen
+        # Compute the objective metric
         if self.optim_config["objective"] == "avg_reward":
             return np.mean(rewards)
         elif self.optim_config["objective"] == "avg_reward - std_deviation":
@@ -104,7 +149,7 @@ class HyperparameterOptimizer:
         else:
             raise ValueError(f"Unsupported objective: {self.optim_config['objective']}")
 
-    def optimize(self, n_trials=50, use_tqdm=True):
+    def optimize(self, n_trials=50):
         """
         Conducts hyperparameter optimization for all agent classes.
 
@@ -113,27 +158,31 @@ class HyperparameterOptimizer:
 
         Returns:
             dict: Best agent class, best hyperparameter configuration, and the corresponding reward.
-            optuna.Study: The best Optuna study with the highest reward.
-            list: List of all Optuna studies for all agent classes.
         """
         best_agent_class = None
         best_config = None
-        best_reward = float('-inf')
+        best_reward = float("-inf")
         best_study = None
         all_studies = []
 
         for agent_class, agent_config in zip(self.agent_classes, self.agent_config):
-            study = optuna.create_study(direction="maximize", study_name=f"{agent_class.__name__}_hyperparameter_optimization")
-            study.optimize(lambda trial: self._objective(trial, agent_class, agent_config), n_trials=n_trials)
+            study = optuna.create_study(
+                direction="maximize",
+                study_name=f"{agent_class.__name__}_hyperparameter_optimization",
+            )
+            study.optimize(
+                lambda trial: self._objective(trial, agent_class, agent_config),
+                n_trials=n_trials,
+            )
 
             # Append the study to the list of all studies
             all_studies.append(study)
 
             # Best trial for the current agent class
             trial = study.best_trial
-            print(f"Beste Trial für {agent_class.__name__}:")
-            print(f"Wert: {trial.value}")
-            print(f"Parameter: {trial.params}")
+            print(f"Best trial for {agent_class.__name__}:")
+            print(f"Value: {trial.value}")
+            print(f"Parameters: {trial.params}")
 
             # Update the best study if the current study has a higher reward
             if trial.value > best_reward:
@@ -145,7 +194,11 @@ class HyperparameterOptimizer:
         self.best_study = best_study
         self.all_studies = all_studies
 
-        return {"best_agent_class": best_agent_class, "best_config": best_config, "best_reward": best_reward}
+        return {
+            "best_agent_class": best_agent_class,
+            "best_config": best_config,
+            "best_reward": best_reward,
+        }
 
     def visualize_results(self, renderer="vscode", save_path=None):
         """
@@ -159,28 +212,38 @@ class HyperparameterOptimizer:
             None: Displays the plots for optimization history and parameter importance.
         """
         import plotly.io as pio
-        pio.renderers.default = 'png'
+
+        pio.renderers.default = "png"
         import os
 
         if save_path is None:
             save_path = qf.DEFAULT_LOG_DIR + "/hyperparameter_optimization_results"
-            
+
         # Ensure the directory exists
         os.makedirs(save_path, exist_ok=True)
-        
+
         # Plot optimization history for the best study
         opt_history_fig = plot_optimization_history(self.best_study)
-        opt_history_fig.write_image(os.path.join(save_path, "opt_history_best_study.png"))
+        opt_history_fig.write_image(
+            os.path.join(save_path, "opt_history_best_study.png")
+        )
 
         # Plot parameter importance for the best study
         param_importance_fig = plot_param_importances(self.best_study)
-        param_importance_fig.write_image(os.path.join(save_path, "param_importance_best_study.png"))
+        param_importance_fig.write_image(
+            os.path.join(save_path, "param_importance_best_study.png")
+        )
 
-        #print("Parameter Importance Across All Studies:")
+        # print("Parameter Importance Across All Studies:")
         for study in self.all_studies:
             opt_history_fig_all = plot_optimization_history(study)
-            opt_history_fig_all.write_image(os.path.join(save_path, f"opt_history_study_{study.study_name}.png"))
+            opt_history_fig_all.write_image(
+                os.path.join(save_path, f"opt_history_study_{study.study_name}.png")
+            )
 
             param_importance_fig_all = plot_param_importances(study)
-            param_importance_fig_all.write_image(os.path.join(save_path, f"param_importance_study_{study.study_name}.png"))
-
+            param_importance_fig_all.write_image(
+                os.path.join(
+                    save_path, f"param_importance_study_{study.study_name}.png"
+                )
+            )
