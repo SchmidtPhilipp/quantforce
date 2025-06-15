@@ -60,8 +60,14 @@ def add_technical_indicators(
     Returns:
         pd.DataFrame: DataFrame with added technical indicators.
     """
+    if data.empty:
+        if verbosity > 0:
+            print("Empty DataFrame provided. Returning empty DataFrame.")
+        return data
+
     if not indicators:
-        print("No indicators specified. Returning the original data.")
+        if verbosity > 0:
+            print("No indicators specified. Returning the original data.")
         return data
 
     valid_indicators = {"sma", "rsi", "macd", "ema", "adx", "bb", "atr", "obv"}
@@ -89,65 +95,74 @@ def add_technical_indicators(
     tickers = sorted(set(t for t, field in data.columns if field == "Close"))
 
     for ticker in tickers:
-        close = data[(ticker, "Close")]
-        high = data[(ticker, "High")]
-        low = data[(ticker, "Low")]
-        volume = data[(ticker, "Volume")]
+        try:
+            close = data[(ticker, "Close")]
+            high = data[(ticker, "High")]
+            low = data[(ticker, "Low")]
+            volume = data[(ticker, "Volume")]
 
-        # Compute standard indicators
-        if "sma" in selected_indicators:
-            enriched[(ticker, "sma")] = compute_sma(close)
+            # Compute standard indicators
+            if "sma" in selected_indicators:
+                enriched[(ticker, "sma")] = compute_sma(close)
 
-        if "rsi" in selected_indicators:
-            enriched[(ticker, "rsi")] = compute_rsi(close)
+            if "rsi" in selected_indicators:
+                enriched[(ticker, "rsi")] = compute_rsi(close)
 
-        if "macd" in selected_indicators:
-            enriched[(ticker, "macd")] = compute_macd(close)
+            if "macd" in selected_indicators:
+                enriched[(ticker, "macd")] = compute_macd(close)
 
-        if "ema" in selected_indicators:
-            enriched[(ticker, "ema")] = compute_ema(close)
+            if "ema" in selected_indicators:
+                enriched[(ticker, "ema")] = compute_ema(close)
 
-        if "adx" in selected_indicators:
-            enriched[(ticker, "adx")] = compute_adx(high, low, close)
+            if "adx" in selected_indicators:
+                enriched[(ticker, "adx")] = compute_adx(high, low, close)
 
-        if "bb" in selected_indicators:
-            enriched[(ticker, "bb_upper")], enriched[(ticker, "bb_lower")] = (
-                compute_bollinger_bands(close)
-            )
+            if "bb" in selected_indicators:
+                bb_upper, bb_lower = compute_bollinger_bands(close)
+                enriched[(ticker, "bb_upper")] = bb_upper
+                enriched[(ticker, "bb_lower")] = bb_lower
 
-        if "atr" in selected_indicators:
-            enriched[(ticker, "atr")] = compute_atr(high, low, close)
+            if "atr" in selected_indicators:
+                enriched[(ticker, "atr")] = compute_atr(high, low, close)
 
-        if "obv" in selected_indicators:
-            enriched[(ticker, "obv")] = compute_obv(close, volume)
+            if "obv" in selected_indicators:
+                enriched[(ticker, "obv")] = compute_obv(close, volume)
 
-        # Compute indicators with specific window sizes
-        for indicator in windowed_indicators:
-            if indicator.startswith("sma"):
-                window = int(indicator[3:])  # Extract the window size
-                enriched[(ticker, f"sma{window}")] = compute_sma(close, window=window)
-            elif indicator.startswith("ema"):
-                window = int(indicator[3:])
-                enriched[(ticker, f"ema{window}")] = compute_ema(close, window=window)
-            elif indicator.startswith("adx"):
-                window = int(indicator[3:])
-                enriched[(ticker, f"adx{window}")] = compute_adx(
-                    high, low, close, window=window
-                )
-            elif indicator.startswith("bb"):
-                window = int(indicator[2:])
-                enriched[
-                    (ticker, f"bb_upper{window}"),
-                    enriched[(ticker, f"bb_lower{window}")],
-                ] = compute_bollinger_bands(close, window=window)
-            elif indicator.startswith("atr"):
-                window = int(indicator[3:])
-                enriched[(ticker, f"atr{window}")] = compute_atr(
-                    high, low, close, window=window
-                )
+            # Compute indicators with specific window sizes
+            for indicator in windowed_indicators:
+                if indicator.startswith("sma"):
+                    window = int(indicator[3:])  # Extract the window size
+                    enriched[(ticker, f"sma{window}")] = compute_sma(
+                        close, window=window
+                    )
+                elif indicator.startswith("ema"):
+                    window = int(indicator[3:])
+                    enriched[(ticker, f"ema{window}")] = compute_ema(
+                        close, window=window
+                    )
+                elif indicator.startswith("adx"):
+                    window = int(indicator[3:])
+                    enriched[(ticker, f"adx{window}")] = compute_adx(
+                        high, low, close, window=window
+                    )
+                elif indicator.startswith("bb"):
+                    window = int(indicator[2:])
+                    bb_upper, bb_lower = compute_bollinger_bands(close, window=window)
+                    enriched[(ticker, f"bb_upper{window}")] = bb_upper
+                    enriched[(ticker, f"bb_lower{window}")] = bb_lower
+                elif indicator.startswith("atr"):
+                    window = int(indicator[3:])
+                    enriched[(ticker, f"atr{window}")] = compute_atr(
+                        high, low, close, window=window
+                    )
+        except Exception as e:
+            if verbosity > 0:
+                print(f"Error calculating indicators for {ticker}: {str(e)}")
+            continue
 
     if not enriched:
-        print("No indicators were computed. Returning the original data.")
+        if verbosity > 0:
+            print("No indicators were computed. Returning the original data.")
         return data
 
     enriched_df = pd.DataFrame(enriched, index=data.index)

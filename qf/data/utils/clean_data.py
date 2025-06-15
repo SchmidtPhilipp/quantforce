@@ -1,3 +1,10 @@
+"""Clean and prepare financial data.
+
+This module provides functions to clean and prepare financial data for analysis.
+"""
+
+from typing import List, Union
+
 import pandas as pd
 
 
@@ -22,19 +29,27 @@ def reindex_data(data, start, end):
     return data
 
 
-def drop_columns(data, indicators):
+def drop_columns(data: pd.DataFrame, indicators: Union[List[str], str]) -> pd.DataFrame:
     """
-    Drops all columns that are not 'Close' or specified indicators.
+    Drop columns that are not 'Close' or the specified indicators.
 
-    Parameters:
-        data (pd.DataFrame): The input data with multi-indexed columns.
-        indicators (list[str]): List of indicator names to retain.
+    Args:
+        data: DataFrame with multi-index columns (ticker, field)
+        indicators: List of indicators to keep, or 'all' to keep all columns
 
     Returns:
-        pd.DataFrame: Filtered data containing only 'Close' and specified indicator columns.
+        pd.DataFrame: DataFrame with only the specified columns
     """
-    # Keep only 'Close' and columns matching the specified indicators
-    filtered_columns = [
-        col for col in data.columns if col[1] == "Close" or col[1] in indicators
-    ]
-    return data.loc[:, filtered_columns]
+    if indicators == "all":
+        return data
+
+    if isinstance(indicators, str):
+        indicators = [indicators]
+
+    # Get all columns that are either 'Close' or in the indicators list
+    keep_columns = []
+    for ticker, field in data.columns:
+        if field == "Close" or field in indicators:
+            keep_columns.append((ticker, field))
+
+    return data[keep_columns]

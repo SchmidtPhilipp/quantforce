@@ -13,14 +13,14 @@ from qf import (
     DEFAULT_DATA_IMPUTATION_METHOD,
     DEFAULT_DOWNLOADER,
     DEFAULT_INDICATORS,
+    DEFAULT_INTERVAL,
     DEFAULT_N_TRADING_DAYS,
     VERBOSITY,
 )
 
 from .clean_data import drop_columns
-from .load_data import load_data
+from .data_manager import DataManager
 from .preprocessor import add_technical_indicators
-from .trading_calendar import get_trading_days
 
 
 def get_data(
@@ -33,6 +33,7 @@ def get_data(
     downloader: str = DEFAULT_DOWNLOADER,
     n_trading_days: int = DEFAULT_N_TRADING_DAYS,
     imputation_method: str = DEFAULT_DATA_IMPUTATION_METHOD,
+    interval: str = DEFAULT_INTERVAL,
 ) -> pd.DataFrame:
     """
     Downloads historical financial data and adds technical indicators.
@@ -47,6 +48,7 @@ def get_data(
         downloader: Data downloader to use
         n_trading_days: Number of trading days to use (252 or 365)
         imputation_method: Method to handle missing values ('bfill', 'shrinkage', 'removal', 'keep_nan')
+        interval: Data interval (e.g., '1d', '1wk')
 
     Returns:
         pd.DataFrame: Multi-index DataFrame with tickers and OHLCV data
@@ -58,20 +60,29 @@ def get_data(
     if indicators is None:
         indicators = DEFAULT_INDICATORS
 
-    # Load the data either from cache or download it
-    data = load_data(
-        tickers,
-        start,
-        end,
-        verbosity=verbosity,
+    # Initialize data manager and load data
+    data_manager = DataManager(
         cache_dir=cache_dir,
+        interval=interval,
         downloader=downloader,
+        verbosity=verbosity,
     )
+    data = data_manager.get_data(tickers, start, end)
+
+    # If data is empty, return it without further processing
+    if data.empty:
+        if verbosity > 0:
+            print("No data available, returning empty DataFrame")
+        return data
+
+    # Convert dates to datetime if they are strings
+    start_dt = pd.to_datetime(start)
+    end_dt = pd.to_datetime(end)
 
     # If we are using 365 trading days, reindex to full calendar days
     if n_trading_days == 365:
         # Get full date range
-        full_range = pd.date_range(start=start, end=end, freq="D")
+        full_range = pd.date_range(start=start_dt, end=end_dt, freq="D")
         # Reindex to full calendar days, forward filling missing values
         data = data.reindex(full_range).ffill()
     elif n_trading_days != 252:
