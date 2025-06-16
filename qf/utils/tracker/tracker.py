@@ -1,7 +1,8 @@
-import torch
+import json  # For loading data from JSON files
 import os
 import pickle  # For saving and loading data
-import json  # For loading data from JSON files
+
+import torch
 
 
 class Tracker:
@@ -45,10 +46,12 @@ class Tracker:
             labels = [range(dim) for dim in shape]
 
         if len(labels) != len(shape):
-            raise ValueError(f"Number of labels ({len(labels)}) must match the number of dimensions in shape ({len(shape)}).")
+            raise ValueError(
+                f"Number of labels ({len(labels)}) must match the number of dimensions in shape ({len(shape)})."
+            )
 
         # Validate that each label matches the corresponding dimension size
-        #for i, (label, dim_size) in enumerate(zip(labels, shape)):
+        # for i, (label, dim_size) in enumerate(zip(labels, shape)):
         #    if len(label) != dim_size:
         #        raise ValueError(f"Label size for dimension {i} ({len(label)}) does not match shape size ({dim_size}).")
 
@@ -116,12 +119,14 @@ class Tracker:
 
         for name, value in kwargs.items():
             if name not in self.tracked_values:
-                
-                #print(f"⚠️ Value '{name}' is not registered. Skipping.")
+
+                # print(f"⚠️ Value '{name}' is not registered. Skipping.")
                 continue
             expected_shape = self.tracked_values[name]["shape"]
             if value.shape != expected_shape:
-                raise ValueError(f"Shape mismatch for '{name}'. Expected {expected_shape}, got {value.shape}.")
+                raise ValueError(
+                    f"Shape mismatch for '{name}'. Expected {expected_shape}, got {value.shape}."
+                )
             self.tracked_values[name]["data"][ep][ts] = value.to(self.device)
 
         # Increment timestep
@@ -171,7 +176,9 @@ class Tracker:
             # Iterate over all tracked values
             for name, value in self.tracked_values.items():
                 dimensions = value["dimensions"]
-                episode_data = value["data"][last_episode_idx]  # Data for the last episode
+                episode_data = value["data"][
+                    last_episode_idx
+                ]  # Data for the last episode
                 labels = value["labels"]  # Retrieve labels for naming
 
                 if len(dimensions) == 2:  # 2D data (e.g., timesteps x agents)
@@ -179,15 +186,23 @@ class Tracker:
                     if type(labels[0]) is not list:
                         labels[0] = [labels[0]]
 
-                    for agent_idx, agent_label in enumerate(labels[0]):  # Use agent labels
+                    for agent_idx, agent_label in enumerate(
+                        labels[0]
+                    ):  # Use agent labels
                         logger.log_scalar(
                             f"{self.tensorboard_prefix}_{name}/Actor_{agent_label}",
                             episode_data[ts, agent_idx],
                         )
 
-                elif len(dimensions) == 3:  # 3D data (e.g., timesteps x agents x assets)
-                    for agent_idx, agent_label in enumerate(labels[0]):  # Use agent labels
-                        for asset_idx, asset_label in enumerate(labels[1]):  # Use asset labels
+                elif (
+                    len(dimensions) == 3
+                ):  # 3D data (e.g., timesteps x agents x assets)
+                    for agent_idx, agent_label in enumerate(
+                        labels[0]
+                    ):  # Use agent labels
+                        for asset_idx, asset_label in enumerate(
+                            labels[1]
+                        ):  # Use asset labels
                             logger.log_scalar(
                                 f"{self.tensorboard_prefix}_{name}/Actor_{agent_label}/{asset_label}",
                                 episode_data[ts, agent_idx, asset_idx],
@@ -235,14 +250,19 @@ class Tracker:
         # Print episode summary
         print(f"📈[{run_type}] Episode {episode + 1:>3} | Steps: {steps}")
         if isinstance(total_reward, (list, torch.Tensor)):  # Multi-agent rewards
-            agent_rewards_str = " -> ".join([f"Agent {i}: {agent_reward:.4f}" for i, agent_reward in enumerate(total_reward)])
+            agent_rewards_str = " -> ".join(
+                [
+                    f"Agent {i}: {agent_reward:.4f}"
+                    for i, agent_reward in enumerate(total_reward)
+                ]
+            )
         else:  # Single-agent reward
             agent_rewards_str = f"Agent 0: {total_reward:.4f}"
         print(f"Rewards: {agent_rewards_str}")
         print(f"Portfolio Value: {env_balance[-1][0]:.4f}")
         print(f"Total Reward: {torch.sum(total_reward):.4f}")
-        #print(f"  Asset Holdings: {asset_holdings[steps - 1]}")
-        #print(f"  Agent Balances: {actor_balances[steps - 1]}")
+        # print(f"  Asset Holdings: {asset_holdings[steps - 1]}")
+        # print(f"  Agent Balances: {actor_balances[steps - 1]}")
 
     def reset(self):
         """
@@ -271,7 +291,9 @@ class Tracker:
         # Add all tracked values to the save data
         for name, value in self.tracked_values.items():
             save_data[name] = {
-                "data": [v.tolist() for v in value["data"]],  # Konvertiere Tensoren in Listen
+                "data": [
+                    v.tolist() for v in value["data"]
+                ],  # Konvertiere Tensoren in Listen
                 "shape": value["shape"],
                 "description": value["description"],
                 "dimensions": value["dimensions"],
@@ -282,8 +304,7 @@ class Tracker:
         save_path = os.path.join(run_path, "tracker_data.json")
         with open(save_path, "w") as f:
             json.dump(save_data, f, indent=4)
-        print(f"✅ Tracker-Daten wurden in {save_path} gespeichert.")
-
+        # print(f"✅ Tracker-Daten wurden in {save_path} gespeichert.")
 
     @staticmethod
     def load(filepath):
@@ -300,15 +321,24 @@ class Tracker:
             data = json.load(f)
 
         # Neue Tracker-Instanz erstellen
-        tracker = Tracker(timesteps=data["timesteps"], tensorboard_prefix=data["tensorboard_prefix"])
+        tracker = Tracker(
+            timesteps=data["timesteps"], tensorboard_prefix=data["tensorboard_prefix"]
+        )
         tracker.current_episode = data["current_episode"]
         tracker.current_timestep = data["current_timestep"]
 
         # Verfolgte Werte laden
         for name, value in data.items():
-            if name not in ["timesteps", "tensorboard_prefix", "current_episode", "current_timestep"]:
+            if name not in [
+                "timesteps",
+                "tensorboard_prefix",
+                "current_episode",
+                "current_timestep",
+            ]:
                 tracker.tracked_values[name] = {
-                    "data": [torch.tensor(v) for v in value["data"]],  # Konvertiere Listen zurück in Tensoren
+                    "data": [
+                        torch.tensor(v) for v in value["data"]
+                    ],  # Konvertiere Listen zurück in Tensoren
                     "shape": value["shape"],
                     "description": value["description"],
                     "dimensions": value["dimensions"],
@@ -324,7 +354,7 @@ class Tracker:
 
         Parameters:
             logger (Logger): Logger instance for logging.
-            values_to_log (list, optional): List of specific tracked values to log. 
+            values_to_log (list, optional): List of specific tracked values to log.
                                              If None, logs all registered values.
         """
         if self.current_episode == 0:
@@ -349,45 +379,55 @@ class Tracker:
                 labels = value["labels"]  # Retrieve labels for naming
 
                 # Collect data for all episodes at the current timestep
-                timestep_data = torch.stack([ep[timestep] for ep in data if timestep < len(ep)])
+                timestep_data = torch.stack(
+                    [ep[timestep] for ep in data if timestep < len(ep)]
+                )
 
                 if len(dimensions) == 2:  # 2D data (e.g., timesteps x agents)
-                    for agent_idx, agent_label in enumerate(labels[0]):  # Use agent labels
+                    for agent_idx, agent_label in enumerate(
+                        labels[0]
+                    ):  # Use agent labels
                         logger.log_scalar(
                             f"{self.tensorboard_prefix}_{name}_mean/{agent_label}",
                             torch.mean(timestep_data[:, agent_idx]),
-                            step=timestep
+                            step=timestep,
                         )
                         logger.log_scalar(
                             f"{self.tensorboard_prefix}_{name}_std/{agent_label}",
                             torch.std(timestep_data[:, agent_idx]),
-                            step=timestep
+                            step=timestep,
                         )
 
-                elif len(dimensions) == 3:  # 3D data (e.g., timesteps x agents x assets)
-                    for agent_idx, agent_label in enumerate(labels[0]):  # Use agent labels
-                        for asset_idx, asset_label in enumerate(labels[1]):  # Use asset labels
+                elif (
+                    len(dimensions) == 3
+                ):  # 3D data (e.g., timesteps x agents x assets)
+                    for agent_idx, agent_label in enumerate(
+                        labels[0]
+                    ):  # Use agent labels
+                        for asset_idx, asset_label in enumerate(
+                            labels[1]
+                        ):  # Use asset labels
                             logger.log_scalar(
                                 f"{self.tensorboard_prefix}_{name}_mean/Actor_{agent_label}/{asset_label}",
                                 torch.mean(timestep_data[:, agent_idx, asset_idx]),
-                                step=timestep
+                                step=timestep,
                             )
                             logger.log_scalar(
                                 f"{self.tensorboard_prefix}_{name}_std/Actor_{agent_label}/{asset_label}",
                                 torch.std(timestep_data[:, agent_idx, asset_idx]),
-                                step=timestep
+                                step=timestep,
                             )
 
                 elif len(dimensions) == 1:  # 1D data (e.g., timesteps)
                     logger.log_scalar(
                         f"{self.tensorboard_prefix}_{name}_mean",
                         torch.mean(timestep_data),
-                        step=timestep
+                        step=timestep,
                     )
                     logger.log_scalar(
                         f"{self.tensorboard_prefix}_{name}_std",
                         torch.std(timestep_data),
-                        step=timestep
+                        step=timestep,
                     )
 
     def get_df(self, name):
@@ -400,14 +440,14 @@ class Tracker:
         Returns:
             pd.DataFrame: DataFrame containing the tracked values for the specified name.
         """
-        import pandas as pd
         import numpy as np
+        import pandas as pd
 
         if name not in self.tracked_values:
             raise ValueError(f"Value '{name}' is not registered.")
 
         value = self.tracked_values[name]
-        
+
         # Extract the data for the current tracking element
         data = np.array(value["data"])  # Shape: (episodes, timesteps, ...)
         dimensions = value["dimensions"]
@@ -416,16 +456,19 @@ class Tracker:
         # Handle "date" separately
         # Get date from value["data"]
         dates = self.tracked_values.get("date", None)
-        dates = dates["data"][0] 
+        dates = dates["data"][0]
         dates = torch.tensor(dates, dtype=torch.int32).detach().clone()
-        dates = dates[:,0]
+        dates = dates[:, 0]
         dates = [pd.Timestamp.fromtimestamp(date.item()) for date in dates]
         dates = pd.to_datetime(dates)  # Convert to pandas datetime
-            
 
         # Reshape the data into a 2D form for the DataFrame
-        reshaped_data = data.reshape(-1, *value["shape"])  # Shape: (episodes * timesteps, ...)
-        reshaped_data = reshaped_data.reshape(reshaped_data.shape[0], -1)  # Flatten for DataFrame
+        reshaped_data = data.reshape(
+            -1, *value["shape"]
+        )  # Shape: (episodes * timesteps, ...)
+        reshaped_data = reshaped_data.reshape(
+            reshaped_data.shape[0], -1
+        )  # Flatten for DataFrame
 
         # Create MultiIndex for the columns based on dimensions and labels
         if len(dimensions) > 1:
@@ -433,13 +476,10 @@ class Tracker:
             # Create DataFrame for the current tracking element
             df = pd.DataFrame(reshaped_data, columns=column_index)
 
-
         else:
             column_index = pd.Index(labels[0], name=name)
             # Create DataFrame for the current tracking element
             df = pd.DataFrame(reshaped_data, columns=column_index)
-
-
 
         # Add timestamps as the index if available
         if dates is not None:
@@ -447,7 +487,7 @@ class Tracker:
             df.index.name = "timestamp"
 
         return df
-    
+
     @staticmethod
     def get_tracker_files(folders):
         """
@@ -457,6 +497,7 @@ class Tracker:
         :return: Liste von Pfaden zu den gefundenen Tracker-Dateien.
         """
         import os
+
         tracker_files = []
         for folder in folders:
             for root, _, files in os.walk(folder):
@@ -464,7 +505,6 @@ class Tracker:
                     if file.endswith(".json") and "tracker" in file.lower():
                         tracker_files.append(os.path.join(root, file))
         return tracker_files
-    
 
     @staticmethod
     def get_trackers(folders):
@@ -476,17 +516,17 @@ class Tracker:
         :return: Liste von Tracker-Instanzen.
         """
         import os
+
         import pandas as pd
 
         # Get tracker files from the folders
         tracker_files = Tracker.get_tracker_files(folders)
-        
+
         trackers = []
         for tracker_file in tracker_files:
             trackers.append(Tracker.load(tracker_file))
 
         return trackers
-    
 
     @staticmethod
     def get_df_from_trackers(folders, df_request, col_names=None):
@@ -505,6 +545,7 @@ class Tracker:
             df.append(tracker.get_df(df_request)[df_request])
 
         import pandas as pd
+
         # Combine balance dataframes
         df = pd.concat(df, axis=1)
 
@@ -513,7 +554,3 @@ class Tracker:
             df.columns = col_names
 
         return df
-
-
-
-

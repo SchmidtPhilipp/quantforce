@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import matplotlib
 import matplotlib.dates as mdates
@@ -508,6 +508,8 @@ def plot_hist_grid(
     data: pd.DataFrame,
     n_cols: int = 3,
     bins: int = 50,
+    x_name: str = "Return",
+    y_name: str = "Probability Density",
     figsize: Tuple[float, float] = (6, 2),
     log_y_scale: bool = False,
     ylim: Optional[Tuple[float, float]] = None,
@@ -546,8 +548,8 @@ def plot_hist_grid(
         data[ticker].plot.kde(ax=ax, color=kde_color)
 
         ax.set_title(ticker)
-        ax.set_ylabel("Density")
-        ax.set_xlabel("Return")
+        ax.set_ylabel(y_name)
+        ax.set_xlabel(x_name)
         ax.grid(True)
         ax.set_xlim(-0.1, 0.1)
 
@@ -567,41 +569,44 @@ def plot_hist_grid(
 
 
 def plot_hist_grid_compare(
-    data1: pd.DataFrame,
-    data2: pd.DataFrame,
+    dataframes: List[pd.DataFrame],
+    data_names: List[str],
+    x_name: str = "Return",
+    y_name: str = "Probability Density",
     n_cols: int = 3,
     bins: int = 50,
     figsize: Tuple[float, float] = (6, 2),
     log_y_scale: bool = False,
     ylim: Optional[Tuple[float, float]] = None,
-    hist_colors: Tuple[str, str] = (
-        qf.DEFAULT_SINGLE_LINE_COLORS[0],
-        qf.DEFAULT_SINGLE_LINE_COLORS[1],
-    ),
-    kde_colors: Tuple[str, str] = (
-        qf.DEFAULT_SINGLE_LINE_COLORS[2],
-        qf.DEFAULT_SINGLE_LINE_COLORS[3],
-    ),
+    colors: Optional[List[str]] = None,
+    hist_alpha: float = 0.3,
 ) -> None:
     """
-    Plots a grid of histogram and KDE plots for each unique first-level column label in two MultiIndex DataFrames.
+    Plots a grid of histogram and KDE plots for each unique first-level column label in multiple MultiIndex DataFrames.
 
     Args:
-        data1 (pd.DataFrame): First MultiIndex DataFrame with two-level column index (e.g., (ticker, attribute)).
-        data2 (pd.DataFrame): Second MultiIndex DataFrame with two-level column index (e.g., (ticker, attribute)).
+        dataframes (List[pd.DataFrame]): List of MultiIndex DataFrames with two-level column index (e.g., (ticker, attribute)).
+        data_names (List[str]): List of names for each DataFrame to be used in the legend.
         n_cols (int): Number of columns in the plot grid.
         bins (int): Number of bins for the histogram.
         figsize (Tuple[float, float]): Size of each subplot (width, height).
         log_y_scale (bool): Whether to use a logarithmic scale for the y-axis.
         ylim (Optional[Tuple[float, float]]): Y-axis limits. If None, defaults to matplotlib's auto-scaling.
-        hist_colors (Tuple[str, str]): Colors for histogram bars for data1 and data2.
-        kde_colors (Tuple[str, str]): Colors for KDE curves for data1 and data2.
+        colors (Optional[List[str]]): Colors for each DataFrame. If None, uses default colors.
+        hist_alpha (float): Alpha value for histogram bars (0-1).
     """
-    # Extract unique tickers from the first level of the MultiIndex
+    if len(dataframes) != len(data_names):
+        raise ValueError("Number of dataframes must match number of data_names")
+
+    if colors is None:
+        colors = qf.DEFAULT_SINGLE_LINE_COLORS[: len(dataframes)]
+
+    if len(colors) != len(dataframes):
+        raise ValueError("Number of colors must match number of dataframes")
+
+    # Extract unique tickers from the first level of all MultiIndex DataFrames
     tickers = sorted(
-        set(col[0] for col in data1.columns).intersection(
-            set(col[0] for col in data2.columns)
-        )
+        set.intersection(*[set(col[0] for col in df.columns) for df in dataframes])
     )
     n_rows = int(np.ceil(len(tickers) / n_cols))
 
@@ -613,42 +618,27 @@ def plot_hist_grid_compare(
     for i, ticker in enumerate(tickers):
         ax = axes[i]
 
-        # Plot histogram and KDE for all attributes under this ticker
-        if ticker in data1.columns.get_level_values(0):
-            data1[ticker].plot.hist(
-                bins=bins,
-                density=True,
-                ax=ax,
-                color=hist_colors[0],
-                alpha=0.5,
-                label=f"{ticker} (Data1)",
-            )
-            data1[ticker].plot.kde(
-                ax=ax,
-                color=kde_colors[0],
-                linestyle="--",
-                label=f"{ticker} KDE (Data1)",
-            )
-
-        if ticker in data2.columns.get_level_values(0):
-            data2[ticker].plot.hist(
-                bins=bins,
-                density=True,
-                ax=ax,
-                color=hist_colors[1],
-                alpha=0.5,
-                label=f"{ticker} (Data2)",
-            )
-            data2[ticker].plot.kde(
-                ax=ax,
-                color=kde_colors[1],
-                linestyle="-.",
-                label=f"{ticker} KDE (Data2)",
-            )
+        # Plot histogram and KDE for all attributes under this ticker for each DataFrame
+        for df, name, color in zip(dataframes, data_names, colors):
+            if ticker in df.columns.get_level_values(0):
+                df[ticker].plot.hist(
+                    bins=bins,
+                    density=True,
+                    ax=ax,
+                    color=color,
+                    alpha=hist_alpha,
+                    label=f"{ticker} ({name})",
+                )
+                df[ticker].plot.kde(
+                    ax=ax,
+                    color=color,
+                    linestyle="-",
+                    label=f"{ticker} KDE ({name})",
+                )
 
         ax.set_title(ticker)
-        ax.set_ylabel("Density")
-        ax.set_xlabel("Return")
+        ax.set_ylabel(y_name)
+        ax.set_xlabel(x_name)
         ax.grid(True)
         ax.set_xlim(-0.1, 0.1)
 
@@ -657,15 +647,12 @@ def plot_hist_grid_compare(
         if ylim is not None:
             ax.set_ylim(ylim)
 
-        ax.legend(
-            [
-                f"{ticker} (Data1)",
-                f"{ticker} (Data2)",
-                f"{ticker} KDE (Data1)",
-                f"{ticker} KDE (Data2)",
-            ],
-            loc="upper right",
-        )
+        # Create legend entries for all DataFrames
+        legend_entries = []
+        for name in data_names:
+            legend_entries.extend([f"{ticker} ({name})", f"{ticker} KDE ({name})"])
+
+        ax.legend(legend_entries, loc="upper right")
 
     # Hide unused subplots
     for j in range(i + 1, len(axes)):
@@ -678,6 +665,8 @@ def plot_hist_grid_compare(
 def plot_grid(
     data: pd.DataFrame,
     n_cols: int = 3,
+    y_name: str = "Price",
+    x_name: str = "Date",
     figsize: Tuple[float, float] = (6, 2),
     ylim: Optional[Tuple[float, float]] = None,
     line_color: str = qf.DEFAULT_SINGLE_LINE_COLORS[0],
@@ -709,8 +698,8 @@ def plot_grid(
         data[ticker].plot(
             ax=ax,
             title=ticker,
-            ylabel="Price",
-            xlabel="Date",
+            ylabel=y_name,
+            xlabel=x_name,
             grid=True,
             color=line_color,
         )
@@ -724,6 +713,95 @@ def plot_grid(
     for j in range(len(tickers), total_plots):
         row, col = divmod(j, n_cols)
         axes[row, col].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_cdf_grid_compare(
+    dataframes: List[pd.DataFrame],
+    data_names: List[str],
+    x_name: str = "Return",
+    y_name: str = "Cumulative Probability",
+    n_cols: int = 3,
+    figsize: Tuple[float, float] = (6, 2),
+    log_y_scale: bool = False,
+    ylim: Optional[Tuple[float, float]] = None,
+    colors: Optional[List[str]] = None,
+    line_alpha: float = 0.7,
+) -> None:
+    """
+    Plots a grid of CDF plots for each unique first-level column label in multiple MultiIndex DataFrames.
+
+    Args:
+        dataframes (List[pd.DataFrame]): List of MultiIndex DataFrames with two-level column index (e.g., (ticker, attribute)).
+        data_names (List[str]): List of names for each DataFrame to be used in the legend.
+        n_cols (int): Number of columns in the plot grid.
+        figsize (Tuple[float, float]): Size of each subplot (width, height).
+        log_y_scale (bool): Whether to use a logarithmic scale for the y-axis.
+        ylim (Optional[Tuple[float, float]]): Y-axis limits. If None, defaults to matplotlib's auto-scaling.
+        colors (Optional[List[str]]): Colors for each DataFrame. If None, uses default colors.
+        line_alpha (float): Alpha value for the CDF lines (0-1).
+    """
+    if len(dataframes) != len(data_names):
+        raise ValueError("Number of dataframes must match number of data_names")
+
+    if colors is None:
+        colors = qf.DEFAULT_SINGLE_LINE_COLORS[: len(dataframes)]
+
+    if len(colors) != len(dataframes):
+        raise ValueError("Number of colors must match number of dataframes")
+
+    # Extract unique tickers from the first level of all MultiIndex DataFrames
+    tickers = sorted(
+        set.intersection(*[set(col[0] for col in df.columns) for df in dataframes])
+    )
+    n_rows = int(np.ceil(len(tickers) / n_cols))
+
+    fig, axes = plt.subplots(
+        nrows=n_rows, ncols=n_cols, figsize=(figsize[0] * n_cols, figsize[1] * n_rows)
+    )
+    axes = np.atleast_1d(axes).flatten()
+
+    for i, ticker in enumerate(tickers):
+        ax = axes[i]
+
+        # Plot CDF for all attributes under this ticker for each DataFrame
+        for df, name, color in zip(dataframes, data_names, colors):
+            if ticker in df.columns.get_level_values(0):
+                # Calculate CDF
+                data = df[ticker].values.flatten()
+                sorted_data = np.sort(data)
+                cdf = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+
+                # Plot CDF
+                ax.plot(
+                    sorted_data,
+                    cdf,
+                    color=color,
+                    alpha=line_alpha,
+                    label=f"{ticker} ({name})",
+                )
+
+        ax.set_title(ticker)
+        ax.set_ylabel(y_name)
+        ax.set_xlabel(x_name)
+        ax.grid(True)
+        ax.set_xlim(-0.1, 0.1)
+        ax.set_ylim(0, 1)
+
+        if log_y_scale:
+            ax.set_yscale("log")
+        if ylim is not None:
+            ax.set_ylim(ylim)
+
+        # Create legend entries for all DataFrames
+        legend_entries = [f"{ticker} ({name})" for name in data_names]
+        ax.legend(legend_entries, loc="lower right")
+
+    # Hide unused subplots
+    for j in range(i + 1, len(axes)):
+        axes[j].axis("off")
 
     plt.tight_layout()
     plt.show()

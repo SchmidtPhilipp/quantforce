@@ -98,6 +98,8 @@ class DataManager:
             return new_data
 
         cached_data = self._load_from_cache([ticker])
+
+        # If cached data is empty, return new data
         if cached_data.empty:
             return new_data
 
@@ -215,27 +217,11 @@ class DataManager:
                 0:0
             ]  # Return truly empty DataFrame but with proper index
 
-        # If columns are already tuples, flatten them
-        def flatten_col(col):
-            if isinstance(col, tuple):
-                # If it's a tuple like ('Open', 'AAPL'), return (ticker, col[0]) if col[1] == ticker
-                if len(col) == 2 and col[1] == ticker:
-                    return (ticker, col[0])
-                # If it's a tuple like ('AAPL', 'Open'), return as is
-                if len(col) == 2 and col[0] == ticker:
-                    return col
-                # Otherwise, flatten to string
-                return (ticker, str(col))
-            return (ticker, col)
-
         # Remove 'Adj Close' if present
         cols = [c for c in data.columns if c != "Adj Close"]
         data = data[cols]
-        # Flatten columns
-        new_columns = pd.MultiIndex.from_tuples(
-            [flatten_col(col) for col in data.columns]
-        )
-        return pd.DataFrame(data.values, index=data.index, columns=new_columns)
+
+        return data
 
     def get_data(
         self,
@@ -263,11 +249,13 @@ class DataManager:
             # Try to load from cache first
             if use_cache:
                 data = self._load_from_cache([ticker])
+
                 if not data.empty:
                     # Check if we need to extend the data
-                    if data.index[0] > pd.Timestamp(start) or data.index[
-                        -1
-                    ] < pd.Timestamp(end):
+                    if (
+                        data.index[0] > pd.Timestamp(start)
+                        or (data.index[-1] - pd.Timestamp(end)).days > 3
+                    ):
                         # Download missing data
                         new_data = self._download_data([ticker], start, end)
                         # Update cache with new data

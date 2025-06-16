@@ -1,6 +1,8 @@
 from stable_baselines3 import A2C
-from qf.agents.sb3_agents.sb3_agent import SB3Agent
+
 import qf
+from qf.agents.sb3_agents.sb3_agent import SB3Agent
+
 
 class A2CAgent(SB3Agent):
     def __init__(self, env, config=None):
@@ -23,7 +25,7 @@ class A2CAgent(SB3Agent):
             "vf_coef": qf.DEFAULT_A2C_VF_COEF,
             "max_grad_norm": qf.DEFAULT_A2C_MAX_GRAD_NORM,
             "device": qf.DEFAULT_DEVICE,
-            "verbose": qf.DEFAULT_A2C_VERBOSITY
+            "verbose": qf.VERBOSITY,
         }
 
         # Merge default config with provided config
@@ -41,5 +43,13 @@ class A2CAgent(SB3Agent):
             vf_coef=self.config["vf_coef"],
             max_grad_norm=self.config["max_grad_norm"],
             verbose=self.config["verbose"],
-            device=self.config["device"]
+            device=self.config["device"],
         )
+
+    @staticmethod
+    def get_default_config():
+        return qf.DEFAULT_A2CAGENT_CONFIG
+
+    @staticmethod
+    def get_hyperparameter_space():
+        return qf.DEFAULT_A2CAGENT_HYPERPARAMETER_SPACE

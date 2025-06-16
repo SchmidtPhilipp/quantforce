@@ -5,9 +5,11 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
+
 
 class Agent:
-    def __init__(self, env, config=None):
+    def __init__(self, env):
         """
         Initializes the agent with the given environment.
         Parameters:
@@ -17,7 +19,6 @@ class Agent:
         self.env = env
         self.obs_dim = env.observation_space.shape[0]
         self.act_dim = env.action_space.shape[0]
-        self.config = config
         self.device = env.device
 
     def train(
@@ -207,11 +208,13 @@ class Agent:
         return Warning("This method should be implemented by subclasses.")
 
     @staticmethod
-    def load_agent(path):
+    def load_agent(path, env=None, device="cpu"):
         """
-        Loads an agent from a specified path.
+        Loads an agent from a specified path. Use this method to load an agent that was saved with the save method.
         Parameters:
             path (str): Path to the saved agent.
+            env: The environment to associate with the loaded agent. If None, will be loaded from config.
+            device (str): Device to load the agent on ("cpu" or "cuda").
         Returns:
             Agent: An instance of the loaded agent.
         """
@@ -225,10 +228,11 @@ class Agent:
         with open(env_config_path, "r") as f:
             env_config = json.load(f)
 
-        # Create environment
-        env_module = importlib.import_module("qf.envs")
-        env_class = getattr(env_module, env_config["class"])
-        env = env_class(**env_config["params"])
+        # Create environment if not provided
+        if env is None:
+            env = MultiAgentPortfolioEnv(
+                tensorboard_prefix="LOAD_ENV", config=env_config
+            )
 
         # Load agent class name
         agent_class_path = os.path.join(path, "agent_class.txt")
@@ -239,7 +243,7 @@ class Agent:
             agent_class_name = f.read().strip()
 
         # Import and instantiate agent
-        agent_module = importlib.import_module("qf.agents")
+        agent_module = importlib.import_module("qf")
         agent_class = getattr(agent_module, agent_class_name)
         agent = agent_class(env)
 
@@ -247,17 +251,3 @@ class Agent:
         agent.load(path)
 
         return agent
-
-    def _evaluate_during_training(self, eval_env, n_episodes=5):
-        """
-        Evaluates the agent during training.
-        Parameters:
-            eval_env: The environment used for evaluation.
-            n_episodes (int): Number of episodes to evaluate.
-        Returns:
-            float: Average reward over evaluation episodes.
-        """
-        rewards = self.evaluate(
-            eval_env=eval_env, episodes=n_episodes, use_tqdm=False, print_metrics=False
-        )
-        return np.mean(rewards)

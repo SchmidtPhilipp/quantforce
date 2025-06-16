@@ -15,7 +15,7 @@ DEFAULT_MAX_TIMESTEPS = 500_000  # Default maximum number of timesteps for train
 
 # Default data configuration
 DEFAULT_TICKERS: list[str] = DOWJONES
-DEFAULT_TRAIN_START = "2005-06-30"
+DEFAULT_TRAIN_START = "1990-01-01"
 DEFAULT_TRAIN_END = "2015-01-01"
 DEFAULT_EVAL_START = "2015-01-01"
 DEFAULT_EVAL_END = "2020-01-01"
@@ -413,12 +413,52 @@ DEFAULT_TD3AGENT_CONFIG = {
 }
 
 DEFAULT_TD3AGENT_HYPERPARAMETER_SPACE = {
-    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4},
-    "noise_std": {"type": "float", "low": 0.1, "high": 0.3},
-    "noise_clip": {"type": "float", "low": 0.3, "high": 0.5},
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 3e-4, "round": 8},
+    "noise_std": {"type": "float", "low": 0.1, "high": 0.3, "round": 2},
+    "noise_clip": {"type": "float", "low": 0.3, "high": 0.5, "round": 2},
     # "batch_size": {"type": "int", "low": 64, "high": 128},
-    "tau": {"type": "float", "low": 0.001, "high": 0.01},
-    "gamma": {"type": "float", "low": 0.8, "high": 0.99},
+    "tau": {"type": "float", "low": 0.001, "high": 0.01, "round": 4},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
+}
+
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+
+# A2C Agent configuration
+DEFAULT_A2C_LR = 0.0007  # Learning rate
+DEFAULT_A2C_GAMMA = 0.99  # Discount factor
+DEFAULT_A2C_BATCH_SIZE = 64  # Batch size
+DEFAULT_A2C_POLICY = "MlpPolicy"  # Default policy architecture for A2C
+DEFAULT_A2C_ENT_COEF = 0.0  # Entropy coefficient
+DEFAULT_A2C_N_STEPS = 5  # Number of steps to run for each environment per update
+DEFAULT_A2C_GAE_LAMBDA = 1.0  # Factor for trade-off of bias vs variance for GAE
+DEFAULT_A2C_NORMALIZE_ADVANTAGE = True  # Whether to normalize the advantage
+DEFAULT_A2C_MAX_GRAD_NORM = 0.5  # Maximum value for gradient clipping
+DEFAULT_A2C_VF_COEF = 0.5  # Value function coefficient
+
+DEFAULT_A2CAGENT_CONFIG = {
+    "policy": DEFAULT_A2C_POLICY,  # Default policy architecture
+    "learning_rate": DEFAULT_A2C_LR,
+    "n_steps": DEFAULT_A2C_N_STEPS,
+    "gamma": DEFAULT_A2C_GAMMA,
+    "gae_lambda": DEFAULT_A2C_GAE_LAMBDA,
+    "ent_coef": DEFAULT_A2C_ENT_COEF,
+    "vf_coef": DEFAULT_A2C_VF_COEF,
+    "normalize_advantage": DEFAULT_A2C_NORMALIZE_ADVANTAGE,
+    "max_grad_norm": DEFAULT_A2C_MAX_GRAD_NORM,
+    "device": DEFAULT_DEVICE,  # Device to run the computations on
+}
+
+DEFAULT_A2CAGENT_HYPERPARAMETER_SPACE = {
+    "learning_rate": {"type": "float", "low": 1e-4, "high": 1e-3, "round": 8},
+    "n_steps": {"type": "int", "low": 4, "high": 8, "round": 0},
+    "ent_coef": {"type": "float", "low": 0.0, "high": 0.01, "round": 2},
+    "gae_lambda": {"type": "float", "low": 0.9, "high": 1.0, "round": 2},
+    "max_grad_norm": {"type": "float", "low": 0.3, "high": 0.7, "round": 2},
+    "gamma": {"type": "float", "low": 0.8, "high": 0.99, "round": 2},
+    "vf_coef": {"type": "float", "low": 0.0, "high": 1.0, "round": 2},
 }
 
 ##########################################################################################################
@@ -609,6 +649,9 @@ DEFAULT_SINGLE_LINE_COLORS = [
 ##########################################################################################################
 ##########################################################################################################
 
+# Custom Agents
+from qf.agents.agent import Agent
+
 # Classic Agents
 from qf.agents.classic_agents.classic_one_period_markovitz_agent import (
     ClassicOnePeriodMarkovitzAgent,
@@ -628,8 +671,6 @@ from qf.agents.sb3_agents.ppo_agent import PPOAgent
 # Stable Baselines3 Agents
 from qf.agents.sb3_agents.sac_agent import SACAgent
 from qf.agents.sb3_agents.td3_agent import TD3Agent
-
-# Custom Agents
 from qf.agents.tensor_agents.dqn_agent import DQNAgent
 
 # Multi-Agent Agents
@@ -656,6 +697,7 @@ from qf.utils.metrics import Metrics
 
 # Visualization
 from qf.utils.plot import (
+    plot_cdf_grid_compare,
     plot_grid,
     plot_hist_grid,
     plot_hist_grid_compare,

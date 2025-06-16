@@ -1,6 +1,6 @@
 {
   // Sets the Python interpreter (virtual environment) used by VS Code
-  "python.defaultInterpreterPath": "/Users/PhilippSchmidt/miniforge3/envs/finrl-env/bin/python",
+  "python.defaultInterpreterPath": "/Users/PhilippSchmidt/miniforge3/envs/quantforce/bin/python",
   // Explicitly sets the language server (Pylance is fast, feature-rich, and officially recommended)
   "python.languageServer": "Pylance",
   // Arguments passed to the unittest discovery (verbose mode, folder, and test file pattern)

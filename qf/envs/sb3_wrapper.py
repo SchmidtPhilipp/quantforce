@@ -11,6 +11,7 @@ class SB3Wrapper(gym.Env):
         self.observation_space = env.get_observation_space()
         self.action_space = env.get_action_space()
         self.device: str = env.device
+        self.config = env.config
 
     def step(self, actions: np.ndarray) -> tuple:
         """

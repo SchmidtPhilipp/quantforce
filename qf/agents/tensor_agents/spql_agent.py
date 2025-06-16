@@ -4,6 +4,7 @@ import random
 import numpy as np
 import torch
 import torch.optim as optim
+from torch.serialization import add_safe_globals
 from tqdm import tqdm
 
 import qf as qf
@@ -87,6 +88,7 @@ class SPQLAgent(Agent):
         self.buffer_max_size = self.config["buffer_max_size"]
         self.epsilon_start = self.config["epsilon_start"]
         self.loss_fn = torch.nn.MSELoss()
+
         self.memory = ReplayBuffer(
             capacity=self.buffer_max_size
         )  # Initialize the replay buffer
@@ -118,6 +120,8 @@ class SPQLAgent(Agent):
         min_delta=1e-3,
         eval_env=None,
         n_eval_steps=None,
+        n_eval_episodes=1,
+        print_eval_metrics=False,
         save_best=True,
     ):
         """
@@ -179,7 +183,12 @@ class SPQLAgent(Agent):
                 and n_eval_steps is not None
                 and timestep - last_eval_step >= n_eval_steps
             ):
-                eval_reward = self._evaluate_during_training(eval_env)
+                eval_reward = self.evaluate(
+                    eval_env,
+                    episodes=n_eval_episodes,
+                    use_tqdm=use_tqdm,
+                    print_metrics=print_eval_metrics,
+                ).mean()
                 last_eval_step = timestep
 
                 if save_best and eval_reward > best_eval_reward:
@@ -312,7 +321,7 @@ class SPQLAgent(Agent):
                 "model_state_dict": self.model.state_dict(),
                 "target_model_state_dict": self.target_model.state_dict(),
                 "optimizer_state_dict": self.optimizer.state_dict(),
-                "memory": self.memory,
+                # "memory": self.memory,
                 "epsilon": self.epsilon_start,
                 "gamma": self.gamma,
                 "batch_size": self.batch_size,
@@ -342,7 +351,6 @@ class SPQLAgent(Agent):
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         # Load other parameters
-        self.memory = checkpoint["memory"]
         self.epsilon_start = checkpoint["epsilon"]
         self.gamma = checkpoint["gamma"]
         self.batch_size = checkpoint["batch_size"]
