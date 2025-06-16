@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import optuna
 from optuna.visualization import plot_optimization_history, plot_param_importances
@@ -145,9 +147,17 @@ class HyperparameterOptimizer:
                 "max_timesteps", qf.DEFAULT_MAX_TIMESTEPS
             ),
             use_tqdm=self.optim_config.get("use_tqdm", True),
+            save_best=self.optim_config.get("save_best", True),
+            eval_env=self.eval_env_config,
+            n_eval_steps=self.optim_config.get("n_eval_steps", 50000),
+            n_eval_episodes=self.optim_config.get("n_eval_episodes", 1),
+            print_eval_metrics=self.optim_config.get("print_eval_metrics", False),
         )
 
-        # Evaluate the agent
+        # Reload the best agent
+        agent = agent_class.load_agent(os.path.join(env.get_save_dir(), "best_agent"))
+
+        # Evaluate the best agent
         eval_env = self.env_class(
             tensorboard_prefix="EVAL", config=self.eval_env_config
         )

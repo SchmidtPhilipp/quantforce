@@ -14,9 +14,11 @@ import yfinance as yf
 from qf import (
     DEFAULT_CACHE_DIR,
     DEFAULT_DOWNLOADER,
+    DEFAULT_FORCE_DOWNLOAD,
     DEFAULT_INTERVAL,
     DEFAULT_USE_ADJUSTED_CLOSE,
     DEFAULT_USE_AUTOREPAIR,
+    DEFAULT_USE_CACHE,
     VERBOSITY,
 )
 
@@ -56,13 +58,17 @@ class DataManager:
         """Get the path to the cached data file for a ticker."""
         return os.path.join(self.cache_dir, f"{ticker}_{self.interval}.csv")
 
-    def _save_to_cache(self, ticker_list: list, data: pd.DataFrame) -> None:
+    def _save_to_cache(
+        self, ticker_list: list, data: pd.DataFrame, start: str, end: str
+    ) -> None:
         """Save data to cache with MultiIndex columns."""
+
         if data.empty:
             if self.verbosity > 0:
                 print(f"Not saving empty data for {ticker_list} to cache")
             return
         cache_path = self._get_cache_path("_".join(ticker_list))
+
         try:
             data.to_csv(cache_path)
             if self.verbosity > 0:
@@ -84,7 +90,9 @@ class DataManager:
                 print(f"Error loading cache for {ticker_list}: {e}")
             return pd.DataFrame()
 
-    def _update_cache(self, ticker: str, new_data: pd.DataFrame) -> pd.DataFrame:
+    def _update_cache(
+        self, ticker: str, new_data: pd.DataFrame, start: str, end: str
+    ) -> pd.DataFrame:
         """Update cached data with new data.
 
         Args:
@@ -114,6 +122,11 @@ class DataManager:
             combined_data = pd.concat([cached_data, new_data])
             combined_data = combined_data[~combined_data.index.duplicated(keep="last")]
             combined_data = combined_data.sort_index()
+
+            # Cast the data to a df with the complete date range but use the trading calendar to get the dates, non existing dates are filled with NaNs
+            # date_range = get_trading_days(start, end)
+            # combined_data = combined_data.reindex(date_range)
+
             return combined_data
         except Exception as e:
             if self.verbosity > 0:
@@ -145,6 +158,8 @@ class DataManager:
 
     def _download_data(self, tickers: list, start: str, end: str) -> pd.DataFrame:
         """Download data for a list of tickers, always return MultiIndex columns."""
+        if self.verbosity > 0:
+            print(f"Downloading data for {tickers} from {start} to {end}")
         if self.downloader == "yfinance":
             try:
                 data = yf.download(
@@ -153,7 +168,7 @@ class DataManager:
                     end=end,
                     interval=self.interval,
                     group_by="ticker",
-                    progress=self.verbosity > 0,
+                    progress=bool(self.verbosity),
                     auto_adjust=self.use_adjusted_close,
                     repair=self.use_autorepair,
                 )
@@ -228,7 +243,8 @@ class DataManager:
         tickers: Union[str, List[str]],
         start: str,
         end: str,
-        use_cache: bool = True,
+        use_cache: bool = DEFAULT_USE_CACHE,
+        force_download: bool = DEFAULT_FORCE_DOWNLOAD,
     ) -> pd.DataFrame:
         """Get data for multiple tickers.
 
@@ -237,6 +253,7 @@ class DataManager:
             start: Start date
             end: End date
             use_cache: Whether to use cached data
+            force_download: If True, forces download even if data exists in cache
 
         Returns:
             pd.DataFrame: Multi-index DataFrame with data for all tickers
@@ -246,32 +263,32 @@ class DataManager:
 
         all_data = []
         for ticker in tickers:
-            # Try to load from cache first
-            if use_cache:
+            # Try to load from cache first if not forcing download
+            if use_cache and not force_download:
                 data = self._load_from_cache([ticker])
 
                 if not data.empty:
                     # Check if we need to extend the data
-                    if (
-                        data.index[0] > pd.Timestamp(start)
-                        or (data.index[-1] - pd.Timestamp(end)).days > 3
-                    ):
+                    # I am using a tolerance of 3 days to avoid issues with the data being slightly off and constantly reloading.
+                    if (data.index[0] - pd.Timestamp(start)).days > 3 or (
+                        data.index[-1] - pd.Timestamp(end)
+                    ).days < -3:
                         # Download missing data
                         new_data = self._download_data([ticker], start, end)
                         # Update cache with new data
-                        data = self._update_cache(ticker, new_data)
+                        data = self._update_cache(ticker, new_data, start, end)
                     # Always filter to requested date range
                     data = data[start:end]
                 else:
                     # Download fresh data
                     data = self._download_data([ticker], start, end)
                     if not data.empty:
-                        self._save_to_cache([ticker], data)
+                        self._save_to_cache([ticker], data, start, end)
             else:
                 # Download fresh data
                 data = self._download_data([ticker], start, end)
                 if use_cache and not data.empty:
-                    self._save_to_cache([ticker], data)
+                    self._save_to_cache([ticker], data, start, end)
 
             # Create multi-index DataFrame for this ticker
             data = self._create_multiindex_dataframe(ticker, data)

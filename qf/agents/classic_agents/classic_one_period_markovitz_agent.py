@@ -87,8 +87,14 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
         Trains the agent by calculating portfolio weights based on the selected target and risk model.
         """
 
-        # Get historical data from the environment's dataset
-        self.historical_data = self.env.data.xs("Close", level=1, axis=1)
+        # We reload the data with "shrinkage" imputation method to ensure that the data is complete and std dev is not biased
+        self.historical_data = qf.get_data(
+            tickers=self.env.tickers,
+            start=self.env.start,
+            end=self.env.end,
+            indicators="Close",
+            imputation_method="shrinkage",
+        )
 
         if self.config["risk_model"] == "ML_brownian_motion_logreturn":
             # Use the MultiAssetBrownianMotionLogReturn model to estimate drift and covariance

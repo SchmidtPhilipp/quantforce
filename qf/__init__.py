@@ -4,7 +4,7 @@ from qf.data.tickers.tickers import DOWJONES, NASDAQ100, SNP500
 
 #### GENERAL DEFAULTS ####
 
-VERBOSITY = 0
+VERBOSITY = 1
 
 DEFAULT_LOG_DIR = "runs"
 DEFAULT_INITIAL_BALANCE = 1000000
@@ -30,7 +30,7 @@ DEFAULT_INDICATORS: list[str] = ["rsi", "sma", "macd", "atr"]
 DEFAULT_DOWNLOADER = "yfinance"  # Options: "yfinance" or "simulate"
 DEFAULT_USE_CACHE = True  # Saves the downloaded data to a local cache
 DEFAULT_FORCE_DOWNLOAD = False  # Force download even if cache exists
-DEFAULT_CACHE_DIR = "../cache"
+DEFAULT_CACHE_DIR = "/Users/PhilippSchmidt/Documents/cache"
 DEFAULT_DATA_IMPUTATION_METHOD = "bfill"  # Options: "bfill" or "shrinkage" or "remove"
 
 # yahoo downloader default parameters
@@ -57,14 +57,14 @@ ALL_INDICATORS = [
     "rsi",
     "macd",
     "ema",
-    # "adx",
-    # "bb",
-    # "atr",
-    # "obv",
-    # "open",
-    # "high",
-    # "low",
-    # "volume",
+    "adx",
+    "bb",
+    "atr",
+    "obv",
+    "open",
+    "high",
+    "low",
+    "volume",
 ]
 
 # Default environment configuration

@@ -46,6 +46,8 @@ class A2CAgent(SB3Agent):
             device=self.config["device"],
         )
 
+        raise ValueError("A2CAgent is not implemented yet")
+
     @staticmethod
     def get_default_config():
         return qf.DEFAULT_A2CAGENT_CONFIG
