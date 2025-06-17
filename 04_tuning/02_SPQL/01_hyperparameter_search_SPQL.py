@@ -10,6 +10,24 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../" * 2)))
 import qf as qf
 from qf.utils.logging_utils import setup_print_logging
 
+# Constants
+N_TRIALS = 20
+MAX_TIMESTEPS = 1_000_000
+EVAL_STEPS = 50_000
+EVAL_EPISODES = 1
+USE_TQDM = True
+PRINT_EVAL_METRICS = True
+
+# Debugging Constants
+IS_DEBUG = True
+if IS_DEBUG:
+    N_TRIALS = 2
+    MAX_TIMESTEPS = 2
+    EVAL_STEPS = 1
+    EVAL_EPISODES = 1
+    USE_TQDM = True
+    PRINT_EVAL_METRICS = True
+
 
 def main() -> None:
     """
@@ -50,10 +68,10 @@ def main() -> None:
     # Optimization configuration
     optim_config: Dict[str, Any] = {
         "objective": "avg_reward",
-        "max_timesteps": 2,  # 1 million steps
-        "episodes": 1,  # 1 episode of evaluation in the end of every training run with the best agent
-        "n_eval_steps": 1,  # Evaluate the agent every 50000 steps during training
-        "n_eval_episodes": 1,  # Evaluate the agent 1 time during training every n_eval_steps steps
+        "max_timesteps": MAX_TIMESTEPS,  # 1 million steps
+        "episodes": EVAL_EPISODES,  # 1 episode of evaluation in the end of every training run with the best agent
+        "n_eval_steps": EVAL_STEPS,  # Evaluate the agent every 50000 steps during training
+        "n_eval_episodes": EVAL_EPISODES,  # Evaluate the agent 1 time during training every n_eval_steps steps
         "use_tqdm": True,  # Use tqdm to show the training progress
         "print_eval_metrics": True,  # Print the evaluation metrics
     }
