@@ -8,6 +8,7 @@ def setup_logging(
     log_dir="logs",
     log_filenames=("all.log", "debug.log", "errors.log"),
     email_config=None,
+    redirect_print=False,
 ):
 
     os.makedirs(log_dir, exist_ok=True)
@@ -16,11 +17,11 @@ def setup_logging(
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-    # Alte Handler entfernen (optional, aber nützlich bei Re-Import)
+    # Alte Handler entfernen
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
-    # 🧾 Log-Dateien
+    # Log-Dateien
     for name in log_filenames:
         path = Path(log_dir) / name
         file_handler = logging.FileHandler(path, mode="w")
@@ -28,8 +29,8 @@ def setup_logging(
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-    # 📺 Konsole
-    console_handler = logging.StreamHandler(sys.__stdout__)  # Verwende echtes stdout
+    # Konsole
+    console_handler = logging.StreamHandler(sys.__stdout__)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
@@ -54,23 +55,25 @@ def setup_logging(
         mail_handler.setFormatter(formatter)
         logger.addHandler(mail_handler)
 
-    # 🔁 print() umleiten, aber zur Konsole und ins Log
-    class LoggerWriter:
-        def __init__(self, level_func, stream):
-            self.level_func = level_func
-            self.stream = stream
+    # Optional: print() umleiten
+    if redirect_print:
 
-        def write(self, message):
-            message = message.strip()
-            if message:
-                self.level_func(message)
-                self.stream.write(message + "\n")
+        class LoggerWriter:
+            def __init__(self, level_func, stream):
+                self.level_func = level_func
+                self.stream = stream
+
+            def write(self, message):
+                message = message.strip()
+                if message:
+                    self.level_func(message)
+                    self.stream.write(message + "\n")
+                    self.stream.flush()
+
+            def flush(self):
                 self.stream.flush()
 
-        def flush(self):
-            self.stream.flush()
-
-    sys.stdout = LoggerWriter(logger.info, sys.__stdout__)
-    sys.stderr = LoggerWriter(logger.error, sys.__stderr__)
+        sys.stdout = LoggerWriter(logger.info, sys.__stdout__)
+        sys.stderr = LoggerWriter(logger.error, sys.__stderr__)
 
     return logger

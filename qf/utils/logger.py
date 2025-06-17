@@ -1,6 +1,8 @@
 import os
+
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
+
 from qf import DEFAULT_LOG_DIR
 
 
@@ -55,5 +57,3 @@ class Logger:
 
     def close(self):
         self.writer.close()
-
-
