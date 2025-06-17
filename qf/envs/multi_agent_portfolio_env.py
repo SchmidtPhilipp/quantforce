@@ -119,17 +119,27 @@ class MultiAgentPortfolioEnv(TensorEnv):
             )
         elif self.reward_function.startswith("sharpe_ratio_w"):
             try:
-                window_size = int(self.reward_function.split("_w")[1])
-            except ValueError:
+                # Parse window parameters from the reward function string
+                # Format: sharpe_ratio_w{past_window}_{future_window}
+                window_params = self.reward_function.split("_w")[1].split("_")
+                past_window = int(window_params[0])
+                future_window = int(window_params[1]) if len(window_params) > 1 else 0
+            except (ValueError, IndexError):
                 raise ValueError(
-                    f"Invalid reward function format: {self.reward_function}. Expected format 'sharpe_ratio_wX' where X is an integer."
+                    f"Invalid reward function format: {self.reward_function}. "
+                    f"Expected format 'sharpe_ratio_w{past_window}_{future_window}' "
+                    f"where past_window and future_window are integers."
                 )
             self.reward_calculator = SharpeRatio(
                 n_agents=self.n_agents,
                 device=self.device,
-                window_size=window_size,
+                past_window=past_window,
+                future_window=future_window,
                 reward_scaling=self.reward_scaling,
                 bad_reward=self.bad_reward,
+                verbosity=self.config.get(
+                    "verbosity", 0
+                ),  # Get verbose flag from config, default to False
             )
         elif self.reward_function == "differential_sharpe_ratio":
             self.reward_calculator = DifferentialSharpeRatio(
@@ -439,11 +449,16 @@ class MultiAgentPortfolioEnv(TensorEnv):
         Resets the environment and returns the first observation.
         """
         self.current_step = 0
-        # Get the window size from the reward calculator if it's a SharpeRatio
-        window_size = 0
+        # Get the window sizes from the reward calculator if it's a SharpeRatio
+        past_window = 0
+        future_window = 0
         if isinstance(self.reward_calculator, SharpeRatio):
-            window_size = self.reward_calculator.window_size
-        self.current_step += max(window_size, self.obs_window_size - 1)
+            past_window = self.reward_calculator.past_window
+            future_window = self.reward_calculator.future_window
+
+        # We need to account for both past and future windows
+        total_window = past_window + future_window
+        self.current_step += max(total_window, self.obs_window_size - 1)
 
         self.current_cash_vector = torch.full(
             (self.n_agents,),
@@ -516,11 +531,16 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Returns the number of timesteps in the environment.
         """
-        # Get the window size from the reward calculator if it's a SharpeRatio
-        window_size = 0
+        # Get the window sizes from the reward calculator if it's a SharpeRatio
+        past_window = 0
+        future_window = 0
         if isinstance(self.reward_calculator, SharpeRatio):
-            window_size = self.reward_calculator.window_size
-        return len(self.data) - max(window_size, self.obs_window_size - 1)
+            past_window = self.reward_calculator.past_window
+            future_window = self.reward_calculator.future_window
+
+        # We need to account for both past and future windows
+        total_window = past_window + future_window
+        return len(self.data) - max(total_window, self.obs_window_size - 1)
 
     def register_tracker(self):
         """
