@@ -81,11 +81,12 @@ class MultiAgentPortfolioEnv(TensorEnv):
         self.trade_cost_percent = self.config["trade_cost_percent"]
         self.trade_cost_fixed = self.config["trade_cost_fixed"]
 
-        # Reward function can be "linear_rate_of_return", "log_return", or "absolute_return", or "sharpe_ratio_wX" where X is the time horizon the sharpe ratio is calculated over
+        # Reward function can be "linear_rate_of_return", "log_return", "absolute_return", "sharpe_ratio_wX", or "differential_sharpe_ratio"
         self.reward_function = self.config["reward_function"]
         self.reward_scaling = self.config["reward_scaling"]
         self.final_reward = self.config["final_reward"]
         self.bad_reward = self.config["bad_reward"]
+
         # check if the reward function begins with "sharpe_ratio_w"
         if self.reward_function is not None and self.reward_function.startswith(
             "sharpe_ratio_w"
@@ -98,6 +99,16 @@ class MultiAgentPortfolioEnv(TensorEnv):
                     f"Invalid reward function format: {self.reward_function}. Expected format 'sharpe_ratio_wX' where X is an integer."
                 )
             self.reward_function = "sharpe_ratio"
+
+        # Initialize differential Sharpe ratio components if needed
+        if self.reward_function == "differential_sharpe_ratio":
+            self.A = torch.zeros(
+                self.n_agents, dtype=torch.float32, device=self.device
+            )  # First moment
+            self.B = torch.zeros(
+                self.n_agents, dtype=torch.float32, device=self.device
+            )  # Second moment
+            self.eta = 0.01  # Learning rate / smoothing parameter
 
         # Initialize actor cash and asset holdings for each agent as Torch Tensors
         self.current_cash_vector = torch.full(
@@ -419,6 +430,37 @@ class MultiAgentPortfolioEnv(TensorEnv):
             zero_allocation_mask = torch.all(self.current_portfolio_matrix == 0, dim=1)
             rewards = torch.where(zero_allocation_mask, self.bad_reward, sharpe_ratio)
 
+        elif self.reward_function == "differential_sharpe_ratio":
+            # Calculate current portfolio value
+            current_portfolio_value = self.current_cash_vector + torch.sum(
+                self.current_portfolio_matrix * old_prices, dim=1
+            )
+
+            # Calculate return for this step
+            returns = (
+                current_portfolio_value / (self.current_portfolio_value + 1e-8)
+            ) - 1
+
+            # Update differential Sharpe ratio components
+            dA = returns - self.A
+            self.A = self.A + self.eta * dA
+
+            dB = returns**2 - self.B
+            self.B = self.B + self.eta * dB
+
+            # Calculate differential Sharpe ratio
+            numerator = self.B * dA - 0.5 * self.A * dB
+            denominator = (self.B - 0.5 * self.A**2) ** (3 / 2)
+
+            # Avoid division by zero
+            dsr = torch.where(
+                denominator > 1e-8, numerator / denominator, torch.zeros_like(numerator)
+            )
+
+            # Check for zero portfolio allocations across all assets and apply punishment
+            zero_allocation_mask = torch.all(self.current_portfolio_matrix == 0, dim=1)
+            rewards = torch.where(zero_allocation_mask, self.bad_reward, dsr)
+
         else:
             raise ValueError(
                 f"Unknown reward function: {self.reward_function}. Supported functions are 'linear_rate_of_return', 'log_return', and 'absolute_return' and 'sharpe_ratio'."
@@ -485,6 +527,11 @@ class MultiAgentPortfolioEnv(TensorEnv):
             dtype=torch.float32,
             device=self.device,
         )
+
+        # Reset differential Sharpe ratio components if needed
+        if self.reward_function == "differential_sharpe_ratio":
+            self.A = torch.zeros(self.n_agents, dtype=torch.float32, device=self.device)
+            self.B = torch.zeros(self.n_agents, dtype=torch.float32, device=self.device)
 
         self.last_actions = torch.zeros(
             (self.n_agents, self.n_assets + 1), dtype=torch.float32, device=self.device
