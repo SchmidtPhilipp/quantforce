@@ -182,7 +182,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Returns the number of consecutive states in the environment.
         """
-        return self.get_timesteps() + 1
+        return self.get_timesteps()
 
     def __setstate__(self, state):
         """Restore state from the unpickled state values."""
@@ -273,7 +273,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         )
 
         self.current_step += 1
-        done = self.current_step >= (self.get_n_succesive_states())
+        done = self.current_step >= len(self.data)
 
         if done:
             new_prices = old_prices  # We use the last prices to calculate the balance a last time
@@ -455,7 +455,6 @@ class MultiAgentPortfolioEnv(TensorEnv):
 
         # Get the next observation
         if not done:
-
             obs = self._get_observation()
 
         output = obs, rewards, done, {}
@@ -465,7 +464,6 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Resets the environment and returns the first observation.
         """
-
         self.current_step = 0
         sharpe = (
             self.sharpe_time_horizon if self.reward_function == "sharpe_ratio" else 0
@@ -539,16 +537,8 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Returns the number of timesteps in the environment.
         """
-        if self.reward_function == "sharpe_ratio":
-            # We need to adjust the number of timesteps because we throw away the first self.sharpe_time_horizon steps
-            if self.sharpe_time_horizon > self.obs_window_size:
-                n_succesive_states = len(self.data) - (self.sharpe_time_horizon) + 1
-            else:
-                n_succesive_states = len(self.data) - (self.obs_window_size) + 1
-        else:
-            n_succesive_states = len(self.data) - (self.obs_window_size) + 1
 
-        return n_succesive_states - 1
+        return len(self.data) - max(self.sharpe_time_horizon, self.obs_window_size - 1)
 
     def register_tracker(self):
         """
@@ -623,16 +613,17 @@ class MultiAgentPortfolioEnv(TensorEnv):
         try:
             # Record the values
             self.tracker.record_step(**values)
-        except:
-            print(f"Current step: {self.current_step}")
-            print(f"Data index: {self.data.index}")
-            print(f"Window size: {self.obs_window_size}")
-            print(f"Sharpe time horizon: {self.sharpe_time_horizon}")
-            print(f"Data length: {len(self.data)}")
-            print(f"N Timesteps: {self.get_timesteps()}")
+        except Exception as e:
             raise ValueError(
-                "Current step is out of bounds. Please check the data index."
+                f"Current step is out of bounds. Please check the data index. {e}"
             )
+
+        print(f"Current step: {self.current_step}")
+        print(f"Data index: {self.data.index}")
+        print(f"Window size: {self.obs_window_size}")
+        print(f"Sharpe time horizon: {self.sharpe_time_horizon}")
+        print(f"Data length: {len(self.data)}")
+        print(f"N Timesteps: {self.get_timesteps()}")
 
     def save_data(self, path=None):
         import os

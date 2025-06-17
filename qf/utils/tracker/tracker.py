@@ -129,7 +129,13 @@ class Tracker:
                 raise ValueError(
                     f"Shape mismatch for '{name}'. Expected {expected_shape}, got {value.shape}."
                 )
-            self.tracked_values[name]["data"][ep][ts] = value.to(self.device)
+            try:
+                self.tracked_values[name]["data"][ep][ts] = value.to(self.device)
+            except Exception as e:
+                # Give full error message
+                raise ValueError(
+                    f"Error recording step {ts} for episode {ep} for value {name}: {e}. \n"
+                )
 
         # Increment timestep
         self.current_timestep += 1
@@ -206,7 +212,7 @@ class Tracker:
                             labels[1]
                         ):  # Use asset labels
                             logger.log_scalar(
-                                f"{self.tensorboard_prefix}_{name}/Actor_{agent_label}/{asset_label}",
+                                f"{self.tensorboard_prefix}_{name}/{agent_label}/{asset_label}",
                                 episode_data[ts, agent_idx, asset_idx],
                             )
 

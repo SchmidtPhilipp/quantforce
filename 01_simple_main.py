@@ -4,6 +4,8 @@ import qf
 
 def main():
 
+    qf.start_tensorboard(port=6007, logdir="runs")
+
     # Initialize the environment and agent
     train_env = qf.MultiAgentPortfolioEnv(
         tensorboard_prefix="TRAIN"

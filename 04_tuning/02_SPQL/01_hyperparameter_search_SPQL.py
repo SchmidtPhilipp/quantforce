@@ -11,7 +11,7 @@ import qf as qf
 from qf.utils.logging_utils import setup_logging
 
 # Log-Ordner angeben
-logger = setup_logging(log_dir="logs")
+logger = setup_logging(log_dir="logs", redirect_print=True)
 
 # Constants
 N_TRIALS = 20

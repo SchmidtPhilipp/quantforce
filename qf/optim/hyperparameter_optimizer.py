@@ -131,7 +131,7 @@ class HyperparameterOptimizer:
 
         # Set the environment's config_name to reflect the current hyperparameter sweep
         merged_env_config["config_name"] = (
-            f"{agent_class.__name__}_" + "_" + str(trial.number)
+            f"{agent_class.__name__}" + "_" + str(trial.number)
         )
         merged_eval_env_config["config_name"] = merged_env_config["config_name"]
 
