@@ -8,7 +8,10 @@ from typing import Any, Dict, List, Type
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../" * 2)))
 
 import qf as qf
-from qf.utils.logging_utils import setup_print_logging
+from qf.utils.logging_utils import setup_logging
+
+# Log-Ordner angeben
+logger = setup_logging(log_dir="logs")
 
 # Constants
 N_TRIALS = 20
@@ -19,7 +22,7 @@ USE_TQDM = True
 PRINT_EVAL_METRICS = True
 
 # Debugging Constants
-IS_DEBUG = True
+IS_DEBUG = False
 if IS_DEBUG:
     N_TRIALS = 2
     MAX_TIMESTEPS = 2

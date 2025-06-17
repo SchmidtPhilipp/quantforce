@@ -1,47 +1,76 @@
-"""Utilities for logging and printing."""
-
+import logging
 import os
 import sys
-from datetime import datetime
-from typing import TextIO
+from pathlib import Path
 
 
-def setup_print_logging(log_dir: str = "logs") -> None:
-    """Override print function to log to both console and file.
+def setup_logging(
+    log_dir="logs",
+    log_filenames=("all.log", "debug.log", "errors.log"),
+    email_config=None,
+):
 
-    Args:
-        log_dir: Directory to store log files
-    """
-    # Create log directory if it doesn't exist
     os.makedirs(log_dir, exist_ok=True)
 
-    # Create log file with timestamp
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = os.path.join(log_dir, f"print_log_{current_time}.log")
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-    # Open log file
-    log_file_handle = open(log_file, "w", encoding="utf-8")
+    # Alte Handler entfernen (optional, aber nützlich bei Re-Import)
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
-    # Store original print function
-    original_print = print
+    # 🧾 Log-Dateien
+    for name in log_filenames:
+        path = Path(log_dir) / name
+        file_handler = logging.FileHandler(path, mode="w")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
-    # Define new print function
-    def custom_print(*args, **kwargs):
-        # Get timestamp
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # 📺 Konsole
+    console_handler = logging.StreamHandler(sys.__stdout__)  # Verwende echtes stdout
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
-        # Convert args to string
-        message = " ".join(str(arg) for arg in args)
+    # 📧 Optionaler E-Mail-Handler
+    if email_config:
+        from logging.handlers import SMTPHandler
 
-        # Format log entry
-        log_entry = f"{timestamp} - {message}\n"
+        mailhost = (email_config["server"], email_config.get("port", 587))
+        credentials = (email_config["email"], email_config["password"])
+        secure = () if email_config.get("use_tls", True) else None
 
-        # Write to log file
-        log_file_handle.write(log_entry)
-        log_file_handle.flush()
+        mail_handler = SMTPHandler(
+            mailhost=mailhost,
+            fromaddr=email_config["email"],
+            toaddrs=email_config["to"],
+            subject=email_config.get("subject", "Fehler im Python-Programm"),
+            credentials=credentials,
+            secure=secure,
+        )
+        mail_handler.setLevel(logging.ERROR)
+        mail_handler.setFormatter(formatter)
+        logger.addHandler(mail_handler)
 
-        # Call original print
-        original_print(*args, **kwargs)
+    # 🔁 print() umleiten, aber zur Konsole und ins Log
+    class LoggerWriter:
+        def __init__(self, level_func, stream):
+            self.level_func = level_func
+            self.stream = stream
 
-    # Override print function
-    sys.stdout.write = custom_print
+        def write(self, message):
+            message = message.strip()
+            if message:
+                self.level_func(message)
+                self.stream.write(message + "\n")
+                self.stream.flush()
+
+        def flush(self):
+            self.stream.flush()
+
+    sys.stdout = LoggerWriter(logger.info, sys.__stdout__)
+    sys.stderr = LoggerWriter(logger.error, sys.__stderr__)
+
+    return logger
