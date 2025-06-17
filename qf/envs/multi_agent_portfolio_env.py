@@ -8,6 +8,14 @@ from gymnasium import spaces
 
 import qf as qf
 from qf.data.utils.get_data import get_data
+from qf.envs.reward_functions import (
+    AbsoluteReturn,
+    DifferentialSharpeRatio,
+    LinearRateOfReturn,
+    LogReturn,
+    RewardFunction,
+    SharpeRatio,
+)
 from qf.envs.tensor_env import TensorEnv
 from qf.utils.logger import Logger
 from qf.utils.tracker.tracker import Tracker
@@ -87,28 +95,53 @@ class MultiAgentPortfolioEnv(TensorEnv):
         self.final_reward = self.config["final_reward"]
         self.bad_reward = self.config["bad_reward"]
 
-        # check if the reward function begins with "sharpe_ratio_w"
-        if self.reward_function is not None and self.reward_function.startswith(
-            "sharpe_ratio_w"
-        ):
-            # Extract the time horizon from the reward function
+        # Initialize the appropriate reward function
+        if self.reward_function == "linear_rate_of_return":
+            self.reward_calculator = LinearRateOfReturn(
+                n_agents=self.n_agents,
+                device=self.device,
+                reward_scaling=self.reward_scaling,
+                bad_reward=self.bad_reward,
+            )
+        elif self.reward_function == "log_return":
+            self.reward_calculator = LogReturn(
+                n_agents=self.n_agents,
+                device=self.device,
+                reward_scaling=self.reward_scaling,
+                bad_reward=self.bad_reward,
+            )
+        elif self.reward_function == "absolute_return":
+            self.reward_calculator = AbsoluteReturn(
+                n_agents=self.n_agents,
+                device=self.device,
+                reward_scaling=self.reward_scaling,
+                bad_reward=self.bad_reward,
+            )
+        elif self.reward_function.startswith("sharpe_ratio_w"):
             try:
-                self.sharpe_time_horizon = int(self.reward_function.split("_w")[1])
+                window_size = int(self.reward_function.split("_w")[1])
             except ValueError:
                 raise ValueError(
                     f"Invalid reward function format: {self.reward_function}. Expected format 'sharpe_ratio_wX' where X is an integer."
                 )
-            self.reward_function = "sharpe_ratio"
-
-        # Initialize differential Sharpe ratio components if needed
-        if self.reward_function == "differential_sharpe_ratio":
-            self.A = torch.zeros(
-                self.n_agents, dtype=torch.float32, device=self.device
-            )  # First moment
-            self.B = torch.zeros(
-                self.n_agents, dtype=torch.float32, device=self.device
-            )  # Second moment
-            self.eta = 0.01  # Learning rate / smoothing parameter
+            self.reward_calculator = SharpeRatio(
+                n_agents=self.n_agents,
+                device=self.device,
+                window_size=window_size,
+                reward_scaling=self.reward_scaling,
+                bad_reward=self.bad_reward,
+            )
+        elif self.reward_function == "differential_sharpe_ratio":
+            self.reward_calculator = DifferentialSharpeRatio(
+                n_agents=self.n_agents,
+                device=self.device,
+                reward_scaling=self.reward_scaling,
+                bad_reward=self.bad_reward,
+            )
+        else:
+            raise ValueError(
+                f"Unknown reward function: {self.reward_function}. Supported functions are 'linear_rate_of_return', 'log_return', 'absolute_return', 'sharpe_ratio_wX', and 'differential_sharpe_ratio'."
+            )
 
         # Initialize actor cash and asset holdings for each agent as Torch Tensors
         self.current_cash_vector = torch.full(
@@ -356,118 +389,17 @@ class MultiAgentPortfolioEnv(TensorEnv):
         # Keep track of the total balance
         self.balance.append(torch.sum(self.current_portfolio_value))
 
-        # 10. Calculate rewards
-        if self.reward_function == "linear_rate_of_return":
-            rewards = (
-                current_portfolio_value_t1 / (current_portfolio_value_t + 1e-10) - 1
-            )
+        # Calculate rewards using the reward calculator
+        rewards = self.reward_calculator.calculate(
+            current_portfolio_value=current_portfolio_value_t1,
+            old_portfolio_value=current_portfolio_value_t,
+            portfolio_matrix=self.current_portfolio_matrix,
+        )
 
-        elif self.reward_function == "log_return":
-            # Create a mask for agents with negative portfolio values
-            negative_mask = (current_portfolio_value_t < 0) | (
-                current_portfolio_value_t1 < 0
-            )
-
-            # Initialize rewards tensor
-            rewards = torch.log(
-                current_portfolio_value_t1 / (current_portfolio_value_t + 1e-10)
-            )
-
-            # Apply bad reward only to agents with negative portfolio values
-            rewards[negative_mask] = self.bad_reward
-
-            # Print warning if any agent has negative portfolio value
-            if torch.any(negative_mask):
-                print(
-                    f"Negative portfolio value detected for {torch.sum(negative_mask)} agent(s)."
-                )
-
-        elif self.reward_function == "absolute_return":
-            rewards = current_portfolio_value_t1 - current_portfolio_value_t
-
-        elif self.reward_function == "sharpe_ratio":
-
-            # We have to adjust the current step because we already incremented it.
-            adjusted_current_step = self.current_step - 1
-
-            # We build a price matrix that contains the (sharpe time horizon of past prices)x(n_assets)
-            past_price_matrix = torch.tensor(
-                self.data.xs("Close", axis=1, level=1)
-                .iloc[
-                    (adjusted_current_step - self.sharpe_time_horizon) : (
-                        adjusted_current_step
-                    )
-                ]
-                .values,
-                dtype=torch.float32,
-                device=self.device,
-            )  # shape: [past_steps, n_assets]
-
-            # We take the past portfolio matrix which contains the portfolio for each agent ([n_agents, n_assets])
-            # and multiply it with the past price matrix to get the portfolio values for each agent in the past assuming
-            # that the portfolio was held constant during the past steps. This gives us a matrix of strictly positive values
-            past_portfolio_values = (
-                self.current_portfolio_matrix @ past_price_matrix.T
-            )  # shape: [n_agents, past_steps]
-
-            # We calculate the past linear returns of this portfolio.
-            past_portfolio_linear_returns = (
-                past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-8)
-                - 1
-            )
-            past_portfolio_log_returns = torch.log(
-                past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-8)
-            )
-
-            past_returns = past_portfolio_log_returns
-
-            # Calculate the Sharpe ratio
-            mean_return = torch.mean(past_returns, dim=-1)  # mean of the time dimension
-            std_return = torch.std(past_returns, dim=-1)  # std of the time dimension
-            sharpe_ratio = (mean_return) / (std_return + 1e-10)
-
-            # Check for zero portfolio allocations across all assets and apply punishment
-            zero_allocation_mask = torch.all(self.current_portfolio_matrix == 0, dim=1)
-            rewards = torch.where(zero_allocation_mask, self.bad_reward, sharpe_ratio)
-
-        elif self.reward_function == "differential_sharpe_ratio":
-            # Calculate current portfolio value
-            current_portfolio_value = self.current_cash_vector + torch.sum(
-                self.current_portfolio_matrix * old_prices, dim=1
-            )
-
-            # Calculate return for this step
-            returns = (
-                current_portfolio_value / (self.current_portfolio_value + 1e-8)
-            ) - 1
-
-            # Update differential Sharpe ratio components
-            dA = returns - self.A
-            self.A = self.A + self.eta * dA
-
-            dB = returns**2 - self.B
-            self.B = self.B + self.eta * dB
-
-            # Calculate differential Sharpe ratio
-            numerator = self.B * dA - 0.5 * self.A * dB
-            denominator = (self.B - 0.5 * self.A**2) ** (3 / 2)
-
-            # Avoid division by zero
-            dsr = torch.where(
-                denominator > 1e-8, numerator / denominator, torch.zeros_like(numerator)
-            )
-
-            # Check for zero portfolio allocations across all assets and apply punishment
-            zero_allocation_mask = torch.all(self.current_portfolio_matrix == 0, dim=1)
-            rewards = torch.where(zero_allocation_mask, self.bad_reward, dsr)
-
-        else:
-            raise ValueError(
-                f"Unknown reward function: {self.reward_function}. Supported functions are 'linear_rate_of_return', 'log_return', and 'absolute_return' and 'sharpe_ratio'."
-            )
-
-        # Scale the rewards
-        rewards = rewards * self.reward_scaling
+        # Apply scaling and punishment
+        rewards = self.reward_calculator.apply_scaling_and_punishment(
+            rewards=rewards, portfolio_matrix=self.current_portfolio_matrix
+        )
 
         done = torch.full(
             (self.n_agents, 1), float(done), dtype=torch.float32, device=self.device
@@ -508,7 +440,9 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         self.current_step = 0
         sharpe = (
-            self.sharpe_time_horizon if self.reward_function == "sharpe_ratio" else 0
+            self.sharpe_time_horizon
+            if isinstance(self.reward_calculator, SharpeRatio)
+            else 0
         )
         self.current_step += max(sharpe, self.obs_window_size - 1)
 
@@ -528,10 +462,9 @@ class MultiAgentPortfolioEnv(TensorEnv):
             device=self.device,
         )
 
-        # Reset differential Sharpe ratio components if needed
-        if self.reward_function == "differential_sharpe_ratio":
-            self.A = torch.zeros(self.n_agents, dtype=torch.float32, device=self.device)
-            self.B = torch.zeros(self.n_agents, dtype=torch.float32, device=self.device)
+        # Reset reward calculator if it has a reset method
+        if hasattr(self.reward_calculator, "reset"):
+            self.reward_calculator.reset()
 
         self.last_actions = torch.zeros(
             (self.n_agents, self.n_assets + 1), dtype=torch.float32, device=self.device
