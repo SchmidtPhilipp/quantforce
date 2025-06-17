@@ -127,18 +127,19 @@ class HyperparameterOptimizer:
         # Merge configurations
         merged_agent_config = {**agent_config, **agent_hyperparameters}
         merged_env_config = {**self.train_env_config, **env_hyperparameters}
+        merged_eval_env_config = {**self.eval_env_config, **env_hyperparameters}
 
         # Set the environment's config_name to reflect the current hyperparameter sweep
-        merged_env_config["config_name"] = f"{agent_class.__name__}_" + "_".join(
-            [
-                f"{k}_{v}"
-                for k, v in {**agent_hyperparameters, **env_hyperparameters}.items()
-            ]
+        merged_env_config["config_name"] = (
+            f"{agent_class.__name__}_" + "_" + str(trial.number)
         )
-        self.eval_env_config["config_name"] = merged_env_config["config_name"]
+        merged_eval_env_config["config_name"] = merged_env_config["config_name"]
 
         # Create environment and agent
         env = self.env_class(tensorboard_prefix="TRAIN", config=merged_env_config)
+        train_eval_env = self.env_class(
+            tensorboard_prefix="TRAIN_EVAL", config=merged_eval_env_config
+        )
         agent = agent_class(env, config=merged_agent_config)
 
         # Train the agent
@@ -147,20 +148,23 @@ class HyperparameterOptimizer:
                 "max_timesteps", qf.DEFAULT_MAX_TIMESTEPS
             ),
             use_tqdm=self.optim_config.get("use_tqdm", True),
-            save_best=self.optim_config.get("save_best", True),
-            eval_env=self.eval_env_config,
+            save_best=True,  # requried
+            eval_env=train_eval_env,
             n_eval_steps=self.optim_config.get("n_eval_steps", 50000),
             n_eval_episodes=self.optim_config.get("n_eval_episodes", 1),
             print_eval_metrics=self.optim_config.get("print_eval_metrics", False),
         )
 
-        # Reload the best agent
-        agent = agent_class.load_agent(os.path.join(env.get_save_dir(), "best_agent"))
-
         # Evaluate the best agent
         eval_env = self.env_class(
-            tensorboard_prefix="EVAL", config=self.eval_env_config
+            tensorboard_prefix="EVAL", config=merged_eval_env_config
         )
+
+        # Reload the best agent
+        agent = agent_class.load_agent(
+            os.path.join(train_eval_env.get_save_dir(), "best_model"), env=env
+        )
+
         rewards = agent.evaluate(
             eval_env, episodes=self.optim_config.get("episodes", 10)
         )

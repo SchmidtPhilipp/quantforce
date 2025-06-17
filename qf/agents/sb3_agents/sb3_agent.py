@@ -1,8 +1,10 @@
 import importlib
 import json
 import os
+from typing import Optional, Union
 
 import cloudpickle
+import gym
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 from tqdm import tqdm
@@ -13,14 +15,23 @@ from qf.envs.sb3_wrapper import SB3Wrapper
 
 
 class CustomEvalCallback(BaseCallback):
-    def __init__(self, eval_env, eval_freq, save_best, agent):
+    def __init__(
+        self,
+        eval_env,
+        eval_freq,
+        save_best,
+        agent,
+        n_eval_episodes=1,
+        print_metrics=True,
+    ):
         super().__init__()
         self.eval_env = eval_env
         self.eval_freq = eval_freq
         self.save_best = save_best
         self.agent = agent
         self.best_mean_reward = -float("inf")
-
+        self.n_eval_episodes = n_eval_episodes
+        self.print_metrics = print_metrics
         # Create directories for checkpoints and best agent
         self.checkpoints_dir = os.path.join(agent.env.get_save_dir(), "checkpoints")
         self.best_agent_dir = os.path.join(agent.env.get_save_dir(), "best_agent")
@@ -35,7 +46,11 @@ class CustomEvalCallback(BaseCallback):
     def _on_step(self):
         if self.n_calls % self.eval_freq == 0:
             # Evaluate using our own evaluate method
-            reward = self.agent.evaluate(self.eval_env, episodes=1)
+            reward = self.agent.evaluate(
+                eval_env=self.eval_env,
+                episodes=self.n_eval_episodes,
+                print_metrics=self.print_metrics,
+            )
 
             # Save checkpoint
             checkpoint_dir = os.path.join(
@@ -68,54 +83,22 @@ class SB3Agent(Agent):
         super().__init__(env)
         self.class_name = self.__class__.__name__
 
-    def train(
+    def _train(
         self,
-        total_timesteps=100000,
-        use_tqdm=True,
-        eval_env=None,
-        n_eval_steps=None,
-        save_best=True,
-    ):
+        total_timesteps: int,
+        use_tqdm: bool = True,
+    ) -> None:
+        """Base training method that executes the learn function of stable baselines.
+
+        Args:
+            total_timesteps: Total number of timesteps to train for
+            use_tqdm: Whether to use tqdm progress bar
         """
-        Trains the SB3 agent for a specified number of timesteps and tracks the TD error.
-        Parameters:
-            total_timesteps (int): Total number of timesteps to train the agent.
-            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print summaries.
-            eval_env: Optional environment for evaluation during training.
-            n_eval_steps (int): Number of training steps between evaluations. If None, no evaluation is performed.
-            save_best (bool): If True, saves the best performing agent based on evaluation.
-        """
-        # Create a callback for evaluation if needed
-        if eval_env is not None and n_eval_steps is not None:
-
-            if eval_env == self.env:
-                print("Eval env is the same as the training env")
-                # Instantiate a new eval env
-                eval_env = SB3Wrapper(
-                    MultiAgentPortfolioEnv(
-                        tensorboard_prefix="EVAL_ENV", config=self.env.config
-                    )
-                )
-
-            eval_callback = CustomEvalCallback(
-                eval_env=SB3Wrapper(eval_env),
-                eval_freq=n_eval_steps,
-                save_best=save_best,
-                agent=self,
-            )
-
-            self.model.learn(
-                total_timesteps=total_timesteps,
-                progress_bar=True if use_tqdm else False,
-                reset_num_timesteps=False,
-                callback=eval_callback,
-            )
-        else:
-            self.model.learn(
-                total_timesteps=total_timesteps,
-                progress_bar=True if use_tqdm else False,
-                reset_num_timesteps=False,
-            )
+        self.model.learn(
+            total_timesteps=total_timesteps,
+            progress_bar=use_tqdm,
+            reset_num_timesteps=False,
+        )
 
     def act(self, state, deterministic=True):
         """
@@ -129,7 +112,7 @@ class SB3Agent(Agent):
         action, _ = self.model.predict(state, deterministic=deterministic)
         return action
 
-    def evaluate(self, eval_env=None, episodes=1, use_tqdm=True):
+    def evaluate(self, eval_env=None, episodes=1, use_tqdm=True, print_metrics=True):
         """
         Evaluates the agent for a specified number of episodes.
         Parameters:
@@ -146,7 +129,8 @@ class SB3Agent(Agent):
         mean_reward = super().evaluate(
             eval_env=eval_env,
             episodes=episodes,
-            use_tqdm=use_tqdm,  # , print_metrics=False
+            use_tqdm=use_tqdm,
+            print_metrics=print_metrics,
         )
         return mean_reward
 

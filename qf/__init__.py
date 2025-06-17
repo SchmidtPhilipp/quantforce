@@ -31,7 +31,9 @@ DEFAULT_DOWNLOADER = "yfinance"  # Options: "yfinance" or "simulate"
 DEFAULT_USE_CACHE = True  # Saves the downloaded data to a local cache
 DEFAULT_FORCE_DOWNLOAD = False  # Force download even if cache exists
 DEFAULT_CACHE_DIR = "/Users/PhilippSchmidt/Documents/cache"
-DEFAULT_DATA_IMPUTATION_METHOD = "bfill"  # Options: "bfill" or "shrinkage" or "remove"
+DEFAULT_DATA_IMPUTATION_METHOD = (
+    "shrinkage"  # Options: "bfill" or "shrinkage" or "remove"
+)
 
 # yahoo downloader default parameters
 DEFAULT_USE_ADJUSTED_CLOSE = True  # Use adjusted close prices by default
@@ -44,10 +46,11 @@ DEFAULT_N_TRADING_DAYS = 252  # Alternative is 365 which casts the data to a yea
 DEFAULT_N_AGENTS = 1
 DEFAULT_TRADE_COST_PERCENT = 0.0
 DEFAULT_TRADE_COST_FIXED = 0
-DEFAULT_REWARD_FUNCTION = "log_return"  # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
+DEFAULT_REWARD_FUNCTION = "sharpe_ratio_w20"  # Options: "linear_rate_of_return", "log_return" "absolute_return", "sharpe_ratio_wX" where X is the window size.
 
 DEFAULT_REWARD_SCALING = 1  # Scaling factor for the reward function
 DEFAULT_FINAL_REWARD = 0.0  # Final reward for the environment
+DEFAULT_BAD_REWARD = -10  # Bad reward for the environment
 
 DEFUALT_CONFIG_NAME = "DEFAULT_CONFIG"
 DEFAULT_DEVICE = "cpu"  # Default device for PyTorch
@@ -56,14 +59,14 @@ ALL_INDICATORS = [
     "sma",
     "rsi",
     "macd",
-    "ema",
-    "adx",
-    "bb",
+    # "ema",
+    # "adx",
+    # "bb",
     "atr",
-    "obv",
-    "open",
-    "high",
-    "low",
+    # "obv",
+    # "open",
+    # "high",
+    # "low",
     "volume",
 ]
 
@@ -136,21 +139,21 @@ for subset_size in range(1, len(ALL_INDICATORS) + 1):
 
 
 DEFAULT_ENVIRONMENT_HYPERPARAMETER_SPACE_SINGLE_AGENT = {
-    "reward_function": {
-        "type": "categorical",
-        "choices": [
-            "sharpe_ratio_w100",
-            "sharpe_ratio_w50",
-            "sharpe_ratio_w20",
-            "sharpe_ratio_w10",
-            "sharpe_ratio_w5",
-        ],
-    },
-    "window_size": {"type": "int", "low": 1, "high": 100},
-    "indicators": {
-        "type": "categorical",
-        "choices": indicator_combinations,
-    },
+    # "reward_function": {
+    #    "type": "categorical",
+    #    "choices": [
+    #        "sharpe_ratio_w100",
+    #        "sharpe_ratio_w50",
+    #        "sharpe_ratio_w20",
+    # "sharpe_ratio_w10",
+    # "sharpe_ratio_w5",
+    #    ],
+    # },
+    # "window_size": {"type": "int", "low": 1, "high": 50},
+    # "indicators": {
+    #    "type": "categorical",
+    #    "choices": indicator_combinations,
+    # },
 }
 
 

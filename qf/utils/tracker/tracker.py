@@ -114,6 +114,8 @@ class Tracker:
         ep = self.current_episode
         ts = self.current_timestep
 
+        # print(f"Episode: {ep}, Timestep: {ts}")
+
         # Ensure the current episode exists
         self._ensure_episode_exists(ep)
 

@@ -5,6 +5,7 @@ checkpoints/
 # Jeder Ordner, der mit "runs" beginnt, ausschließen
 # und alle Unterordner, die damit beginnen
 runs*/
+logs*/
 
 
 temp/

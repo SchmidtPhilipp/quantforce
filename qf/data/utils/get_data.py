@@ -19,7 +19,7 @@ from qf import (
 )
 
 from .clean_data import drop_columns
-from .data_manager import DataManager
+from .data_manager_v2 import DataManagerV2
 from .preprocessor import add_technical_indicators
 
 
@@ -61,7 +61,7 @@ def get_data(
         indicators = DEFAULT_INDICATORS
 
     # Initialize data manager and load data
-    data_manager = DataManager(
+    data_manager = DataManagerV2(
         cache_dir=cache_dir,
         interval=interval,
         downloader=downloader,

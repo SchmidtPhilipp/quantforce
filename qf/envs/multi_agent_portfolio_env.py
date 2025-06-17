@@ -49,6 +49,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
             "reward_function": qf.DEFAULT_REWARD_FUNCTION,
             "reward_scaling": qf.DEFAULT_REWARD_SCALING,
             "final_reward": qf.DEFAULT_FINAL_REWARD,
+            "bad_reward": qf.DEFAULT_BAD_REWARD,
             "verbosity": qf.VERBOSITY,
             "log_dir": qf.DEFAULT_LOG_DIR,
             "config_name": qf.DEFUALT_CONFIG_NAME,
@@ -67,6 +68,9 @@ class MultiAgentPortfolioEnv(TensorEnv):
             interval=self.config["interval"],
         )
 
+        self.start = self.config["start"]
+        self.end = self.config["end"]
+
         self.tickers = self.config["tickers"]
         self.n_assets = len(self.tickers)
         self.obs_window_size = self.config["window_size"]
@@ -81,7 +85,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
         self.reward_function = self.config["reward_function"]
         self.reward_scaling = self.config["reward_scaling"]
         self.final_reward = self.config["final_reward"]
-
+        self.bad_reward = self.config["bad_reward"]
         # check if the reward function begins with "sharpe_ratio_w"
         if self.reward_function is not None and self.reward_function.startswith(
             "sharpe_ratio_w"
@@ -148,7 +152,8 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """Initialize tracking components (logger and tracker)"""
         # Initialize the tracker
         self.tracker = Tracker(
-            timesteps=self.get_timesteps(), tensorboard_prefix=f"{tensorboard_prefix}"
+            timesteps=self.get_n_succesive_states(),
+            tensorboard_prefix=f"{tensorboard_prefix}",
         )
         self.register_tracker()
 
@@ -172,6 +177,12 @@ class MultiAgentPortfolioEnv(TensorEnv):
         state.pop("logger", None)
         state.pop("tracker", None)
         return {state}
+
+    def get_n_succesive_states(self):
+        """
+        Returns the number of consecutive states in the environment.
+        """
+        return self.get_timesteps() + 1
 
     def __setstate__(self, state):
         """Restore state from the unpickled state values."""
@@ -205,12 +216,14 @@ class MultiAgentPortfolioEnv(TensorEnv):
             obs (torch.Tensor): A tensor of observations for all agents.
         """
         # Get the window of data for the current step
-        start_idx = self.current_step
-        end_idx = start_idx + self.obs_window_size
-        window_data = self.data.iloc[start_idx:end_idx].values
+        start_idx = self.current_step - self.obs_window_size + 1
+        end_idx = self.current_step
+        window_data = self.data.iloc[start_idx : end_idx + 1].values
+
         current_observations = torch.tensor(
             window_data.flatten(), dtype=torch.float32, device=self.device
         )
+
         current_observations = current_observations.repeat(self.n_agents, 1)
 
         current_actions = self.last_actions
@@ -248,22 +261,19 @@ class MultiAgentPortfolioEnv(TensorEnv):
             raise ValueError(f"Invalid actions type: {type(actions)}")
 
         actions = torch.clamp(actions, 0, 1)  # Ensure actions are in [0, 1]
-        # actions = torch.clamp(actions, 0, 1)
         actions = actions / actions.sum(dim=1, keepdim=True)  # Normalize actions
 
         self.last_actions = actions  # Save actions for the next observation
 
         # Get prices for the current and next steps
         old_prices = torch.tensor(
-            self.data.xs("Close", axis=1, level=1)
-            .iloc[self.current_step + self.obs_window_size - 1]
-            .values,
+            self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values,
             dtype=torch.float32,
             device=self.device,
         )
 
         self.current_step += 1
-        done = self.current_step >= len(self.data) - self.obs_window_size
+        done = self.current_step >= (self.get_n_succesive_states())
 
         if done:
             new_prices = old_prices  # We use the last prices to calculate the balance a last time
@@ -274,9 +284,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
             )
         else:
             new_prices = torch.tensor(
-                self.data.xs("Close", axis=1, level=1)
-                .iloc[self.current_step + self.obs_window_size - 1]
-                .values,
+                self.data.xs("Close", axis=1, level=1).iloc[self.current_step].values,
                 dtype=torch.float32,
                 device=self.device,
             )
@@ -344,12 +352,24 @@ class MultiAgentPortfolioEnv(TensorEnv):
             )
 
         elif self.reward_function == "log_return":
-            rewards = current_portfolio_value_t1 / (current_portfolio_value_t + 1e-10)
-            if rewards < 0:
-                raise ValueError(
-                    "Negative reward detected. log_return is not defined for negative values. You may remove the costs of the transaction."
+            # Create a mask for agents with negative portfolio values
+            negative_mask = (current_portfolio_value_t < 0) | (
+                current_portfolio_value_t1 < 0
+            )
+
+            # Initialize rewards tensor
+            rewards = torch.log(
+                current_portfolio_value_t1 / (current_portfolio_value_t + 1e-10)
+            )
+
+            # Apply bad reward only to agents with negative portfolio values
+            rewards[negative_mask] = self.bad_reward
+
+            # Print warning if any agent has negative portfolio value
+            if torch.any(negative_mask):
+                print(
+                    f"Negative portfolio value detected for {torch.sum(negative_mask)} agent(s)."
                 )
-            rewards = torch.log(rewards)
 
         elif self.reward_function == "absolute_return":
             rewards = current_portfolio_value_t1 - current_portfolio_value_t
@@ -372,7 +392,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
                 device=self.device,
             )  # shape: [past_steps, n_assets]
 
-            # We take the pastt portfolio matrix which contains the portfolio for each agent ([n_agents, n_assets])
+            # We take the past portfolio matrix which contains the portfolio for each agent ([n_agents, n_assets])
             # and multiply it with the past price matrix to get the portfolio values for each agent in the past assuming
             # that the portfolio was held constant during the past steps. This gives us a matrix of strictly positive values
             past_portfolio_values = (
@@ -381,11 +401,11 @@ class MultiAgentPortfolioEnv(TensorEnv):
 
             # We calculate the past linear returns of this portfolio.
             past_portfolio_linear_returns = (
-                past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-10)
+                past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-8)
                 - 1
             )
             past_portfolio_log_returns = torch.log(
-                past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-10)
+                past_portfolio_values[:, 1:] / (past_portfolio_values[:, :-1] + 1e-8)
             )
 
             past_returns = past_portfolio_log_returns
@@ -395,13 +415,9 @@ class MultiAgentPortfolioEnv(TensorEnv):
             std_return = torch.std(past_returns, dim=-1)  # std of the time dimension
             sharpe_ratio = (mean_return) / (std_return + 1e-10)
 
-            # if any entry of the sharpe ratio is NaN or inf, we set it to 0
-            if torch.any(torch.isnan(sharpe_ratio)) or torch.any(
-                torch.isinf(sharpe_ratio)
-            ):
-                print("Sharpe ratio contains NaN or inf values.")
-
-            rewards = sharpe_ratio
+            # Check for zero portfolio allocations across all assets and apply punishment
+            zero_allocation_mask = torch.all(self.current_portfolio_matrix == 0, dim=1)
+            rewards = torch.where(zero_allocation_mask, self.bad_reward, sharpe_ratio)
 
         else:
             raise ValueError(
@@ -439,6 +455,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
 
         # Get the next observation
         if not done:
+
             obs = self._get_observation()
 
         output = obs, rewards, done, {}
@@ -448,11 +465,12 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Resets the environment and returns the first observation.
         """
-        self.current_step = (
-            0 + self.sharpe_time_horizon
-            if self.reward_function == "sharpe_ratio"
-            else 0
+
+        self.current_step = 0
+        sharpe = (
+            self.sharpe_time_horizon if self.reward_function == "sharpe_ratio" else 0
         )
+        self.current_step += max(sharpe, self.obs_window_size - 1)
 
         self.current_cash_vector = torch.full(
             (self.n_agents,),
@@ -523,9 +541,14 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         if self.reward_function == "sharpe_ratio":
             # We need to adjust the number of timesteps because we throw away the first self.sharpe_time_horizon steps
-            return len(self.data) - self.obs_window_size - self.sharpe_time_horizon + 1
+            if self.sharpe_time_horizon > self.obs_window_size:
+                n_succesive_states = len(self.data) - (self.sharpe_time_horizon) + 1
+            else:
+                n_succesive_states = len(self.data) - (self.obs_window_size) + 1
         else:
-            return len(self.data) - self.obs_window_size + 1
+            n_succesive_states = len(self.data) - (self.obs_window_size) + 1
+
+        return n_succesive_states - 1
 
     def register_tracker(self):
         """
@@ -593,33 +616,42 @@ class MultiAgentPortfolioEnv(TensorEnv):
             values["balance"] = self.get_portfolio_value().unsqueeze(0)
         if "date" in values_to_record:
             values["date"] = torch.tensor(
-                [
-                    (
-                        self.data.index[self.current_step + self.obs_window_size - 2]
-                    ).timestamp()
-                ],
+                [(self.data.index[self.current_step - 1]).timestamp()],
                 dtype=torch.int32,
                 device=self.device,
             )
+        try:
+            # Record the values
+            self.tracker.record_step(**values)
+        except:
+            print(f"Current step: {self.current_step}")
+            print(f"Data index: {self.data.index}")
+            print(f"Window size: {self.obs_window_size}")
+            print(f"Sharpe time horizon: {self.sharpe_time_horizon}")
+            print(f"Data length: {len(self.data)}")
+            print(f"N Timesteps: {self.get_timesteps()}")
+            raise ValueError(
+                "Current step is out of bounds. Please check the data index."
+            )
 
-        # Record the values
-        self.tracker.record_step(**values)
-
-    def save_data(self):
+    def save_data(self, path=None):
         import os
 
+        if path is None:
+            path = self.save_dir
+
         # Save tracker data
-        self.tracker.save(self.save_dir)
+        self.tracker.save(path)
 
         # Save config data
-        config_path = os.path.join(self.save_dir, "env_config.json")
+        config_path = os.path.join(path, "env_config.json")
         with open(config_path, "w") as f:
             import json
 
             json.dump(self.config, f, indent=4)
 
         # Save metrics data
-        metrics_path = os.path.join(self.save_dir, "metrics")
+        metrics_path = os.path.join(path, "metrics")
         self.metrics.save(metrics_path)
 
     def get_save_dir(self):

@@ -4,9 +4,9 @@ import os
 import sys
 from typing import Any, Dict, List, Type
 
-parent_dir = os.path.abspath(os.path.join(os.getcwd(), "../" * 3))
-if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
+# Add the root folder to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../" * 2)))
+
 import qf as qf
 from qf.utils.logging_utils import setup_print_logging
 
@@ -31,12 +31,13 @@ def main() -> None:
     qf.start_tensorboard()
 
     # Setup print logging
-    setup_print_logging()
+    # setup_print_logging()
 
     # Environment adjustments
     env_adjustments: Dict[str, Any] = {
-        "trade_costs": 1,
-        "trade_costs_percent": 0.01,
+        "trade_cost_fixed": 1,
+        "trade_cost_percent": 0.01,
+        "reward_function": "sharpe_ratio_w20",
     }
 
     # Update training and evaluation environment configurations
@@ -49,11 +50,10 @@ def main() -> None:
     # Optimization configuration
     optim_config: Dict[str, Any] = {
         "objective": "avg_reward",
-        "max_timesteps": 1,  # 1 million steps
+        "max_timesteps": 2,  # 1 million steps
         "episodes": 1,  # 1 episode of evaluation in the end of every training run with the best agent
-        "n_eval_steps": 2,  # Evaluate the agent every 50000 steps during training
+        "n_eval_steps": 1,  # Evaluate the agent every 50000 steps during training
         "n_eval_episodes": 1,  # Evaluate the agent 1 time during training every n_eval_steps steps
-        "save_best": True,  # Save the best agent during training
         "use_tqdm": True,  # Use tqdm to show the training progress
         "print_eval_metrics": True,  # Print the evaluation metrics
     }

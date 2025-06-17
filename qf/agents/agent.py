@@ -23,22 +23,65 @@ class Agent:
 
     def train(
         self,
-        episodes=10,
-        use_tqdm=True,
+        total_timesteps: int,
         eval_env=None,
         n_eval_steps=None,
+        n_eval_episodes=5,
         save_best=True,
-    ):
+        print_eval_metrics=True,
+        use_tqdm=True,
+        save_checkpoints=True,
+    ) -> None:
+        """Train the agent with optional evaluation.
+
+        Args:
+            total_timesteps: Total number of timesteps to train for
+            eval_env: Environment to use for evaluation
+            n_eval_steps: Number of steps between evaluations
+            n_eval_episodes: Number of episodes to evaluate on
+            save_best: Whether to save the best model
+            print_eval_metrics: Whether to print evaluation metrics
+            use_tqdm: Whether to use tqdm progress bar
         """
-        Trains the agent for a specified number of episodes.
-        Parameters:
-            episodes (int): Number of episodes to train the agent.
-            use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print episode summaries.
-            eval_env: Optional environment for evaluation during training.
-            n_eval_steps (int): Number of training steps between evaluations. If None, no evaluation is performed.
-            save_best (bool): If True, saves the best performing agent based on evaluation.
-        """
-        raise NotImplementedError("This method should be implemented by subclasses.")
+        if eval_env is None or n_eval_steps is None:
+            # Train without evaluation
+            self._train(total_timesteps, use_tqdm)
+            return
+
+        # Calculate number of evaluation steps
+        n_evaluations = total_timesteps // n_eval_steps
+        best_mean_reward = float("-inf")
+
+        # Training loop with evaluation
+        for i in range(n_evaluations):
+            # Train for n_eval_steps
+            self._train(n_eval_steps, use_tqdm)
+
+            # Evaluate
+            mean_reward = self.evaluate(
+                eval_env=eval_env,
+                episodes=n_eval_episodes,
+                print_metrics=print_eval_metrics,
+            ).mean()
+
+            if save_checkpoints:
+                path = os.path.join(eval_env.get_save_dir(), f"checkpoint_{i}")
+                self.save(path)
+                self.env.save_data(path=path)
+
+            # Save best model if needed
+            if save_best and mean_reward > best_mean_reward:
+                best_mean_reward = mean_reward
+                best_model_path = os.path.join(eval_env.get_save_dir(), "best_model")
+                self.save(best_model_path)
+                self.env.save_data(path=best_model_path)
+                if print_eval_metrics:
+                    print(f"New best model saved with mean reward: {mean_reward:.2f}")
+
+        # Train remaining steps
+        remaining_steps = total_timesteps % n_eval_steps
+        if remaining_steps > 0:
+            self._train(remaining_steps, use_tqdm)
 
     def evaluate(self, eval_env=None, episodes=1, use_tqdm=True, print_metrics=True):
         """

@@ -4,7 +4,6 @@ import random
 import numpy as np
 import torch
 import torch.optim as optim
-from torch.serialization import add_safe_globals
 from tqdm import tqdm
 
 import qf as qf
@@ -88,7 +87,6 @@ class SPQLAgent(Agent):
         self.buffer_max_size = self.config["buffer_max_size"]
         self.epsilon_start = self.config["epsilon_start"]
         self.loss_fn = torch.nn.MSELoss()
-
         self.memory = ReplayBuffer(
             capacity=self.buffer_max_size
         )  # Initialize the replay buffer
@@ -112,28 +110,14 @@ class SPQLAgent(Agent):
     def store(self, transition):
         self.memory.store(transition)
 
-    def train(
-        self,
-        total_timesteps=500_000,
-        use_tqdm=True,
-        patience=10_000,
-        min_delta=1e-3,
-        eval_env=None,
-        n_eval_steps=None,
-        n_eval_episodes=1,
-        print_eval_metrics=False,
-        save_best=True,
+    def _train(
+        self, total_timesteps=500_000, use_tqdm=True, patience=10_000, min_delta=1e-3
     ):
         """
         Trains the agent for a specified number of timesteps.
         Parameters:
             total_timesteps (int): Total number of timesteps to train the agent.
             use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print training summaries.
-            patience (int): Number of steps to wait for improvement before early stopping.
-            min_delta (float): Minimum change in TD error to be considered an improvement.
-            eval_env: Optional environment for evaluation during training.
-            n_eval_steps (int): Number of training steps between evaluations. If None, no evaluation is performed.
-            save_best (bool): If True, saves the best performing agent based on evaluation.
         """
         progress = (
             tqdm(range(total_timesteps), desc="Training SPQLAgent")
@@ -143,17 +127,11 @@ class SPQLAgent(Agent):
 
         state, info = self.env.reset()
         total_reward = 0
-        epsilon = self.epsilon_start
+        epsilon = self.epsilon_start  # Initial epsilon for exploration
         timestep = 0
 
-        best_td_error = float("inf")
-        no_improvement_steps = 0
-
-        # Evaluation tracking
-        best_eval_reward = float("-inf")
-        last_eval_step = 0
-        temp_save_dir = os.path.join(self.env.get_save_dir(), "temp_checkpoints")
-        os.makedirs(temp_save_dir, exist_ok=True)
+        best_td_error = float("inf")  # Best TD error observed
+        no_improvement_steps = 0  # Counter for steps without improvement
 
         for _ in progress:
             # Linear epsilon decay
@@ -177,37 +155,13 @@ class SPQLAgent(Agent):
                 state, info = self.env.reset()
                 total_reward = 0
 
-            # Evaluation during training
-            if (
-                eval_env is not None
-                and n_eval_steps is not None
-                and timestep - last_eval_step >= n_eval_steps
-            ):
-                eval_reward = self.evaluate(
-                    eval_env,
-                    episodes=n_eval_episodes,
-                    use_tqdm=use_tqdm,
-                    print_metrics=print_eval_metrics,
-                ).mean()
-                last_eval_step = timestep
-
-                if save_best and eval_reward > best_eval_reward:
-                    best_eval_reward = eval_reward
-                    self.save(os.path.join(temp_save_dir, "best_model"))
-
-                if use_tqdm:
-                    progress.set_postfix(
-                        {
-                            "Eval Reward": f"{eval_reward:.2f}",
-                            "Best Eval": f"{best_eval_reward:.2f}",
-                        }
-                    )
-
             # Report the td_error in the env logger
             if td_error is not None:
+
+                # Check for early stopping based on TD error
                 if td_error < best_td_error - min_delta:
                     best_td_error = td_error
-                    no_improvement_steps = 0
+                    no_improvement_steps = 0  # Reset patience counter
                 else:
                     no_improvement_steps += 1
 
@@ -231,19 +185,8 @@ class SPQLAgent(Agent):
                     f"Timestep: {timestep}, Last Reward: {reward} TD Error: {td_error if td_error else 'N/A'}"
                 )
 
-        # Save final model
+        # End of training save data
         self.env.save_data()
-
-        # If we have a best model, copy it to the final location
-        if save_best and os.path.exists(os.path.join(temp_save_dir, "best_model")):
-            import shutil
-
-            shutil.copytree(
-                os.path.join(temp_save_dir, "best_model"),
-                os.path.join(self.env.get_save_dir(), "best_model"),
-                dirs_exist_ok=True,
-            )
-            shutil.rmtree(temp_save_dir)
 
         return True
 
@@ -320,14 +263,14 @@ class SPQLAgent(Agent):
             {
                 "model_state_dict": self.model.state_dict(),
                 "target_model_state_dict": self.target_model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
+                # "optimizer_state_dict": self.optimizer.state_dict(),
                 # "memory": self.memory,
-                "epsilon": self.epsilon_start,
-                "gamma": self.gamma,
-                "batch_size": self.batch_size,
-                "buffer_max_size": self.buffer_max_size,
-                "tau": self.tau,
-                "temperature": self.temperature,
+                # "epsilon": self.epsilon_start,
+                # "gamma": self.gamma,
+                # "batch_size": self.batch_size,
+                # "buffer_max_size": self.buffer_max_size,
+                # "tau": self.tau,
+                # "temperature": self.temperature,
             },
             model_path,
         )
@@ -348,15 +291,16 @@ class SPQLAgent(Agent):
         # Load model states
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.target_model.load_state_dict(checkpoint["target_model_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        # self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         # Load other parameters
-        self.epsilon_start = checkpoint["epsilon"]
-        self.gamma = checkpoint["gamma"]
-        self.batch_size = checkpoint["batch_size"]
-        self.buffer_max_size = checkpoint["buffer_max_size"]
-        self.tau = checkpoint["tau"]
-        self.temperature = checkpoint["temperature"]
+        # self.memory = checkpoint["memory"]
+        # self.epsilon_start = checkpoint["epsilon"]
+        # self.gamma = checkpoint["gamma"]
+        # self.batch_size = checkpoint["batch_size"]
+        # self.buffer_max_size = checkpoint["buffer_max_size"]
+        # self.tau = checkpoint["tau"]
+        # self.temperature = checkpoint["temperature"]
 
         # Move models to device
         self.model.to(self.device)
