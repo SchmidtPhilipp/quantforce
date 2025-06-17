@@ -439,12 +439,11 @@ class MultiAgentPortfolioEnv(TensorEnv):
         Resets the environment and returns the first observation.
         """
         self.current_step = 0
-        sharpe = (
-            self.sharpe_time_horizon
-            if isinstance(self.reward_calculator, SharpeRatio)
-            else 0
-        )
-        self.current_step += max(sharpe, self.obs_window_size - 1)
+        # Get the window size from the reward calculator if it's a SharpeRatio
+        window_size = 0
+        if isinstance(self.reward_calculator, SharpeRatio):
+            window_size = self.reward_calculator.window_size
+        self.current_step += max(window_size, self.obs_window_size - 1)
 
         self.current_cash_vector = torch.full(
             (self.n_agents,),
@@ -517,8 +516,11 @@ class MultiAgentPortfolioEnv(TensorEnv):
         """
         Returns the number of timesteps in the environment.
         """
-
-        return len(self.data) - max(self.sharpe_time_horizon, self.obs_window_size - 1)
+        # Get the window size from the reward calculator if it's a SharpeRatio
+        window_size = 0
+        if isinstance(self.reward_calculator, SharpeRatio):
+            window_size = self.reward_calculator.window_size
+        return len(self.data) - max(window_size, self.obs_window_size - 1)
 
     def register_tracker(self):
         """
@@ -601,7 +603,6 @@ class MultiAgentPortfolioEnv(TensorEnv):
         print(f"Current step: {self.current_step}")
         print(f"Data index: {self.data.index}")
         print(f"Window size: {self.obs_window_size}")
-        print(f"Sharpe time horizon: {self.sharpe_time_horizon}")
         print(f"Data length: {len(self.data)}")
         print(f"N Timesteps: {self.get_timesteps()}")
 
