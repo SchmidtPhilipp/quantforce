@@ -18,7 +18,11 @@ from qf.envs.reward_functions import (
 )
 from qf.envs.tensor_env import TensorEnv
 from qf.utils.logger import Logger
+from qf.utils.logging_config import get_logger
 from qf.utils.tracker.tracker import Tracker
+
+# Get logger for this module
+logger = get_logger(__name__)
 
 
 class MultiAgentPortfolioEnv(TensorEnv):
@@ -193,7 +197,9 @@ class MultiAgentPortfolioEnv(TensorEnv):
         )
 
         if self.verbosity > 0:
-            print(f"MultiAgentPortfolioEnv initialized with {self.n_agents} agents.")
+            logger.info(
+                f"MultiAgentPortfolioEnv initialized with {self.n_agents} agents."
+            )
 
         # Initialize tracking components
         self._init_tracking(tensorboard_prefix)
@@ -417,7 +423,7 @@ class MultiAgentPortfolioEnv(TensorEnv):
 
         # End the episode if the portfolio value is only a 1000th of the initial balance or less
         if torch.any(current_portfolio_value_t1 <= self.initial_balance / 1000):
-            print(
+            logger.warning(
                 "Episode ended due to portfolio value dropping below 0.1% of initial balance."
             )
             done = torch.full(
@@ -620,11 +626,12 @@ class MultiAgentPortfolioEnv(TensorEnv):
                 f"Current step is out of bounds. Please check the data index. {e}"
             )
 
-        print(f"Current step: {self.current_step}")
-        print(f"Data index: {self.data.index}")
-        print(f"Window size: {self.obs_window_size}")
-        print(f"Data length: {len(self.data)}")
-        print(f"N Timesteps: {self.get_timesteps()}")
+        if self.verbosity > 1:
+            logger.debug(f"Current step: {self.current_step}")
+            logger.debug(f"Data index: {self.data.index}")
+            logger.debug(f"Window size: {self.obs_window_size}")
+            logger.debug(f"Data length: {len(self.data)}")
+            logger.debug(f"N Timesteps: {self.get_timesteps()}")
 
     def save_data(self, path=None):
         import os

@@ -4,9 +4,27 @@ import pickle  # For saving and loading data
 
 import torch
 
+from qf import (
+    DEBUG_VERBOSITY,
+    ERROR_VERBOSITY,
+    INFO_VERBOSITY,
+    VERBOSITY,
+    WARNING_VERBOSITY,
+)
+from qf.utils.logging_config import get_logger
+
+# Get logger for this module
+logger = get_logger(__name__)
+
 
 class Tracker:
-    def __init__(self, timesteps, tensorboard_prefix="tracker", device="cpu"):
+    def __init__(
+        self,
+        timesteps,
+        tensorboard_prefix="tracker",
+        device="cpu",
+        verbosity=VERBOSITY,
+    ):
         """
         Generalized tracker for storing and logging values.
 
@@ -18,6 +36,7 @@ class Tracker:
         self.timesteps = timesteps
         self.tensorboard_prefix = tensorboard_prefix
         self.device = device
+        self.verbosity = verbosity
 
         # Dictionary to store registered values
         self.tracked_values = {}
@@ -114,7 +133,8 @@ class Tracker:
         ep = self.current_episode
         ts = self.current_timestep
 
-        # print(f"Episode: {ep}, Timestep: {ts}")
+        if self.verbosity > DEBUG_VERBOSITY:
+            logger.debug(f"Episode: {ep}, Timestep: {ts}")
 
         # Ensure the current episode exists
         self._ensure_episode_exists(ep)
@@ -122,7 +142,8 @@ class Tracker:
         for name, value in kwargs.items():
             if name not in self.tracked_values:
 
-                # print(f"⚠️ Value '{name}' is not registered. Skipping.")
+                if self.verbosity > WARNING_VERBOSITY:
+                    logger.warning(f"⚠️ Value '{name}' is not registered. Skipping.")
                 continue
             expected_shape = self.tracked_values[name]["shape"]
             if value.shape != expected_shape:
@@ -173,7 +194,8 @@ class Tracker:
             logger (Logger): Logger instance for logging.
         """
         if self.current_episode == 0:
-            print("⚠️ No episodes to log yet.")
+            if self.verbosity > WARNING_VERBOSITY:
+                logger.warning("⚠️ No episodes to log yet.")
             return
 
         # Get the last episode index
@@ -233,7 +255,8 @@ class Tracker:
             episode (int): Optional episode index to summarize. Defaults to the last episode.
         """
         if self.current_episode == 0:
-            print("⚠️ No episodes to summarize yet.")
+            if self.verbosity > WARNING_VERBOSITY:
+                logger.warning("⚠️ No episodes to summarize yet.")
             return
 
         if run_type is None:
@@ -256,7 +279,7 @@ class Tracker:
         total_reward = torch.sum(rewards, axis=0)
 
         # Print episode summary
-        print(f"📈[{run_type}] Episode {episode + 1:>3} | Steps: {steps}")
+        logger.info(f"📈[{run_type}] Episode {episode + 1:>3} | Steps: {steps}")
         if isinstance(total_reward, (list, torch.Tensor)):  # Multi-agent rewards
             agent_rewards_str = " -> ".join(
                 [
@@ -266,11 +289,13 @@ class Tracker:
             )
         else:  # Single-agent reward
             agent_rewards_str = f"Agent 0: {total_reward:.4f}"
-        print(f"Rewards: {agent_rewards_str}")
-        print(f"Portfolio Value: {env_balance[-1][0]:.4f}")
-        print(f"Total Reward: {torch.sum(total_reward):.4f}")
-        # print(f"  Asset Holdings: {asset_holdings[steps - 1]}")
-        # print(f"  Agent Balances: {actor_balances[steps - 1]}")
+
+        if self.verbosity > INFO_VERBOSITY:
+            logger.info(f"Rewards: {agent_rewards_str}")
+            logger.info(f"Portfolio Value: {env_balance[-1][0]:.4f}")
+            logger.info(f"Total Reward: {torch.sum(total_reward):.4f}")
+            logger.info(f"Asset Holdings: {asset_holdings[steps - 1]}")
+            logger.info(f"Agent Balances: {actor_balances[steps - 1]}")
 
     def reset(self):
         """
@@ -312,7 +337,8 @@ class Tracker:
         save_path = os.path.join(run_path, "tracker_data.json")
         with open(save_path, "w") as f:
             json.dump(save_data, f, indent=4)
-        # print(f"✅ Tracker-Daten wurden in {save_path} gespeichert.")
+        if self.verbosity > INFO_VERBOSITY:
+            logger.info(f"✅ Tracker-Daten wurden in {save_path} gespeichert.")
 
     @staticmethod
     def load(filepath):
@@ -353,7 +379,8 @@ class Tracker:
                     "labels": value["labels"],
                 }
 
-        print(f"✅ Tracker-Daten wurden aus {filepath} geladen.")
+        if tracker.verbosity > INFO_VERBOSITY:
+            logger.info(f"✅ Tracker-Daten wurden aus {filepath} geladen.")
         return tracker
 
     def log_statistics(self, logger, values_to_log=None):
@@ -366,7 +393,8 @@ class Tracker:
                                              If None, logs all registered values.
         """
         if self.current_episode == 0:
-            print("⚠️ No episodes to log statistics for yet.")
+            if self.verbosity > WARNING_VERBOSITY:
+                logger.warning("⚠️ No episodes to log statistics for yet.")
             return
 
         # If no specific values are provided, log all tracked values
@@ -378,7 +406,8 @@ class Tracker:
             # Iterate over the specified tracked values
             for name in values_to_log:
                 if name not in self.tracked_values:
-                    print(f"⚠️ Value '{name}' is not registered. Skipping.")
+                    if self.verbosity > WARNING_VERBOSITY:
+                        logger.warning(f"⚠️ Value '{name}' is not registered. Skipping.")
                     continue
 
                 value = self.tracked_values[name]

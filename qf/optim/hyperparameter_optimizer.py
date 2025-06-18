@@ -5,6 +5,9 @@ import optuna
 from optuna.visualization import plot_optimization_history, plot_param_importances
 
 import qf
+from qf.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class HyperparameterOptimizer:
@@ -210,9 +213,9 @@ class HyperparameterOptimizer:
 
             # Best trial for the current agent class
             trial = study.best_trial
-            print(f"Best trial for {agent_class.__name__}:")
-            print(f"Value: {trial.value}")
-            print(f"Parameters: {trial.params}")
+            qf.logger.info(f"Best trial for {agent_class.__name__}:")
+            qf.logger.info(f"Value: {trial.value}")
+            qf.logger.info(f"Parameters: {trial.params}")
 
             # Update the best study if the current study has a higher reward
             if trial.value > best_reward:
@@ -264,7 +267,6 @@ class HyperparameterOptimizer:
             os.path.join(save_path, "param_importance_best_study.png")
         )
 
-        # print("Parameter Importance Across All Studies:")
         for study in self.all_studies:
             opt_history_fig_all = plot_optimization_history(study)
             opt_history_fig_all.write_image(

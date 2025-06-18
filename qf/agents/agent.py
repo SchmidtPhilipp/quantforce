@@ -5,11 +5,15 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+from qf import INFO_VERBOSITY
 from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
+from qf.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class Agent:
-    def __init__(self, env):
+    def __init__(self, env, verbosity=INFO_VERBOSITY):
         """
         Initializes the agent with the given environment.
         Parameters:
@@ -20,6 +24,7 @@ class Agent:
         self.obs_dim = env.observation_space.shape[0]
         self.act_dim = env.action_space.shape[0]
         self.device = env.device
+        self.verbosity = verbosity
 
     def train(
         self,
@@ -76,7 +81,9 @@ class Agent:
                 self.save(best_model_path)
                 self.env.save_data(path=best_model_path)
                 if print_eval_metrics:
-                    print(f"New best model saved with mean reward: {mean_reward:.2f}")
+                    logger.info(
+                        f"New best model saved with mean reward: {mean_reward:.2f}"
+                    )
 
         # Train remaining steps
         remaining_steps = total_timesteps % n_eval_steps
@@ -94,7 +101,8 @@ class Agent:
             np.ndarray: Rewards matrix with shape (episodes, num_steps, n_agents).
         """
         if eval_env is None:
-            print("Running evaluation on the training environment.")
+            if self.verbosity > INFO_VERBOSITY:
+                logger.info("Running evaluation on the training environment.")
             eval_env = self.env
 
         rewards_dict = {}  # Dictionary to store rewards for each episode
@@ -151,9 +159,10 @@ class Agent:
 
         avg_reward = np.mean(rewards_matrix)  # remember in rl is the reward R_t not G_t
         std_reward = np.std(rewards_matrix)
-        print(
-            f"Average reward over {episodes} episodes: {avg_reward}, Standard Deviation: {std_reward}"
-        )
+        if self.verbosity > INFO_VERBOSITY:
+            logger.info(
+                f"Average reward over {episodes} episodes: {avg_reward}, Standard Deviation: {std_reward}"
+            )
 
         # End of evaluation save data
         eval_env.save_data()

@@ -19,10 +19,15 @@ from qf import (
     DEFAULT_USE_ADJUSTED_CLOSE,
     DEFAULT_USE_AUTOREPAIR,
     DEFAULT_USE_CACHE,
+    ERROR_VERBOSITY,
+    INFO_VERBOSITY,
     VERBOSITY,
 )
+from qf.utils.logging_config import get_logger
 
 from .trading_calendar import get_trading_days
+
+logger = get_logger(__name__)
 
 
 class DataManagerV2:
@@ -89,19 +94,19 @@ class DataManagerV2:
                 return data
             return pd.DataFrame()
         except Exception as e:
-            if self.verbosity > 0:
-                print(f"Error loading cache: {e}")
+            if self.verbosity > ERROR_VERBOSITY:
+                logger.error(f"Error loading cache: {e}")
             return pd.DataFrame()
 
     def _save_cache(self, data: pd.DataFrame) -> None:
         """Save data to cache file."""
         try:
             data.to_csv(self.cache_file)
-            if self.verbosity > 0:
-                print(f"Saved data to cache")
+            if self.verbosity > INFO_VERBOSITY:
+                logger.info(f"Saved data to cache")
         except Exception as e:
-            if self.verbosity > 0:
-                print(f"Error saving cache: {e}")
+            if self.verbosity > ERROR_VERBOSITY:
+                logger.error(f"Error saving cache: {e}")
 
     def _update_cache(self, new_data: pd.DataFrame) -> pd.DataFrame:
         """Update cache with new data, replacing NaN values with new data.
@@ -143,14 +148,14 @@ class DataManagerV2:
 
             return combined_data
         except Exception as e:
-            if self.verbosity > 0:
-                print(f"Error updating cache: {e}")
+            if self.verbosity > ERROR_VERBOSITY:
+                logger.error(f"Error updating cache: {e}")
             return new_data
 
     def _download_data(self, tickers: list, start: str, end: str) -> pd.DataFrame:
         """Download data for a list of tickers."""
-        if self.verbosity > 0:
-            print(f"Downloading data for {tickers} from {start} to {end}")
+        if self.verbosity > INFO_VERBOSITY:
+            logger.info(f"Downloading data for {tickers} from {start} to {end}")
 
         if self.downloader == "yfinance":
             try:
@@ -165,13 +170,13 @@ class DataManagerV2:
                     repair=self.use_autorepair,
                 )
                 if data.empty or data.isna().all().all():
-                    if self.verbosity > 0:
-                        print(f"No data available for {tickers}")
+                    if self.verbosity > WARNING_VERBOSITY:
+                        logger.warning(f"No data available for {tickers}")
                     return pd.DataFrame()
                 return data
             except Exception as e:
-                if self.verbosity > 0:
-                    print(f"Error downloading {tickers}: {e}")
+                if self.verbosity > ERROR_VERBOSITY:
+                    logger.error(f"Error downloading {tickers}: {e}")
                 return pd.DataFrame()
         elif self.downloader == "simulate":
             from .generate_random_data import generate_random_data
@@ -180,16 +185,18 @@ class DataManagerV2:
                 known_tickers = ["AAPL", "MSFT"]
                 valid_tickers = [t for t in tickers if t in known_tickers]
                 if not valid_tickers:
-                    if self.verbosity > 0:
-                        print(f"No known tickers in {tickers} for simulate mode")
+                    if self.verbosity > WARNING_VERBOSITY:
+                        logger.warning(
+                            f"No known tickers in {tickers} for simulate mode"
+                        )
                     return pd.DataFrame()
                 data = generate_random_data(
                     start, end, valid_tickers, interval=self.interval
                 )
                 return data
             except Exception as e:
-                if self.verbosity > 0:
-                    print(f"Error generating random data for {tickers}: {e}")
+                if self.verbosity > ERROR_VERBOSITY:
+                    logger.error(f"Error generating random data for {tickers}: {e}")
                 return pd.DataFrame()
         else:
             raise ValueError(f"Unknown downloader: {self.downloader}")
@@ -252,8 +259,8 @@ class DataManagerV2:
         """Clear the entire cache file."""
         if os.path.exists(self.cache_file):
             os.remove(self.cache_file)
-            if self.verbosity > 0:
-                print("Cleared cache file")
+            if self.verbosity > INFO_VERBOSITY:
+                logger.info("Cleared cache file")
             self._initialize_cache()
 
     def get_cache_info(self) -> Dict[str, str]:

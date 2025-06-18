@@ -4,7 +4,32 @@ from qf.data.tickers.tickers import DOWJONES, NASDAQ100, SNP500
 
 #### GENERAL DEFAULTS ####
 
-VERBOSITY = 1
+VERBOSITY = 3
+# Verbosity levels:
+# 0: Only warnings and errors
+# 1: Basic information
+# 2: Detailed information
+# 3: Maximum verbosity
+INFO_VERBOSITY = 1
+DEBUG_VERBOSITY = 2
+WARNING_VERBOSITY = 1
+ERROR_VERBOSITY = 0
+
+# Default logging configurations
+DEFAULT_CONSOLE_LEVELS = [
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+]  # Show these in console by default
+DEFAULT_LOG_LEVELS = [
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+]  # Log these to files by default
+
 
 DEFAULT_LOG_DIR = "runs"
 DEFAULT_INITIAL_BALANCE = 1000000
@@ -696,6 +721,9 @@ from qf.report.report import EVALReport
 
 # Helper functions
 from qf.utils.helper_functions import generate_random_name
+
+# Logging
+from qf.utils.logging_config import setup_logging
 from qf.utils.metrics import Metrics
 
 # Visualization

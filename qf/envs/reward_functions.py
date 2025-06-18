@@ -2,6 +2,12 @@ from abc import ABC, abstractmethod
 
 import torch
 
+from qf.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+from qf import DEBUG_VERBOSITY, ERROR_VERBOSITY, INFO_VERBOSITY, WARNING_VERBOSITY
+
 
 class RewardFunction(ABC):
     """Base class for all reward functions."""
@@ -142,18 +148,18 @@ class SharpeRatio(RewardFunction):
         self.returns_buffer[:, -1] = current_return
 
         # Print debug information about window positions
-        if self.verbosity and self.current_step >= self.past_window:
-            print(f"\nWindow Debug Info:")
-            print(f"Current step: {self.current_step}")
-            print(
+        if self.verbosity > DEBUG_VERBOSITY and self.current_step >= self.past_window:
+            logger.debug(f"\nWindow Debug Info:")
+            logger.debug(f"Current step: {self.current_step}")
+            logger.debug(
                 f"Past window: {self.current_step - self.past_window + 1} to {self.current_step}"
             )
             if self.future_window > 0 and self.current_step >= self.total_window:
-                print(
+                logger.debug(
                     f"Future window: {self.current_step + 1} to {self.current_step + self.future_window}"
                 )
-            print(f"Total window size: {self.total_window}")
-            print(f"Buffer shape: {self.returns_buffer.shape}")
+            logger.debug(f"Total window size: {self.total_window}")
+            logger.debug(f"Buffer shape: {self.returns_buffer.shape}")
 
         # Only calculate Sharpe ratio if we have enough data
         if self.current_step >= self.past_window:
@@ -179,14 +185,14 @@ class SharpeRatio(RewardFunction):
                 sharpe_ratio = combined_mean / (combined_std + 1e-8)
 
                 # Print additional debug info for combined calculation
-                if self.verbosity:
-                    print(
+                if self.verbosity > DEBUG_VERBOSITY:
+                    logger.debug(
                         f"Past metrics - Mean: {mean_return.mean():.4f}, Std: {std_return.mean():.4f}"
                     )
-                    print(
+                    logger.debug(
                         f"Future metrics - Mean: {future_mean.mean():.4f}, Std: {future_std.mean():.4f}"
                     )
-                    print(
+                    logger.debug(
                         f"Combined metrics - Mean: {combined_mean.mean():.4f}, Std: {combined_std.mean():.4f}"
                     )
         else:
@@ -194,10 +200,10 @@ class SharpeRatio(RewardFunction):
             sharpe_ratio = torch.zeros(
                 self.n_agents, dtype=torch.float32, device=self.device
             )
-            if self.verbosity:
-                print(f"\nWindow Debug Info:")
-                print(f"Current step: {self.current_step}")
-                print(f"Waiting for enough data (need {self.past_window} steps)")
+            if self.verbosity > DEBUG_VERBOSITY:
+                logger.debug(f"\nWindow Debug Info:")
+                logger.debug(f"Current step: {self.current_step}")
+                logger.debug(f"Waiting for enough data (need {self.past_window} steps)")
 
         self.current_step += 1
         return sharpe_ratio

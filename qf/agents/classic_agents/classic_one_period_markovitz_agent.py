@@ -94,6 +94,7 @@ class ClassicOnePeriodMarkovitzAgent(Agent):
             end=self.env.end,
             indicators="Close",
             imputation_method="shrinkage",
+            verbosity=0,
         )
 
         if self.config["risk_model"] == "ML_brownian_motion_logreturn":

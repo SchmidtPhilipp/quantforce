@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 
 import numpy as np
 import torch
@@ -10,12 +11,14 @@ import qf as qf
 from qf.agents.agent import Agent
 from qf.agents.buffers.replay_buffer import ReplayBuffer
 from qf.agents.utils.model_builder import ModelBuilder
+from qf.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 # Attention this is Soft-SPQL
 class SPQLAgent(Agent):
     def __init__(self, env, config=None):
-        super().__init__(env=env)
 
         default_config = {
             "learning_rate": qf.DEFAULT_SPQL_LR,
@@ -26,10 +29,13 @@ class SPQLAgent(Agent):
             "epsilon_start": qf.DEFAULT_SPQL_EPSILON_START,
             "tau": qf.DEFAULT_SPQL_TAU,
             "temperature": qf.DEFAULT_SPQL_TEMPERATURE,
+            "verbosity": qf.VERBOSITY,
         }
 
         # Merge default config with provided config
         self.config = {**default_config, **(config or {})}
+
+        super().__init__(env=env, verbosity=self.config["verbosity"])
 
         # Use the provided network architecture or a default one
         default_architecture = [
@@ -118,9 +124,11 @@ class SPQLAgent(Agent):
         Parameters:
             total_timesteps (int): Total number of timesteps to train the agent.
             use_tqdm (bool): If True, use tqdm for progress tracking; otherwise, print training summaries.
+            patience (int): Number of steps without improvement before stopping.
+            min_delta (float): Minimum improvement required to reset patience counter.
         """
         progress = (
-            tqdm(range(total_timesteps), desc="Training SPQLAgent")
+            tqdm(range(total_timesteps), desc="Training SPQLAgent", file=sys.__stderr__)
             if use_tqdm
             else range(total_timesteps)
         )
@@ -181,9 +189,15 @@ class SPQLAgent(Agent):
             if use_tqdm:
                 progress.set_postfix(text=text)
             else:
-                print(
+                logger.info(
                     f"Timestep: {timestep}, Last Reward: {reward} TD Error: {td_error if td_error else 'N/A'}"
                 )
+
+        # Send the final tqdm progress bar to the logger
+        if use_tqdm:
+            progress.close()
+            logger.info(f"Training SPQLAgent completed after {timestep} timesteps")
+            logger.info(text)
 
         # End of training save data
         self.env.save_data()

@@ -2,16 +2,18 @@ import os
 
 # Import the root folder of this folder
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Type
 
-# Add the root folder to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../" * 2)))
+# Add root directory (two levels up) to sys.path
+ROOT_PATH = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT_PATH))
 
-import qf as qf
-from qf.utils.logging_utils import setup_logging
+
+import qf
 
 # Log-Ordner angeben
-logger = setup_logging(log_dir="logs", redirect_print=True)
+logger = qf.setup_logging(log_dir="logs", redirect_print=True)
 
 # Constants
 N_TRIALS = 20

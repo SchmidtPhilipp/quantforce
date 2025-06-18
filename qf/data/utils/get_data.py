@@ -15,12 +15,16 @@ from qf import (
     DEFAULT_INDICATORS,
     DEFAULT_INTERVAL,
     DEFAULT_N_TRADING_DAYS,
+    INFO_VERBOSITY,
     VERBOSITY,
 )
+from qf.utils.logging_config import get_logger
 
 from .clean_data import drop_columns
 from .data_manager_v2 import DataManagerV2
 from .preprocessor import add_technical_indicators
+
+logger = get_logger(__name__)
 
 
 def get_data(
@@ -71,8 +75,8 @@ def get_data(
 
     # If data is empty, return it without further processing
     if data.empty:
-        if verbosity > 0:
-            print("No data available, returning empty DataFrame")
+        if verbosity > INFO_VERBOSITY:
+            logger.info("No data available, returning empty DataFrame")
         return data
 
     # Convert dates to datetime if they are strings
