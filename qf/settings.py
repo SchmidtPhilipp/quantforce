@@ -1,0 +1,3 @@
+#### GENERAL DEFAULTS ####
+VERBOSITY = 2
+DEFAULT_LOG_DIR = "./runs"

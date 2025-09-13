@@ -1,0 +1,28 @@
+{
+  "python.defaultInterpreterPath": "/Users/PhilippSchmidt/miniconda3/envs/quantforce/bin/python",
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    "./tests",
+    "-p",
+    "*test*.py"
+  ],
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true,
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  // Formatierungen
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true
+    },
+  
+    "black-formatter.args": ["--line-length", "88"],
+  
+    // Pylint komplett ruhigstellen
+    "pylint.enabled": false,
+  
+    // Pylance ruhig
+    "python.analysis.typeCheckingMode": "off"
+}

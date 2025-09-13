@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python-Debugger: Aktuelle Datei (mit PYTHONPATH)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${fileDirname}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "CONDA_AUTO_ACTIVATE_BASE": "false"
+            }
+        }
+    ]
+}
