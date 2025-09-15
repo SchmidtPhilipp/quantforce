@@ -24,6 +24,18 @@ The framework supports:
 - **Hyperparameter Optimization**: Grid search and Optuna-based optimization
 - **Publication-Ready Visualization**: LaTeX/TikZ integration for academic papers
 
+## Key Features
+
+- **Unified Interface**: Single API for classical, modern, and RL approaches
+- **Configuration-Driven**: Easy experimentation through configuration objects
+- **Academic Focus**: Built specifically for portfolio optimization research
+- **Publication Ready**: LaTeX integration for academic papers
+- **Comprehensive**: 15+ portfolio optimization algorithms
+- **Scalable**: Multi-agent and multi-seed experimental capabilities
+- **Advanced Data Processing**: Sophisticated missing data handling
+- **Performance Optimized**: Tensor operations and memory pooling
+- **Extensible**: Easy to add new agents and environments
+
 ## Installation
 
 The installation requirements for the subpackages is quite tight. 
@@ -314,34 +326,6 @@ Each example directory contains:
 - `report.py`: Results analysis and visualization
 - `plots/`: Generated visualizations in PNG and PGF formats
 - `runs/`: Saved experimental results
-
-## Key Features
-
-- **Unified Interface**: Single API for classical, modern, and RL approaches
-- **Configuration-Driven**: Easy experimentation through configuration objects
-- **Academic Focus**: Built specifically for portfolio optimization research
-- **Publication Ready**: LaTeX integration for academic papers
-- **Comprehensive**: 15+ portfolio optimization algorithms
-- **Scalable**: Multi-agent and multi-seed experimental capabilities
-- **Advanced Data Processing**: Sophisticated missing data handling
-- **Performance Optimized**: Tensor operations and memory pooling
-- **Extensible**: Easy to add new agents and environments
-
-## Academic Positioning
-
-QuantForce is designed to advance the state-of-the-art in academic portfolio optimization research by building upon and extending existing frameworks like FinRL [1]. Recognizing the significant contributions that FinRL has made to applying reinforcement learning in finance, QuantForce enhances these capabilities to address the broader needs of academic research:
-
-1. **Theoretical Completeness**: Provides a unified framework spanning classical portfolio theory, modern continuous-time optimization, and reinforcement learning
-2. **Research Reproducibility**: Configuration-driven approach ensures reproducible experiments across different research groups
-3. **Publication Readiness**: Built-in LaTeX integration and automated metrics generation for academic papers
-4. **Statistical Rigor**: Multi-seed experiments with proper confidence interval reporting for academic standards
-
-### Potential Research Applications
-
-- **Comparative Studies**: Systematic comparison of classical vs. modern vs. RL portfolio methods within a unified experimental framework
-- **Methodology Papers**: Focus on novel algorithmic contributions rather than implementation details
-- **Empirical Finance**: Large-scale studies with advanced missing data handling
-- **Dissertation Research**: Comprehensive framework for PhD students in quantitative finance
 
 ## Citation
 
