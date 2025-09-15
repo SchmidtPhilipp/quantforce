@@ -246,6 +246,7 @@ agents, train_runs, train_eval_runs, eval_runs = agent.multi_seeded_run(
 #### LaTeX Integration for Publications
 ```python
 # Generate publication-ready LaTeX plots
+# Requirements: Latex
 # Still experimental and does not yet work in jupyter notebooks because we have to use pgf as backend which is not supported in jupyter notebooks. Still figures are saved to png and pgf folder. 
 
 # After training or evaluating the agent get the data collector
