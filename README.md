@@ -26,6 +26,10 @@ The framework supports:
 
 ## Installation
 
+The installation requirements for the subpackages is quite tight. 
+Ensure to use python=3.10 otherwise some packages are incompatible. 
+For generating latex plots a local installation of pdflatex is necessary. 
+
 ```bash
 # Clone the repository
 git clone https://github.com/SchmidtPhilipp/quantforce.git
@@ -277,6 +281,9 @@ comparison.metrics_table_comparison(frames)
 comparison.metrics_table_comparison(frames, transpose=True) # You may also transpose the table. 
 
 ```
+
+Without a local latex installation it is still possible to make custom plots of the results using matplotlib. But not using the predefined plot functions from above. 
+Any contributions to the plotting functionalities are highly welcome! 
 
 For more detailed examples, see the `01_scripts/00_examples/` directory:
 - `01_basic_example.py` - Simple single-agent setup

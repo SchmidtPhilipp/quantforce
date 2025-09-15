@@ -132,8 +132,8 @@ class MatplotlibConfig:
             # colormap_type="qualitative",
             # Jupyter-specific settings
             pgf_enabled=False,  # Disable PGF for interactive display
-            # text_usetex=False,  # Disable LaTeX for faster rendering
-            # axes_formatter_use_mathtext=False,
+            text_usetex=False,  # Disable LaTeX for faster rendering
+            axes_formatter_use_mathtext=False,
         )
 
     def get_jupyter_rc_params(self) -> Dict[str, Any]:
@@ -313,9 +313,7 @@ class PlotConfig:
         """Create a Jupyter notebook optimized PlotConfig."""
         return cls(
             matplotlib=MatplotlibConfig.jupyter(),  # Use Jupyter-optimized MatplotlibConfig
-            save=SaveConfig(
-                save_formats=["png", "svg", "pgf"]
-            ),  # Optimized formats for web display + PGF for LaTeX
+            save=SaveConfig(save_formats=["png"]),
         )
 
     @staticmethod
