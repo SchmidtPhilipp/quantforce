@@ -36,7 +36,7 @@ git clone https://github.com/SchmidtPhilipp/quantforce.git
 cd quantforce
 
 # Create and activate conda environment
-conda env create -f qf/requirements/quantforce.yml
+conda env create -f qf/requirements/environment.yml
 conda activate quantforce
 
 # Install the package in development mode
