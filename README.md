@@ -194,67 +194,59 @@ comparison.metrics_table_comparison(frames)
 
 ### Hyperparameter Optimization
 
-QuantForce provides powerful hyperparameter optimization capabilities:
+QuantForce provides powerful hyperparameter optimization capabilities integrated directly into the agent classes:
 
-#### Grid Search Optimization
+#### Optuna-based Optimization (Recommended)
 ```python
-# Define hyperparameter space
-agent_space = {
-    "learning_rate": {
-        "type": "float",
-        "low": 1e-5,
-        "high": 1e-2,
-        "n_points": 5
-    },
-    "batch_size": {
-        "type": "categorical",
-        "choices": [64, 128, 256]
-    }
-}
+# Create and configure an agent
+agent = qf.SACAgent(train_env, config=qf.SACConfig.get_default_config())
 
-env_space = {
-    "trade_cost_percent": {
-        "type": "float",
-        "low": 0.0,
-        "high": 0.02,
-        "n_points": 3
-    }
-}
-
-# Initialize optimizer
-optimizer = qf.GridSearchOptimizer(
-    agent_classes=[qf.SACAgent],
-    agent_config=[agent_space],
-    env_hyperparameter_space=env_space,
-    optim_config={
-        "objective": "avg_reward",
-        "max_timesteps": 10000,
-        "episodes": 5
-    }
+# Run hyperparameter optimization
+results = agent.hyperparameter_optimization_run(
+    total_timesteps=50000,
+    eval_env_config=eval_config,
+    eval_every_n_steps=10000,
+    n_eval_episodes=5,
+    n_trials=100,
+    seeds=[1, 2, 3],  # Multiple seeds for statistical robustness
+    objective_metric="avg_reward"
 )
 
-# Run optimization
-results = optimizer.optimize()
-optimizer.visualize_results()
-optimizer.save_results()
+# Access results
+print(f"Best parameters: {results['best_params']}")
+print(f"Best reward: {results['best_reward']}")
+print(f"Optimization study: {results['study']}")
 ```
 
-#### Optuna-based Optimization
+#### Grid Search for Agent Comparison
 ```python
-from qf.optim.hyperparameter_optimizer import HyperparameterOptimizer
+# Compare different agent configurations with multiple seeds
+agents_to_compare = [
+    ("SAC_default", qf.SACAgent, qf.SACConfig.get_default_config()),
+    ("PPO_default", qf.PPOAgent, qf.PPOConfig.get_default_config()),
+    ("HJB_analytical", qf.HJBPortfolioAgent, qf.HJBPortfolioAgentConfig(solver_method="analytical")),
+    ("HJB_numerical", qf.HJBPortfolioAgent, qf.HJBPortfolioAgentConfig(solver_method="numerical")),
+    ("Markowitz_tangency", qf.ClassicOnePeriodMarkowitzAgent, qf.ClassicOnePeriodMarkowitzAgentConfig(target="Tangency"))
+]
 
-optimizer = HyperparameterOptimizer(
-    agent_classes=[qf.SACAgent, qf.PPOAgent],
-    optim_config={
-        "objective": "avg_reward",
-        "max_timesteps": 50000,
-        "episodes": 10
-    }
+results = qf.Agent.grid_search_run(
+    agents_to_compare=agents_to_compare,
+    train_env_config=train_config,
+    total_timesteps=100000,
+    eval_env_config=eval_config,
+    eval_every_n_steps=10000,
+    n_eval_episodes=5,
+    seeds=[1, 2, 3, 4, 5]  # Multiple seeds for statistical significance
 )
 
-# Run Bayesian optimization
-results = optimizer.optimize(n_trials=100)
-optimizer.visualize_results()
+# Access results
+print(f"Best configuration: {results['grid_search_summary']['best_configuration']}")
+print(f"Best mean reward: {results['grid_search_summary']['best_mean_reward']:.4f}")
+
+# Access detailed results for each configuration
+for config_name, config_results in results['configurations'].items():
+    print(f"{config_name}: mean_reward={config_results['mean_reward']:.4f}, "
+          f"std_reward={config_results['std_reward']:.4f}")
 ```
 
 ### Advanced Features
