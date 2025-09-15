@@ -28,7 +28,7 @@ The framework supports:
 
 The installation requirements for the subpackages is quite tight. 
 Ensure to use python=3.10 otherwise some packages are incompatible. 
-For generating latex plots a installaation of latex is necessary. 
+For generating LaTeX plots a local LaTeX installation is necessary. 
 
 ```bash
 # Clone the repository
@@ -286,13 +286,13 @@ qf.PlotFrame.plot_confidence_asset_holdings(frames, mean_of_level=["run"])
 qf.PlotFrame.plot_confidence_cash(frames, mean_of_level=["run"])
 qf.PlotFrame.plot_confidence_cumulative_rewards(frames, mean_of_level=["run"])
 
-# Generate a latex table
+# Generate a LaTeX table
 comparison.metrics_table_comparison(frames)
 comparison.metrics_table_comparison(frames, transpose=True) # You may also transpose the table. 
 
 ```
 
-Without a local latex installation it is still possible to make custom plots of the results using matplotlib.
+Without a local LaTeX installation it is still possible to make custom plots of the results using matplotlib.
 Any contributions to the plotting functionalities are highly welcome! 
 
 For more detailed examples, see the `01_scripts/00_examples/` directory:
