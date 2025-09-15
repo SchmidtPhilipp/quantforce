@@ -222,12 +222,13 @@ class PlotFrame:
         labels = self._get_plot_labels("balance")
 
         plot_manager = PlotManager(self._get_plot_config(plot_config))
-        plot_manager.plot_lines(
+        fig = plot_manager.plot_lines(
             data,
             filename=labels["filename"],
             ylabel=labels["ylabel"],
             **kwargs,
         )
+        return fig
 
     def plot_cash(self, plot_config: Optional[PlotConfig] = None, **kwargs):
         """Plot cash for each agent using PlotManager."""

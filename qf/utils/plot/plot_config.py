@@ -112,7 +112,7 @@ class MatplotlibConfig:
         """Create a Jupyter-optimized MatplotlibConfig."""
         return cls(
             # Figure settings optimized for screen display
-            figsize=(7.5, 3),  # Larger for better visibility
+            figsize=(10, 3),  # Larger for better visibility
             dpi=150,  # Higher DPI for crisp display on screens
             # Font settings optimized for screen reading
             # font_size=12,
