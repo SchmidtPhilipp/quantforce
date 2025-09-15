@@ -20,7 +20,7 @@ The framework supports:
 - **Modern Methods**: Hamilton-Jacobi-Bellman (HJB) optimal control with and without transaction costs
 - **Reinforcement Learning**: Deep Q-Networks (DQN), Soft Actor-Critic (SAC), Proximal Policy Optimization (PPO), Deep Deterministic Policy Gradient (DDPG), Twin Delayed DDPG (TD3), and more
 - **Multi-Agent Systems**: MADDPG for multi-agent portfolio optimization
-- **Advanced Data Processing**: Sophisticated missing data imputation using Kalman filters, GBM bridges, and other financial time series methods
+- **Advanced Data Processing**: Sophisticated missing data imputation using GBM bridges, Kalman filters, and other methods
 - **Hyperparameter Optimization**: Grid search and Optuna-based optimization
 - **Publication-Ready Visualization**: LaTeX/TikZ integration for academic papers
 
@@ -28,7 +28,7 @@ The framework supports:
 
 The installation requirements for the subpackages is quite tight. 
 Ensure to use python=3.10 otherwise some packages are incompatible. 
-For generating latex plots a local installation of pdflatex is necessary. 
+For generating latex plots a installaation of latex is necessary. 
 
 ```bash
 # Clone the repository
@@ -50,6 +50,7 @@ QuantForce is a configuration-driven machine learning tool that enables research
 ### Quick Start Example
 
 ### Colab Example
+
 <a href="https://colab.research.google.com/github/SchmidtPhilipp/quantforce/blob/main/Quantforce_colab_example.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
 
@@ -115,7 +116,12 @@ env_config = qf.EnvConfig(
     initial_balance=1_000_000,
     trade_cost_percent=0.01,  # 1% transaction cost
     trade_cost_fixed=1.0,
-    reward_function_config=qf.envs.LinearRateOfReturnConfig()
+    reward_function_config=qf.envs. CostAdjustedSharpeRatioConfig(
+        type="cost_adjusted_sharpe_ratio",
+        past_window=0,
+        future_window=60,
+        use_log_returns=False,
+    )
 )
 ```
 
@@ -134,7 +140,7 @@ markowitz_config = qf.agents.ClassicOnePeriodMarkowitzAgentConfig(
 hjb_config = qf.agents.HJBPortfolioAgentConfig(
     risk_aversion=2.0,
     time_horizon=252,
-    solver_method="analytical"
+    solver_method="analytical" # Uses Merton solution
 )
 
 # Reinforcement Learning
@@ -273,8 +279,7 @@ comparison.plot_asset_holdings()
 comparison.plot_cash()
 comparison.plot_cumulative_rawards()
 
-# If we have multi seeded runs so multiple runs wiht the same name "_seed_" 
-# Then there are some other methods as well we can supply a list of frames. 
+# For multi seeded runs one can also use a list of runs having the same "run" name and plot the confidence intervals of the runs. 
 qf.PlotFrame.plot_confidence_rewards(frames, mean_of_level=["run"])
 qf.PlotFrame.plot_confidence_balance(frames, mean_of_level=["run"])
 qf.PlotFrame.plot_confidence_actions(frames, mean_of_level=["run"])
