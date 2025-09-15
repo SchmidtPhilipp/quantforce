@@ -33,6 +33,10 @@ agents_to_compare = [
     ),
     ("1/N", qf.OneOverNPortfolioAgent, qf.agents.OneOverNPortfolioAgentConfig()),
     ("Merton", qf.HJBPortfolioAgent, qf.agents.HJBPortfolioAgentConfig()),
+    ("SAC", qf.SACAgent, qf.agents.SACConfig()),
+    ("PPO", qf.PPOAgent, qf.agents.PPOConfig()),
+    ("DDPG", qf.DDPGAgent, qf.agents.DDPGConfig()),
+    ("MADDPG", qf.MADDPGAgent, qf.agents.MADDPGConfig()),
 ]
 
 # Train and evaluate each agent
