@@ -263,7 +263,6 @@ agents, train_runs, train_eval_runs, eval_runs = agent.multi_seeded_run(
 ```python
 # Generate publication-ready LaTeX plots
 # Requirements: Latex
-# Still experimental and does not yet work in jupyter notebooks because we have to use pgf as backend which is not supported in jupyter notebooks. Still figures are saved to png and pgf folder. 
 
 # After training or evaluating the agent get the data collector
 run = eval_env.data_collector
@@ -293,7 +292,7 @@ comparison.metrics_table_comparison(frames, transpose=True) # You may also trans
 
 ```
 
-Without a local latex installation it is still possible to make custom plots of the results using matplotlib. But not using the predefined plot functions from above. 
+Without a local latex installation it is still possible to make custom plots of the results using matplotlib.
 Any contributions to the plotting functionalities are highly welcome! 
 
 For more detailed examples, see the `01_scripts/00_examples/` directory:
