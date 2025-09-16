@@ -45,8 +45,7 @@ from qf.envs.multi_agent_portfolio_env import MultiAgentPortfolioEnv
 # Networks
 from qf.networks.default_networks import DefaultNetworks
 
-# Optimizers
-from qf.optim.grid_search_optimizer import GridSearchOptimizer
+
 from qf.results.episode import Episode
 from qf.results.plotframe import PlotFrame
 from qf.results.result import Result
